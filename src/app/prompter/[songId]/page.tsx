@@ -22,17 +22,17 @@ export default function PrompterView() {
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [currentBlock, setCurrentBlock] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
-
-  const [showIosBanner, setShowIosBanner] = useState(false)
-
-  useEffect(() => {
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
-    const isStandalone = (window.navigator as any).standalone === true
-    if (isIos && !isStandalone) setShowIosBanner(true)
-  }, [])
+  const [isMobile, setIsMobile] = useState(false)
 
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    setIsMobile(/iphone|ipad|ipod|android/i.test(navigator.userAgent))
+  }, [])
+
+  useEffect(() => {
+    Promise.all([
       fetch(`/api/songs/${songId}`).then(r => r.json()),
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
@@ -53,33 +53,25 @@ export default function PrompterView() {
     [members]
   )
 
-  // --- 再生ループ（stateを直接使わずrefで管理）---
   const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null })
 
-  useEffect(() => {
-    stateRef.current.blocks = blocks
-  }, [blocks])
-
-  useEffect(() => {
-    stateRef.current.currentBlock = currentBlock
-  }, [currentBlock])
+  useEffect(() => { stateRef.current.blocks = blocks }, [blocks])
+  useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
 
   const stopLoop = () => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
   }
 
-  const startLoop = (fromBlock: number, resetTime = false) => {
+  const startLoop = (fromBlock: number) => {
     stopLoop()
     const startFrom = Math.max(0, fromBlock)
     const bl = stateRef.current.blocks
-    // 表紙から再生 or resetTime指定時は00:00基準
-    const ts = (fromBlock < 0 || resetTime) ? 0 : (bl[startFrom]?.[0]?.timestamp_ms ?? 0)
+    const ts = fromBlock < 0 ? 0 : (bl[startFrom]?.[0]?.timestamp_ms ?? 0)
     startTimeRef.current = Date.now() - ts
     stateRef.current.isPlaying = true
     stateRef.current.startTime = startTimeRef.current
     stateRef.current.currentBlock = startFrom
     setCurrentBlock(startFrom)
-
     const tick = () => {
       if (!stateRef.current.isPlaying) return
       const elapsed = Date.now() - (stateRef.current.startTime ?? 0)
@@ -96,35 +88,18 @@ export default function PrompterView() {
     rafRef.current = requestAnimationFrame(tick)
   }
 
-  const handlePlay = () => {
-    setIsPlaying(true)
-    startLoop(stateRef.current.currentBlock)
-  }
-
-  const handlePause = () => {
-    stateRef.current.isPlaying = false
-    setIsPlaying(false)
-    stopLoop()
-  }
-
+  const handlePlay = () => { setIsPlaying(true); startLoop(stateRef.current.currentBlock) }
+  const handlePause = () => { stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop() }
   const handlePrev = () => {
-    stateRef.current.isPlaying = false
-    setIsPlaying(false)
-    stopLoop()
+    stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
     const next = Math.max(-1, stateRef.current.currentBlock - 1)
-    stateRef.current.currentBlock = next
-    setCurrentBlock(next)
+    stateRef.current.currentBlock = next; setCurrentBlock(next)
   }
-
   const handleNext = () => {
-    // 再生中は停止せず次のブロックに移動
     const next = Math.min(stateRef.current.blocks.length - 1, stateRef.current.currentBlock + 1)
-    stateRef.current.currentBlock = next
-    setCurrentBlock(next)
-    // 再生中ならそのまま継続（停止しない）
+    stateRef.current.currentBlock = next; setCurrentBlock(next)
   }
 
-  // キーボード
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); handleNext() }
@@ -135,8 +110,14 @@ export default function PrompterView() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
+    const x = e.clientX
+    const w = window.innerWidth
+    if (x < w / 2) handlePrev()
+    else handleNext()
+  }
+
   function renderLine(line: LyricLine) {
-    // word_membersがある場合は単語ごとに色分け
     if (line.word_members && line.word_members.length > 0) {
       return (
         <>
@@ -146,11 +127,7 @@ export default function PrompterView() {
             const ids: number[] = (w as any).member_ids ?? ((w as any).member_id ? [(w as any).member_id] : [])
             if (ids.length === 0) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
             if (ids.length === 1) return <span key={wi} style={{ color: memberMap[ids[0]]?.color || '#fff' }}>{w.text}</span>
-            const stops = ids.map((id, i) => {
-              const pct = 100 / ids.length
-              const color = memberMap[id]?.color || '#fff'
-              return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%`
-            }).join(', ')
+            const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
             return <span key={wi} style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{w.text}</span>
           })}
         </>
@@ -159,19 +136,8 @@ export default function PrompterView() {
     const ids = line.member_ids || []
     if (ids.length === 0) return <span style={{ color: '#fff' }}>{line.text}</span>
     if (ids.length === 1) return <span style={{ color: memberMap[ids[0]]?.color || '#fff' }}>{line.text}</span>
-    const stops = ids.map((id, i) => {
-      const pct = 100 / ids.length
-      const color = memberMap[id]?.color || '#fff'
-      return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%`
-    }).join(', ')
-    return (
-      <span style={{
-        backgroundImage: `linear-gradient(to bottom, ${stops})`,
-        WebkitBackgroundClip: 'text',
-        WebkitTextFillColor: 'transparent',
-        backgroundClip: 'text',
-      }}>{line.text}</span>
-    )
+    const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
+    return <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{line.text}</span>
   }
 
   if (!song) return <Loading label="プロンプター" />
@@ -179,50 +145,56 @@ export default function PrompterView() {
   return (
     <>
       <div className={styles.rotatePrompt}>
-        <div style={{ fontSize: '3rem' }}>&#x21BA;</div>
+        <div style={{ fontSize: '3rem' }}>↺</div>
         <p style={{ fontSize: '1.1rem' }}>端末を横向きにしてください</p>
       </div>
-      <div className={styles.container}>
-      {/* 表紙：currentBlock === -1 */}
-      {currentBlock === -1 ? (
-        <div className={styles.cover}>
-          <div className={styles.coverTitle}>{song.title}</div>
-          {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
-          <div className={styles.coverSeparator} />
-          <div className={styles.coverMembers}>
-            {members.map(m => (
-              <div key={m.id} className={styles.coverMember}>
-                <span className={styles.coverMemberDot} style={{ background: m.color }} />
-                <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name}</span>
-              </div>
-            ))}
+      <div className={styles.container} onClick={isMobile ? handleTap : undefined}>
+        {currentBlock === -1 ? (
+          <div className={styles.cover}>
+            <div className={styles.coverTitle}>{song.title}</div>
+            {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+            <div className={styles.coverSeparator} />
+            <div className={styles.coverMembers}>
+              {members.map(m => (
+                <div key={m.id} className={styles.coverMember}>
+                  <span className={styles.coverMemberDot} style={{ background: m.color }} />
+                  <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className={styles.currentBlock}>
-            {(blocks[currentBlock] || []).map(line => (
-              <div key={line.id} className={styles.line}>{renderLine(line)}</div>
-            ))}
-          </div>
-          <div className={styles.separator} />
-          <div className={styles.nextBlock}>
-            {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
-              <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
-            ))}
-          </div>
-        </>
-      )}
+        ) : (
+          <>
+            <div className={styles.currentBlock}>
+              {(blocks[currentBlock] || []).map(line => (
+                <div key={line.id} className={styles.line}>{renderLine(line)}</div>
+              ))}
+            </div>
+            <div className={styles.separator} />
+            <div className={styles.nextBlock}>
+              {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
+                <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
+              ))}
+            </div>
+          </>
+        )}
 
-      <div className={styles.controls}>
-        <button className={styles.btn} onClick={handlePrev}>◀</button>
-        <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
-          {isPlaying ? '⏸' : '▶'}
-        </button>
-        <button className={styles.btn} onClick={handleNext}>▶▶</button>
-        <button className={styles.btn} onClick={() => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.().catch(() => {}) } else { document.exitFullscreen?.() } }}>⛶</button>
+        <div className={styles.controls} onClick={e => e.stopPropagation()}>
+          {!isMobile && (
+            <>
+              <button className={styles.btn} onClick={handlePrev}>◀</button>
+              <button className={styles.btn} onClick={handleNext}>▶▶</button>
+            </>
+          )}
+          <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
+            {isPlaying ? '⏸' : '▶'}
+          </button>
+          <button className={styles.btn} onClick={() => {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {})
+            else document.exitFullscreen?.()
+          }}>⛶</button>
+        </div>
       </div>
-    </div>
     </>
   )
 }
