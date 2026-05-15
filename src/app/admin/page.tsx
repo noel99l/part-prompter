@@ -102,7 +102,7 @@ export default function AdminPrompterPage() {
     searchTimer.current = setTimeout(async () => {
       setSearching(true)
       try {
-        const res = await fetch(`https://lrclib.net/api/search?q=${encodeURIComponent(value)}`)
+        const res = await fetch(`/api/lrclib?q=${encodeURIComponent(value)}`)
         const data: LrcResult[] = await res.json()
         setSuggestions(Array.isArray(data) ? data.filter(item => item.syncedLyrics).slice(0, 8) : [])
         setShowSuggestions(true)
