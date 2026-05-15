@@ -3,8 +3,8 @@ import { SessionProvider } from 'next-auth/react'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'part-prompter',
-  description: 'Lyrics prompter with part assignment',
+  title: 'PART-PROMPTER',
+  description: 'PART-PROMPTER',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -378,11 +378,24 @@
   border-radius: 6px;
   text-align: left;
   transition: background 0.2s;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
+  display: block;
 }
 
 .inlineEditBtn:hover { background: #1a1a1a; }
-.inlineEditBtn:hover::after { color: #888; }
+
+.cancelInlineBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+}
+
+.cancelInlineBtn:hover { color: #fff; }
 
 .loading {
   min-height: 100vh;
@@ -392,4 +405,73 @@
   align-items: center;
   justify-content: center;
   font-family: 'Hiragino Sans', sans-serif;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .header {
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .title {
+    font-size: 1.2rem;
+  }
+
+  .createBtn, .logoutBtn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .list {
+    max-width: 100%;
+  }
+
+  .card {
+    padding: 0.75rem 1rem;
+    gap: 0.5rem;
+  }
+
+  .songTitle {
+    font-size: 1rem;
+  }
+
+  .cardActions {
+    gap: 0.3rem;
+  }
+
+  .editBtn, .viewBtn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
+  }
+
+  .modal {
+    padding: 1.2rem;
+  }
+
+  .modalActions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelBtn, .submitBtn {
+    width: 100%;
+    text-align: center;
+  }
+
+  .previewLink {
+    font-size: 0.8rem;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .saveBtn {
+    padding: 0.5rem 0.9rem;
+    font-size: 0.9rem;
+  }
+
+  .inlineEditBtn {
+    font-size: 1.1rem;
+  }
 }

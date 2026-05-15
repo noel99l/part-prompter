@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
 import styles from '../page.module.css'
@@ -168,12 +167,8 @@ export default function AdminSongsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/admin" className={styles.backLink}>← 管理トップ</Link>
         <h1 className={styles.title}>🎤 楽曲管理</h1>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
-          <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/' })}>ログアウト</button>
-        </div>
+        <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
       </div>
 
       {songs.length === 0 ? (
