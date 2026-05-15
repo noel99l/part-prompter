@@ -45,6 +45,20 @@
 
 .createBtn:hover { opacity: 0.85; }
 
+.logoutBtn {
+  background: #333;
+  border: none;
+  color: #aaa;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.logoutBtn:hover { background: #444; color: #fff; }
+
 .empty {
   color: #555;
   font-size: 1rem;
@@ -67,6 +81,8 @@
   padding: 1rem 1.2rem;
   gap: 1rem;
   flex-wrap: wrap;
+  text-decoration: none;
+  color: inherit;
 }
 
 .cardInfo { flex: 1; min-width: 0; }
@@ -276,3 +292,104 @@
 
 .submitBtn:disabled { opacity: 0.5; cursor: not-allowed; }
 .submitBtn:hover:not(:disabled) { opacity: 0.85; }
+
+.metaInput {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.6rem 0.9rem;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+.metaInput:focus { outline: none; border-color: #FF69B4; }
+
+.saveBtn {
+  background: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.saveBtn:hover:not(:disabled) { background: #444; }
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.previewLink {
+  color: #FF69B4;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  border: 1px solid #FF69B4;
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.previewLink:hover { background: rgba(255,105,180,0.1); }
+
+.orderBtn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.orderBtn:hover:not(:disabled) { color: #fff; }
+.orderBtn:disabled { opacity: 0.2; cursor: not-allowed; }
+
+.orderNum {
+  color: #555;
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.dragHandle {
+  color: #555;
+  cursor: grab;
+  font-size: 1.2rem;
+  padding: 0.2rem 0.4rem;
+  user-select: none;
+  touch-action: none;
+  line-height: 1;
+}
+
+.dragHandle:active { cursor: grabbing; }
+
+.inlineEditBtn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 0.2s;
+  margin-bottom: 24px;
+}
+
+.inlineEditBtn:hover { background: #1a1a1a; }
+.inlineEditBtn:hover::after { color: #888; }
+
+.loading {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Hiragino Sans', sans-serif;
+}

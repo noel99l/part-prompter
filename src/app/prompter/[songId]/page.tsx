@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
+import Loading from '@/components/Loading'
 import styles from './page.module.css'
 
 interface LyricLine {
@@ -168,7 +169,7 @@ export default function PrompterView() {
     )
   }
 
-  if (!song) return <div className={styles.loading}>読み込み中...</div>
+  if (!song) return <Loading label="プロンプター" />
 
   return (
     <div className={styles.container}>

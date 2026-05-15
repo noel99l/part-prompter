@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import Loading from '@/components/Loading'
 import styles from './page.module.css'
 
 export default function PrompterList() {
@@ -13,12 +14,12 @@ export default function PrompterList() {
       .then(data => { setSongs(data); setLoading(false) })
   }, [])
 
+  if (loading) return <Loading label="曲一覧" />
+
   return (
     <div className={styles.container}>
       <h1 className={styles.title}>🎤 プロンプター</h1>
-      {loading ? (
-        <p className={styles.empty}>読み込み中...</p>
-      ) : songs.length === 0 ? (
+      {songs.length === 0 ? (
         <p className={styles.empty}>曲が登録されていません</p>
       ) : (
         <div className={styles.list}>
