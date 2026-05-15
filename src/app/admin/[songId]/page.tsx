@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import Loading from '@/components/Loading'
 import styles from './page.module.css'
 
 const PALETTE = [
@@ -398,7 +399,7 @@ export default function LyricsEditor() {
     return b
   }
 
-  if (!song) return <div className={styles.loading}>読み込み中...</div>
+  if (!song) return <Loading label="歌詞編集" />
 
   return (
     <div className={styles.container} onPointerUp={handlePointerUp}>

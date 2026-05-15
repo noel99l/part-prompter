@@ -82,6 +82,23 @@ export async function initDb() {
 
     await query(`ALTER TABLE prompter_lyrics ADD COLUMN IF NOT EXISTS word_members JSONB DEFAULT '[]'`)
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS playlists (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS playlist_songs (
+        id SERIAL PRIMARY KEY,
+        playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+        song_id INTEGER NOT NULL REFERENCES prompter_songs(id) ON DELETE CASCADE,
+        sort_order INTEGER DEFAULT 0
+      )
+    `)
+
     // デフォルト管理者（パスワード: admin123）
     const bcrypt = require('bcrypt')
     const hashedPassword = await bcrypt.hash('admin123', 10)
