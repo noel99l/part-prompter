@@ -3,8 +3,6 @@ import Link from 'next/link'
 import styles from './page.module.css'
 
 export default function AdminDashboard() {
-  const { data: session } = useSession()
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>

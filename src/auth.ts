@@ -37,7 +37,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return token
     },
     async session({ session, token }) {
-      session.user.id = token.userId as number
       session.user.accountName = token.accountName as string | null
       return session
     },
