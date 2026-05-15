@@ -12,6 +12,20 @@
   box-sizing: border-box;
 }
 
+@media (max-width: 768px) and (orientation: portrait) {
+  .container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vh;
+    height: 100vw;
+    transform: rotate(90deg) translateY(-100%);
+    transform-origin: top left;
+    overflow: hidden;
+    padding: 3vh 4vh;
+  }
+}
+
 .loading {
   background: #000;
   color: #fff;
@@ -60,6 +74,14 @@
   display: flex;
   gap: 0.5rem;
   z-index: 10;
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  .controls {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
 }
 
 .btn {
