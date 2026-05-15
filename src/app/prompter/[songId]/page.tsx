@@ -23,11 +23,16 @@ export default function PrompterView() {
   const [currentBlock, setCurrentBlock] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
 
-  const rafRef = useRef<number | null>(null)
-  const startTimeRef = useRef<number | null>(null)
+  const [showIosBanner, setShowIosBanner] = useState(false)
 
   useEffect(() => {
-    Promise.all([
+    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    const isStandalone = (window.navigator as any).standalone === true
+    if (isIos && !isStandalone) setShowIosBanner(true)
+  }, [])
+
+  const rafRef = useRef<number | null>(null)
+  const startTimeRef = useRef<number | null>(null)
       fetch(`/api/songs/${songId}`).then(r => r.json()),
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
@@ -215,6 +220,7 @@ export default function PrompterView() {
           {isPlaying ? '⏸' : '▶'}
         </button>
         <button className={styles.btn} onClick={handleNext}>▶▶</button>
+        <button className={styles.btn} onClick={() => { if (!document.fullscreenElement) { document.documentElement.requestFullscreen?.().catch(() => {}) } else { document.exitFullscreen?.() } }}>⛶</button>
       </div>
     </div>
     </>
