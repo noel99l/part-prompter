@@ -58,7 +58,6 @@ export default function PlaylistsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/admin" className={styles.backLink}>← 管理トップ</Link>
         <h1 className={styles.title}>📋 プレイリスト管理</h1>
         <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ プレイリストを追加</button>
       </div>

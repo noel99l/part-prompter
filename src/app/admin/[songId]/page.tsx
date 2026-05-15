@@ -117,10 +117,13 @@ export default function LyricsEditor() {
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<'info' | 'lrc' | 'parts'>('info')
+  const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'export'>('info')
   const [editTitle, setEditTitle] = useState('')
   const [editArtist, setEditArtist] = useState('')
   const [savingMeta, setSavingMeta] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [editingArtist, setEditingArtist] = useState(false)
+  const [memberSaving, setMemberSaving] = useState(false)
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
   const [expandedLine, setExpandedLine] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -145,45 +148,61 @@ export default function LyricsEditor() {
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
   // ---- メンバー操作 ----
-  const addMember = () => {
-    if (members.length >= 10) return
-    setMembers(prev => [...prev, { id: -(Date.now()), name: '', color: PALETTE[prev.length % PALETTE.length], sort_order: prev.length }])
-  }
-  const updateMember = (idx: number, field: 'name' | 'color', val: string) =>
-    setMembers(prev => prev.map((m, i) => i === idx ? { ...m, [field]: val } : m))
-  const removeMember = (idx: number) =>
-    setMembers(prev => prev.filter((_, i) => i !== idx))
-
-  const saveMembers = async () => {
-    setSaving(true)
+  const saveMembersApi = async (newMembers: Member[]) => {
+    setMemberSaving(true)
     const res = await fetch(`/api/songs/${songId}/members`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(members.map((m, i) => ({ ...m, sort_order: i }))),
+      body: JSON.stringify(newMembers.map((m, i) => ({ ...m, sort_order: i }))),
     })
     const saved: Member[] = await res.json()
 
-    // 旧ID→新IDのマッピングを作成（同じsort_orderで対応）
-    const oldMembers = members
+    // 仮ID（負の値）→本IDのマッピングのみ作成
     const idMap = new Map<number, number>()
-    oldMembers.forEach((old, i) => {
-      if (saved[i]) idMap.set(old.id, saved[i].id)
+    newMembers.forEach((old, i) => {
+      if (old.id < 0 && saved[i]) idMap.set(old.id, saved[i].id)
     })
 
-    // linesのmember_ids / word_membersを新IDに更新
+    // 削除されたメンバーのIDセット
+    const savedIds = new Set(saved.map(m => m.id))
+
     const remapIds = (ids: number[]) =>
-      ids.map(id => idMap.get(id) ?? id).filter(id => saved.some(m => m.id === id))
+      ids
+        .map(id => idMap.get(id) ?? id)  // 仮IDのみ本IDに変換
+        .filter(id => savedIds.has(id))   // 削除されたメンバーのみ除外
 
     setLines(prev => prev.map(l => ({
       ...l,
       member_ids: remapIds(l.member_ids),
       word_members: l.word_members.map(w => ({ ...w, member_ids: remapIds(w.member_ids) })),
     })))
-
     setMembers(saved)
-    setSaving(false)
-    alert('メンバーを保存しました')
+    setMemberSaving(false)
   }
+
+  const addMember = () => {
+    if (members.length >= 10) return
+    const newMembers = [...members, { id: -(Date.now()), name: '', color: PALETTE[members.length % PALETTE.length], sort_order: members.length }]
+    setMembers(newMembers)
+    saveMembersApi(newMembers)
+  }
+
+  const updateMemberName = (idx: number, val: string) =>
+    setMembers(prev => prev.map((m, i) => i === idx ? { ...m, name: val } : m))
+
+  const updateMemberColor = (idx: number, val: string) => {
+    const newMembers = members.map((m, i) => i === idx ? { ...m, color: val } : m)
+    setMembers(newMembers)
+    saveMembersApi(newMembers)
+  }
+
+  const removeMember = (idx: number) => {
+    const newMembers = members.filter((_, i) => i !== idx)
+    setMembers(newMembers)
+    saveMembersApi(newMembers)
+  }
+
+  const saveMembers = async () => saveMembersApi(members)
 
   const saveMeta = async () => {
     setSavingMeta(true)
@@ -193,7 +212,9 @@ export default function LyricsEditor() {
       body: JSON.stringify({ title: editTitle, artist: editArtist }),
     })
     setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist }))
-    setSavingMeta(false); alert('曲情報を保存しました')
+    setSavingMeta(false)
+    setEditingTitle(false)
+    setEditingArtist(false)
   }
 
   // ---- LRCインポート ----
@@ -225,10 +246,21 @@ export default function LyricsEditor() {
     reader.readAsText(file, 'utf-8'); e.target.value = ''
   }
 
-  // LRCテキストを直接編集して適用
-  const applyLrcTextFromEditor = () => {
+  // LRCテキストを直接編集して保存＆反映
+  const saveLrcAndApply = async () => {
     applyLrcText(lrcText)
-    alert('歌詞を反映しました')
+    setSaving(true)
+    const { lines: fl, breaks: br } = parseLrc(lrcText)
+    if (br.size === 0 && fl.length > 0) for (let i = 4; i < fl.length; i += 4) br.add(i)
+    const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
+    lines.forEach(l => { if (!existingMap.has(l.text)) existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members }) })
+    const merged = fl.map(l => { const e = existingMap.get(l.text); return e ? { ...l, ...e } : l })
+    await fetch(`/api/songs/${songId}/lyrics`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(toDbFormat(merged, br)),
+    })
+    setSaving(false)
   }
 
   // ---- ブロック区切り ----
@@ -347,7 +379,7 @@ export default function LyricsEditor() {
   function GradientText({ text, memberIds, id }: { text: string; memberIds: number[]; id: string }) {
     const colors = memberIds.map(mid => memberMap[mid]?.color || '#fff')
     const gradientId = `grad-${id}`
-    const fontSize = 17, height = fontSize * 2.2
+    const fontSize = 17, height = 28
     return (
       <svg className={styles.lyricSvg} height={height} style={{ overflow: 'visible', flex: 1 }}>
         <defs>
@@ -360,7 +392,7 @@ export default function LyricsEditor() {
             ))}
           </linearGradient>
         </defs>
-        <text x="0" y={fontSize * 1.4} fontSize={fontSize} fontFamily="'Hiragino Sans', sans-serif" fill={`url(#${gradientId})`}>{text}</text>
+        <text x="0" y={fontSize} fontSize={fontSize} fontFamily="'Hiragino Sans', sans-serif" fill={`url(#${gradientId})`}>{text}</text>
       </svg>
     )
   }
@@ -399,16 +431,81 @@ export default function LyricsEditor() {
     return b
   }
 
+  function LyricsTextExport({ lines, breaks, members }: { lines: FlatLine[]; breaks: Set<number>; members: Member[] }) {
+    const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
+
+    const getLabel = (memberIds: number[]): string => {
+      if (!memberIds || memberIds.length === 0) return '全員'
+      if (memberIds.length === members.length && members.length > 0) return '全員'
+      return memberIds.map(id => {
+        const m = memberMap[id]
+        if (!m) return '?'
+        return m.name || String.fromCharCode(65 + (m.sort_order ?? 0))
+      }).join('')
+    }
+
+    const buildText = (): string => {
+      const result: string[] = []
+      let prevLabel = ''
+      lines.forEach((line, i) => {
+        if (i > 0 && breaks.has(i)) result.push('')
+
+        // word_membersがある場合は単語ごとに(パート名)テキストを構築
+        if (line.word_members.length > 0) {
+          let text = ''
+          let curLabel = ''
+          line.word_members.forEach(w => {
+            const isSpace = w.text === ' ' || w.text === '\u3000'
+            if (!isSpace) {
+              const label = getLabel(w.member_ids)
+              if (label !== curLabel) {
+                text += `(${label})`
+                curLabel = label
+              }
+            }
+            text += w.text
+          })
+          result.push(text)
+          prevLabel = ''
+          return
+        }
+
+        const label = getLabel(line.member_ids)
+        const prefix = label !== prevLabel ? `(${label})` : ''
+        result.push(prefix ? `${prefix}${line.text}` : line.text)
+        prevLabel = label
+      })
+      return result.join('\n')
+    }
+
+    const [copied, setCopied] = React.useState(false)
+
+    const handleCopy = async () => {
+      await navigator.clipboard.writeText(buildText())
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+
+    const text = buildText()
+
+    return (
+      <div>
+        <button className={styles.saveBtn} onClick={handleCopy} style={{ marginBottom: '1rem' }}>
+          {copied ? '✓ コピーしました' : '📋 テキストをコピー'}
+        </button>
+        <pre style={{ background: '#111', border: '1px solid #222', borderRadius: '8px', padding: '1rem', color: '#ccc', fontSize: '0.85rem', lineHeight: '1.8', whiteSpace: 'pre-wrap', maxWidth: '600px', maxHeight: '60vh', overflowY: 'auto' }}>{text}</pre>
+      </div>
+    )
+  }
+
   if (!song) return <Loading label="歌詞編集" />
 
   return (
     <div className={styles.container} onPointerUp={handlePointerUp}>
       <div className={styles.header}>
-        <Link href="/admin" className={styles.backLink}>← 管理画面</Link>
-        <h1 className={styles.title}>🎤 歌詞編集</h1>
+        <h1 className={styles.title}>🎨 パート分け</h1>
         <div className={styles.headerActions}>
           <Link href={`/prompter/${songId}`} className={styles.previewLink} target="_blank">▶ プロンプター表示 ↗</Link>
-          <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
         </div>
       </div>
 
@@ -416,15 +513,53 @@ export default function LyricsEditor() {
         <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>📝 楽曲情報</button>
         <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>🎵 歌詞編集</button>
         <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>🎨 パート分け</button>
+        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力</button>
       </div>
 
       {tab === 'info' && (
         <div className={styles.membersPanel}>
           {/* 楽曲情報 */}
           <div className={styles.metaSection}>
-            <input className={styles.metaInput} value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="曲名" />
-            <input className={styles.metaInput} value={editArtist} onChange={e => setEditArtist(e.target.value)} placeholder="アーティスト" />
-            <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? '保存中...' : '楽曲情報を保存'}</button>
+            {/* 曲名 */}
+            {editingTitle ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
+                <input
+                  className={styles.metaInput}
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveMeta(); if (e.key === 'Escape') setEditingTitle(false) }}
+                  autoFocus
+                  style={{ flex: 1, fontSize: '1.3rem' }}
+                />
+                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? '...' : '✓'}</button>
+                <button className={styles.cancelInlineBtn} onClick={() => { setEditTitle(song.title); setEditingTitle(false) }}>✕</button>
+              </div>
+            ) : (
+              <button className={styles.inlineEditBtn} onClick={() => setEditingTitle(true)}>
+                <span className={styles.inlineEditBtnTitle}>{editTitle || '曲名未設定'}</span>
+                <span className={styles.inlineEditIcon}>✎</span>
+              </button>
+            )}
+            {/* アーティスト */}
+            {editingArtist ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  className={styles.metaInput}
+                  value={editArtist}
+                  onChange={e => setEditArtist(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveMeta(); if (e.key === 'Escape') setEditingArtist(false) }}
+                  autoFocus
+                  style={{ flex: 1 }}
+                />
+                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? '...' : '✓'}</button>
+                <button className={styles.cancelInlineBtn} onClick={() => { setEditArtist(song.artist || ''); setEditingArtist(false) }}>✕</button>
+              </div>
+            ) : (
+              <button className={styles.inlineEditBtn} onClick={() => setEditingArtist(true)}>
+                <span className={styles.inlineEditBtnArtist}>{editArtist || 'アーティスト未設定'}</span>
+                <span className={styles.inlineEditIcon}>✎</span>
+              </button>
+            )}
           </div>
           <hr className={styles.divider} />
           {/* メンバー設定 */}
@@ -433,13 +568,19 @@ export default function LyricsEditor() {
             {members.map((m, i) => (
               <div key={m.id} className={styles.memberRow}>
                 <span className={styles.memberNum}>{i + 1}</span>
-                <input className={styles.memberNameInput} value={m.name} onChange={e => updateMember(i, 'name', e.target.value)} placeholder={`メンバー${i + 1}`} />
+                <input
+                  className={styles.memberNameInput}
+                  value={m.name}
+                  onChange={e => updateMemberName(i, e.target.value)}
+                  onBlur={() => saveMembersApi(members)}
+                  placeholder={String.fromCharCode(65 + i)}
+                />
                 <div className={styles.palette}>
                   {PALETTE.map(color => (
-                    <button key={color} className={`${styles.colorBtn} ${m.color === color ? styles.colorBtnActive : ''}`} style={{ background: color }} onClick={() => updateMember(i, 'color', color)} title={color} />
+                    <button key={color} className={`${styles.colorBtn} ${m.color === color ? styles.colorBtnActive : ''}`} style={{ background: color }} onClick={() => updateMemberColor(i, color)} title={color} />
                   ))}
                   <span className={styles.paletteDivider} />
-                  <input type="color" className={`${styles.colorPicker} ${!PALETTE.includes(m.color) ? styles.colorPickerActive : ''}`} value={m.color} onChange={e => updateMember(i, 'color', e.target.value)} title="カスタムカラー" />
+                  <input type="color" className={`${styles.colorPicker} ${!PALETTE.includes(m.color) ? styles.colorPickerActive : ''}`} value={m.color} onChange={e => updateMemberColor(i, e.target.value)} title="カスタムカラー" />
                 </div>
                 <div className={styles.colorPreview} style={{ background: m.color }} />
                 <button className={styles.removeBtn} onClick={() => removeMember(i)}>✕</button>
@@ -448,7 +589,7 @@ export default function LyricsEditor() {
           </div>
           <div className={styles.memberActions}>
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
-            <button className={styles.saveBtn} onClick={saveMembers} disabled={saving}>{saving ? '保存中...' : '💾 保存'}</button>
+            {memberSaving && <span className={styles.saveStatus}>保存中...</span>}
           </div>
         </div>
       )}
@@ -458,8 +599,7 @@ export default function LyricsEditor() {
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
             <input ref={fileRef} type="file" accept=".lrc,.txt" style={{ display: 'none' }} onChange={handleLrcImport} />
-            <button className={styles.saveBtn} onClick={applyLrcTextFromEditor}>🔄 パート分けに反映</button>
-            <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>{saving ? '保存中...' : '💾 DB保存'}</button>
+            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>{saving ? '保存中...' : '💾 保存'}</button>
           </div>
           <p className={styles.hint}>LRCテキストを直接編集できます。「パート分けに反映」でパート分けタブに反映されます。</p>
           <textarea
@@ -493,7 +633,7 @@ export default function LyricsEditor() {
                       <label key={m.id} className={styles.selectorItem}>
                         <input type="checkbox" checked={checkedMemberIds.includes(m.id)} onChange={() => toggleMemberCheck(m.id)} />
                         <span className={styles.selectorDot} style={{ background: m.color }} />
-                        <span className={styles.selectorName}>{m.name || `メンバー${m.sort_order + 1}`}</span>
+                        <span className={styles.selectorName}>{m.name || String.fromCharCode(65 + m.sort_order)}</span>
                       </label>
                     ))}
                   </div>
@@ -605,6 +745,16 @@ export default function LyricsEditor() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'export' && (
+        <div className={styles.membersPanel}>
+          <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
+          <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
+          <hr className={styles.divider} />
+          <p className={styles.hint}>パート分けをテキスト形式でコピーできます。</p>
+          <LyricsTextExport lines={lines} breaks={breaks} members={members} />
         </div>
       )}
     </div>

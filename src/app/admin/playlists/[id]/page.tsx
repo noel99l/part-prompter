@@ -165,7 +165,6 @@ export default function PlaylistEditPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/admin/playlists" className={styles.backLink}>← プレイリスト一覧</Link>
         <h1 className={styles.title}>📋 プレイリスト編集</h1>
         <Link href={`/prompter/playlist/${id}`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
       </div>

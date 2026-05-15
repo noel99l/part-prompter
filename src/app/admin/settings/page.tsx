@@ -1,7 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import Link from 'next/link'
 import styles from '../page.module.css'
 
 export default function SettingsPage() {
@@ -30,7 +29,6 @@ export default function SettingsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/admin" className={styles.backLink}>← 管理トップ</Link>
         <h1 className={styles.title}>⚙️ アカウント設定</h1>
       </div>
 

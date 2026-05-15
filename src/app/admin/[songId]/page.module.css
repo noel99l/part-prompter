@@ -61,11 +61,15 @@
 
 /* 曲情報 */
 .metaSection {
-  display: flex;
-  gap: 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
   margin-bottom: 1.5rem;
-  flex-wrap: wrap;
-  align-items: center;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .metaInput {
@@ -307,6 +311,60 @@
 .addBtn:hover:not(:disabled) { background: #222; }
 .addBtn:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.saveStatus {
+  font-size: 0.85rem;
+  color: #7CFC00;
+}
+
+.inlineEditBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  text-align: left;
+  transition: background 0.2s;
+  display: block;
+  width: 100%;
+}
+
+.inlineEditBtn:hover { background: #1a1a1a; }
+
+.inlineEditBtnTitle {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.inlineEditBtnArtist {
+  color: #aaa;
+  font-size: 1rem;
+}
+
+.inlineEditIcon {
+  color: #555;
+  font-size: 0.85rem;
+  margin-left: 0.4rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.inlineEditBtn:hover .inlineEditIcon { opacity: 1; }
+
+.cancelInlineBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.cancelInlineBtn:hover { color: #fff; }
+
 /* 歌詞編集 */
 .lyricsPanel {
   display: flex;
@@ -362,6 +420,7 @@
   display: flex;
   gap: 1.5rem;
   align-items: flex-start;
+  position: relative;
 }
 
 /* メンバー選択パネル（左） */
@@ -373,7 +432,11 @@
   border-radius: 8px;
   padding: 1rem;
   position: sticky;
-  top: 1rem;
+  top: 64px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  z-index: 100;
+  align-self: flex-start;
 }
 
 .selectorTitle {
@@ -516,15 +579,16 @@
 .lyricText {
   font-size: 1.1rem;
   flex: 1;
-  line-height: 1;
+  line-height: 1.6;
   display: inline-block;
-  padding-top: 0.5em;
-  padding-bottom: 0.5em;
+  padding: 0;
 }
 
 .lyricSvg {
   flex: 1;
   display: block;
+  overflow: visible;
+  height: 1.76rem;
 }
 
 .memberBadges {
@@ -720,17 +784,127 @@
 
 /* レスポンシブ */
 @media (max-width: 640px) {
-  .editorLayout {
+  .container {
+    padding: 0.75rem;
+  }
+
+  .header {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .title {
+    font-size: 1.1rem;
+  }
+
+  .headerActions {
+    gap: 0.4rem;
+  }
+
+  .previewLink,
+  .exportBtn,
+  .saveBtn {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.8rem;
+  }
+
+  .tabs {
+    gap: 0.25rem;
+  }
+
+  .tab {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .metaSection {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .metaInput {
+    width: 100%;
+    min-width: unset;
+  }
+
+  .memberRow {
+    gap: 0.5rem;
+    padding: 0.6rem;
+  }
+
+  .memberNameInput {
+    width: 100px;
+  }
+
+  .palette {
+    gap: 0.25rem;
+  }
+
+  .colorBtn {
+    width: 20px;
+    height: 20px;
+  }
+
+  .colorPicker {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .lyricsToolbar {
+    gap: 0.4rem;
+  }
+
+  .importBtn {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.85rem;
+  }
+
+  .editorLayout {
+    gap: 0;
   }
 
   .memberSelector {
     width: 100%;
-    position: static;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    top: auto;
+    max-height: 40vh;
+    border-radius: 12px 12px 0 0;
+    border: none;
+    border-top: 2px solid #FF69B4;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
+    background: #161616;
+    z-index: 100;
+    overflow-y: auto;
+  }
+
+  .blocksArea {
+    margin-left: 0;
+    margin-bottom: 220px;
   }
 
   .selectorList {
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .lyricText {
+    font-size: 0.95rem;
+  }
+
+  .timestamp {
+    width: 2.2rem;
+    font-size: 0.7rem;
+  }
+
+  .wordToken {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.4rem;
+  }
+
+  .lrcEditor {
+    font-size: 0.8rem;
+    min-height: 50vh;
   }
 }
