@@ -185,6 +185,7 @@ export default function AdminSongsPage() {
               <div className={styles.cardInfo}>
                 <div className={styles.songTitle}>{s.title}</div>
                 {s.artist && <div className={styles.artist}>{s.artist}</div>}
+                {s.created_by_name && <div className={styles.artist}>作成者: {s.created_by_name}</div>}
               </div>
               <div className={styles.cardActions}>
                 <Link href={`/admin/${s.id}`} className={styles.editBtn}>✏️ 編集</Link>
