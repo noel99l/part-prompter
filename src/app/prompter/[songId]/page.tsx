@@ -172,7 +172,12 @@ export default function PrompterView() {
   if (!song) return <Loading label="プロンプター" />
 
   return (
-    <div className={styles.container}>
+    <>
+      <div className={styles.rotatePrompt}>
+        <div style={{ fontSize: '3rem' }}>&#x21BA;</div>
+        <p style={{ fontSize: '1.1rem' }}>端末を横向きにしてください</p>
+      </div>
+      <div className={styles.container}>
       {/* 表紙：currentBlock === -1 */}
       {currentBlock === -1 ? (
         <div className={styles.cover}>
@@ -212,5 +217,6 @@ export default function PrompterView() {
         <button className={styles.btn} onClick={handleNext}>▶▶</button>
       </div>
     </div>
+    </>
   )
 }
