@@ -1,0 +1,164 @@
+.container {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Hiragino Sans', sans-serif;
+  padding: 1.5rem 2rem;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  padding-top: 0.3rem;
+}
+
+.backLink:hover { color: #fff; }
+
+.headerCenter {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: 1.8rem;
+  margin: 0 0 0.2rem;
+  color: #fff;
+}
+
+.artist {
+  color: #888;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.prompterBtn {
+  background: #FF69B4;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1.2rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.prompterBtn:hover { opacity: 0.85; }
+
+.editBtn {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.editBtn:hover { background: #222; }
+
+.infoSection {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  margin-bottom: 2rem;
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.infoLabel {
+  color: #666;
+  font-size: 0.85rem;
+  min-width: 40px;
+}
+
+.infoValue {
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.memberList {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.memberBadge {
+  border: 1px solid;
+  border-radius: 20px;
+  padding: 0.2rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.lyrics {
+  max-width: 700px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.block {
+  background: #111;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.line {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1rem;
+}
+
+.timestamp {
+  color: #444;
+  font-size: 0.75rem;
+  min-width: 36px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lineBadges {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
