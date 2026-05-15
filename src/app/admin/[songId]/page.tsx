@@ -182,25 +182,17 @@ export default function LyricsEditor() {
 
   const addMember = () => {
     if (members.length >= 10) return
-    const newMembers = [...members, { id: -(Date.now()), name: '', color: PALETTE[members.length % PALETTE.length], sort_order: members.length }]
-    setMembers(newMembers)
-    saveMembersApi(newMembers)
+    setMembers(prev => [...prev, { id: -(Date.now()), name: '', color: PALETTE[prev.length % PALETTE.length], sort_order: prev.length }])
   }
 
   const updateMemberName = (idx: number, val: string) =>
     setMembers(prev => prev.map((m, i) => i === idx ? { ...m, name: val } : m))
 
-  const updateMemberColor = (idx: number, val: string) => {
-    const newMembers = members.map((m, i) => i === idx ? { ...m, color: val } : m)
-    setMembers(newMembers)
-    saveMembersApi(newMembers)
-  }
+  const updateMemberColor = (idx: number, val: string) =>
+    setMembers(prev => prev.map((m, i) => i === idx ? { ...m, color: val } : m))
 
-  const removeMember = (idx: number) => {
-    const newMembers = members.filter((_, i) => i !== idx)
-    setMembers(newMembers)
-    saveMembersApi(newMembers)
-  }
+  const removeMember = (idx: number) =>
+    setMembers(prev => prev.filter((_, i) => i !== idx))
 
   const saveMembers = async () => saveMembersApi(members)
 
@@ -572,7 +564,6 @@ export default function LyricsEditor() {
                   className={styles.memberNameInput}
                   value={m.name}
                   onChange={e => updateMemberName(i, e.target.value)}
-                  onBlur={() => saveMembersApi(members)}
                   placeholder={String.fromCharCode(65 + i)}
                 />
                 <div className={styles.palette}>
@@ -589,7 +580,7 @@ export default function LyricsEditor() {
           </div>
           <div className={styles.memberActions}>
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
-            {memberSaving && <span className={styles.saveStatus}>保存中...</span>}
+            <button className={styles.saveBtn} onClick={saveMembers} disabled={memberSaving}>{memberSaving ? '保存中...' : '💾 メンバーを保存'}</button>
           </div>
         </div>
       )}
