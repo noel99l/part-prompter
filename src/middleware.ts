@@ -1,4 +1,4 @@
-import { auth } from '@/auth'
+import { auth } from '@/auth.edge'
 import { NextResponse } from 'next/server'
 
 export default auth((req) => {
@@ -7,6 +7,7 @@ export default auth((req) => {
     signInUrl.searchParams.set('callbackUrl', req.url)
     return NextResponse.redirect(signInUrl)
   }
+  return NextResponse.next()
 })
 
 export const config = {

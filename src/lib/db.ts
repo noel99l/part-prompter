@@ -83,6 +83,18 @@ export async function initDb() {
     await query(`ALTER TABLE prompter_lyrics ADD COLUMN IF NOT EXISTS word_members JSONB DEFAULT '[]'`)
 
     await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        google_id TEXT UNIQUE NOT NULL,
+        email TEXT,
+        account_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
+    await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
+    await query(`
       CREATE TABLE IF NOT EXISTS playlists (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,

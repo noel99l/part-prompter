@@ -5,7 +5,7 @@ import Link from 'next/link'
 import Loading from '@/components/Loading'
 import styles from '../page.module.css'
 
-interface Playlist { id: number; name: string; created_at: string }
+interface Playlist { id: number; name: string; created_at: string; created_by_name?: string }
 
 export default function PlaylistsPage() {
   const router = useRouter()
@@ -71,6 +71,7 @@ export default function PlaylistsPage() {
             <div key={p.id} className={styles.card}>
               <div className={styles.cardInfo}>
                 <div className={styles.songTitle}>{p.name}</div>
+                {p.created_by_name && <div className={styles.artist}>作成者: {p.created_by_name}</div>}
               </div>
               <div className={styles.cardActions}>
                 <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}>✏️ 編集</Link>
