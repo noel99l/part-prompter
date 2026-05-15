@@ -125,7 +125,6 @@ export default function LyricsEditor() {
   const fileRef = useRef<HTMLInputElement>(null)
   const isDraggingRef = useRef(false)
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') ?? '' : ''
 
   useEffect(() => {
     Promise.all([
@@ -158,7 +157,7 @@ export default function LyricsEditor() {
     setSaving(true)
     const res = await fetch(`/api/songs/${songId}/members`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(members.map((m, i) => ({ ...m, sort_order: i }))),
     })
     const saved: Member[] = await res.json()
@@ -189,7 +188,7 @@ export default function LyricsEditor() {
     setSavingMeta(true)
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: editTitle, artist: editArtist }),
     })
     setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist }))
@@ -326,7 +325,7 @@ export default function LyricsEditor() {
     setSaving(true)
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(toDbFormat(lines, breaks)),
     })
     setSaving(false); alert('歌詞を保存しました')
