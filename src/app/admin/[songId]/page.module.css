@@ -1,0 +1,736 @@
+.container {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Hiragino Sans', sans-serif;
+  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.loading {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+
+/* ヘッダー */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.headerActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.backLink {
+  color: #888;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.backLink:hover { color: #fff; }
+
+.title {
+  font-size: 1.5rem;
+  flex: 1;
+  margin: 0;
+  color: #fff !important;
+}
+
+.previewLink {
+  color: #FF69B4;
+  text-decoration: none;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.previewLink:hover { text-decoration: underline; }
+
+/* 曲情報 */
+.metaSection {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.metaInput {
+  background: #1a1a1a !important;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff !important;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  flex: 1;
+  min-width: 140px;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.metaInput:focus { outline: none; border-color: #FF69B4; }
+
+.metaInput::placeholder { color: #666; opacity: 1; }
+
+.metaInput:-webkit-autofill,
+.metaInput:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1a1a1a inset;
+  -webkit-text-fill-color: #fff !important;
+}
+
+/* タブ */
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #222;
+  padding-bottom: 0.5rem;
+}
+
+.tab {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1rem;
+  padding: 0.5rem 1.2rem;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  transition: color 0.2s, background 0.2s;
+}
+
+.tab:hover { color: #fff; background: #1a1a1a; }
+
+.tabActive {
+  color: #fff;
+  background: #1a1a1a;
+  border-bottom: 2px solid #FF69B4;
+}
+
+/* ボタン共通 */
+.saveBtn {
+  background: #FF69B4;
+  border: none;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+}
+
+.saveBtn:disabled { opacity: 0.5; cursor: not-allowed; }
+.saveBtn:hover:not(:disabled) { opacity: 0.85; }
+
+.exportBtn {
+  background: #1E90FF;
+  border: none;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.2s;
+  display: inline-block;
+}
+
+.exportBtn:hover { opacity: 0.85; }
+
+/* メンバー設定 */
+.membersPanel {
+  max-width: 800px;
+}
+
+.hint {
+  color: #666;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.memberList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.memberNum {
+  color: #666;
+  font-size: 0.85rem;
+  width: 1.2rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.memberNameInput {
+  background: #1a1a1a !important;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff !important;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.95rem;
+  width: 140px;
+  flex-shrink: 0;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.memberNameInput:focus { outline: none; border-color: #FF69B4; }
+
+.memberNameInput::placeholder { color: #666; opacity: 1; }
+
+.memberNameInput:-webkit-autofill,
+.memberNameInput:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px #1a1a1a inset;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.palette {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.colorBtn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.colorBtn:hover { transform: scale(1.2); }
+
+.colorBtnActive {
+  border-color: #fff;
+  transform: scale(1.2);
+}
+
+.colorPicker {
+  width: 24px !important;
+  height: 24px !important;
+  padding: 0 !important;
+  border: 2px dashed #888 !important;
+  border-radius: 50% !important;
+  cursor: pointer;
+  background: none !important;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+  overflow: hidden;
+  position: relative;
+}
+
+.colorPicker::-webkit-color-swatch-wrapper { padding: 0; }
+.colorPicker::-webkit-color-swatch { border: none; border-radius: 50%; }
+.colorPicker:hover { border-color: #fff !important; border-style: solid !important; transform: scale(1.2); }
+
+.colorPickerActive {
+  border-style: solid !important;
+  border-color: #fff !important;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
+}
+
+.paletteDivider {
+  width: 1px;
+  height: 20px;
+  background: #444;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.colorPreview {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #444;
+  flex-shrink: 0;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.removeBtn:hover { color: #FF4444; background: #1a1a1a; }
+
+.memberActions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.addBtn {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.addBtn:hover:not(:disabled) { background: #222; }
+.addBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 歌詞編集 */
+.lyricsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.lyricsToolbar {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.importBtn {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.2s;
+}
+
+.importBtn:hover { background: #222; }
+
+.lrcEditor {
+  width: 100%;
+  min-height: 60vh;
+  background: #0d0d0d !important;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  font-family: monospace;
+  font-size: 0.9rem;
+  padding: 0.75rem;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.lrcEditor:focus { outline: none; border-color: #FF69B4; }
+
+.divider {
+  border: none;
+  border-top: 1px solid #222;
+  margin: 1rem 0;
+}
+
+.editorLayout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+/* メンバー選択パネル（左） */
+.memberSelector {
+  width: 200px;
+  flex-shrink: 0;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  padding: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.selectorTitle {
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+  line-height: 1.4;
+}
+
+.selectorList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.selectorItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  padding: 0.3rem 0.4rem;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.selectorItem:hover { background: #1a1a1a; }
+
+.selectorItem input[type="checkbox"] {
+  accent-color: #FF69B4;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.selectorDot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.selectorName {
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selectedPreview {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.selectedDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.clearBtn {
+  background: none;
+  border: 1px solid #333;
+  color: #888;
+  padding: 0.3rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  width: 100%;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.clearBtn:hover { color: #fff; border-color: #666; }
+
+/* 歌詞ブロックエリア（右） */
+.blocksArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+  border: 1px solid #222;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.blockLabel {
+  font-size: 0.75rem;
+  color: #FF69B4;
+  padding: 0.25rem 0.75rem;
+  background: #0d0d0d;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.blockLabel::before,
+.blockLabel::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: #FF69B4;
+  border-radius: 1px;
+  opacity: 0.6;
+}
+
+.lyricLine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0.75rem;
+  cursor: crosshair;
+  border-bottom: 1px solid #1a1a1a;
+  transition: background 0.1s;
+  user-select: none;
+  touch-action: none;
+  -webkit-user-select: none;
+}
+
+.lyricLine:last-child { border-bottom: none; }
+
+.lyricLine:hover { background: #161616; }
+
+.lyricLineDragging:hover { background: #1a1a2a; }
+
+.timestamp {
+  font-size: 0.75rem;
+  color: #555;
+  font-family: monospace;
+  flex-shrink: 0;
+  width: 3rem;
+}
+
+.lyricText {
+  font-size: 1.1rem;
+  flex: 1;
+  line-height: 1;
+  display: inline-block;
+  padding-top: 0.5em;
+  padding-bottom: 0.5em;
+}
+
+.lyricSvg {
+  flex: 1;
+  display: block;
+}
+
+.memberBadges {
+  display: flex;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.memberBadge {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.clearLineBtn {
+  background: none;
+  border: none;
+  color: #444;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.lyricLine:hover .clearLineBtn { opacity: 1; }
+.clearLineBtn:hover { color: #FF4444; }
+
+/* 単語分割モード */
+.lyricLineExpanded {
+  background: #1a1a2a !important;
+  border-bottom: none;
+}
+
+.wordModeIndicator {
+  font-size: 0.8rem;
+  color: #FF69B4;
+  flex-shrink: 0;
+  margin-right: 0.25rem;
+}
+
+.wordPanel {
+  background: #12121e;
+  border-bottom: 1px solid #1a1a1a;
+  padding: 0.6rem 0.75rem 0.75rem;
+}
+
+.wordPanelHint {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wordPanelActions {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.wordPanelClose {
+  background: none;
+  border: 1px solid #444;
+  color: #aaa;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.wordPanelClose:hover { color: #fff; border-color: #888; }
+
+.wordPanelClear {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.wordPanelClear:hover { color: #FF4444; border-color: #FF4444; }
+
+.wordTokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.wordToken {
+  background: none;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #aaa;
+  font-size: 1rem;
+  padding: 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  font-family: 'Hiragino Sans', sans-serif;
+}
+
+.wordToken:hover { background: #1e1e2e; }
+
+.wordTokenAssigned {
+  background: rgba(255,255,255,0.05);
+}
+
+.wordSpace {
+  display: inline-block;
+  width: 0.5rem;
+}
+
+/* ブロック区切りUI */
+.addBreakRow {
+  display: flex;
+  justify-content: center;
+  padding: 0;
+  height: 16px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.blocksArea > div:hover > .addBreakRow {
+  opacity: 1;
+}
+
+.addBreakBtn {
+  background: none;
+  border: 1px dashed #444;
+  color: #666;
+  font-size: 0.75rem;
+  padding: 0.15rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.addBreakBtn:hover {
+  color: #FF69B4;
+  border-color: #FF69B4;
+}
+
+.breakRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: #0d0d0d;
+}
+
+.breakLine {
+  flex: 1;
+  height: 2px;
+  background: #FF69B4;
+  border-radius: 1px;
+  opacity: 0.6;
+}
+
+.breakLabel {
+  font-size: 0.75rem;
+  color: #FF69B4;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.removeBreakBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #666;
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.removeBreakBtn:hover {
+  color: #FF4444;
+  border-color: #FF4444;
+}
+
+/* レスポンシブ */
+@media (max-width: 640px) {
+  .editorLayout {
+    flex-direction: column;
+  }
+
+  .memberSelector {
+    width: 100%;
+    position: static;
+  }
+
+  .selectorList {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
