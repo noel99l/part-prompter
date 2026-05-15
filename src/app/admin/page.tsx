@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import { signOut } from 'next-auth/react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
@@ -71,10 +72,7 @@ export default function AdminPrompterPage() {
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
   const suggestRef = useRef<HTMLDivElement>(null)
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem('adminToken') ?? '' : ''
-
   useEffect(() => {
-    if (!token) { router.push('/admin'); return }
     loadSongs()
   }, [])
 
@@ -129,7 +127,7 @@ export default function AdminPrompterPage() {
     setCreating(true)
     const res = await fetch('/api/songs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: newTitle.trim(), artist: newArtist.trim() }),
     })
     const song = await res.json()
@@ -139,7 +137,7 @@ export default function AdminPrompterPage() {
       const lyrics = parseLrcToDb(selectedLyrics)
       await fetch(`/api/songs/${song.id}/lyrics`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(lyrics),
       })
     }
@@ -166,7 +164,7 @@ export default function AdminPrompterPage() {
     setDeletingId(id)
     await fetch(`/api/songs/${id}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: {},
     })
     setSongs(prev => prev.filter(s => s.id !== id))
     setDeletingId(null)
@@ -177,7 +175,10 @@ export default function AdminPrompterPage() {
       <div className={styles.header}>
         <Link href="/admin" className={styles.backLink}>← 管理ダッシュボード</Link>
         <h1 className={styles.title}>🎤 プロンプター管理</h1>
-        <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
+          <button className={styles.createBtn} onClick={() => signOut({ callbackUrl: '/' })} style={{ background: '#555' }}>ログアウト</button>
+        </div>
       </div>
 
       {loading ? (

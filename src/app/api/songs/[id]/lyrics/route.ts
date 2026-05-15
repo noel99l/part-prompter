@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
-import { verifyToken } from '@/lib/auth'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -13,8 +12,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const token = req.headers.get('authorization')?.replace('Bearer ', '')
-  if (!token || !verifyToken(token)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const lyrics: { block_index: number; line_index: number; text: string; member_ids: number[]; timestamp_ms: number | null; word_members?: { text: string; member_ids: number[] }[] }[] = await req.json()
 
