@@ -2,7 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Loading from '@/components/Loading'
+import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
 interface LrcResult {
@@ -162,7 +162,29 @@ export default function AdminSongsPage() {
     setDeletingId(null)
   }
 
-  if (loading) return <Loading label="楽曲一覧" />
+  if (loading) return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={skStyles.sk} style={{ width: 140, height: 28 }} />
+        <div className={skStyles.sk} style={{ width: 100, height: 36, borderRadius: 8, marginLeft: 'auto' }} />
+      </div>
+      <div className={styles.list}>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className={styles.card}>
+            <div className={styles.cardInfo}>
+              <div className={skStyles.sk} style={{ width: '55%', height: 18, marginBottom: 8 }} />
+              <div className={skStyles.sk} style={{ width: '35%', height: 14 }} />
+            </div>
+            <div className={styles.cardActions}>
+              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 36, height: 32, borderRadius: 6 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.container}>

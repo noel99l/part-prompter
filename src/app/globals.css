@@ -14,3 +14,7 @@ body {
 input, select, textarea {
   font-family: inherit;
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
