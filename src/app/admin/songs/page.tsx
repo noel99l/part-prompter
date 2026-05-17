@@ -60,28 +60,19 @@ export default function AdminSongsPage() {
   const [songs, setSongs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [step, setStep] = useState<'search' | 'input'>('search')
   const [newTitle, setNewTitle] = useState('')
   const [newArtist, setNewArtist] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [suggestions, setSuggestions] = useState<LrcResult[]>([])
   const [searching, setSearching] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searched, setSearched] = useState(false)
   const [selectedLyrics, setSelectedLyrics] = useState<string | null>(null)
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
-  const suggestRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { loadSongs() }, [])
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
 
   const loadSongs = async () => {
     setLoading(true)
@@ -91,31 +82,40 @@ export default function AdminSongsPage() {
     setLoading(false)
   }
 
-  const handleTitleChange = useCallback((value: string) => {
-    setNewTitle(value)
-    if (searchTimer.current) clearTimeout(searchTimer.current)
-    if (!value.trim()) { setSuggestions([]); setShowSuggestions(false); return }
-    searchTimer.current = setTimeout(async () => {
-      setSearching(true)
-      try {
-        const res = await fetch(`/api/lrclib?q=${encodeURIComponent(value)}`)
-        const data: LrcResult[] = await res.json()
-        setSuggestions(Array.isArray(data) ? data.filter(item => item.syncedLyrics).slice(0, 8) : [])
-        setShowSuggestions(true)
-      } catch {
-        setSuggestions([])
-      } finally {
-        setSearching(false)
-      }
-    }, 400)
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value)
+    setSuggestions([])
+    setSearched(false)
+  }, [])
+
+  const handleSearch = useCallback(async (value: string) => {
+    if (!value.trim()) return
+    setSearching(true)
+    setSearched(false)
+    try {
+      const res = await fetch(`/api/lrclib?q=${encodeURIComponent(value)}`)
+      const data: LrcResult[] = await res.json()
+      setSuggestions(Array.isArray(data) ? data.filter(item => item.syncedLyrics).slice(0, 10) : [])
+    } catch {
+      setSuggestions([])
+    } finally {
+      setSearching(false)
+      setSearched(true)
+    }
   }, [])
 
   const selectSuggestion = (item: LrcResult) => {
     setNewTitle(item.trackName)
     setNewArtist(item.artistName)
     setSelectedLyrics(item.syncedLyrics ?? null)
-    setShowSuggestions(false)
-    setSuggestions([])
+    setStep('input')
+  }
+
+  const goManualInput = () => {
+    setNewTitle(searchQuery)
+    setNewArtist('')
+    setSelectedLyrics(null)
+    setStep('input')
   }
 
   const createSong = async () => {
@@ -147,10 +147,12 @@ export default function AdminSongsPage() {
 
   const closeModal = () => {
     setShowModal(false)
+    setStep('search')
+    setSearchQuery('')
+    setSearched(false)
     setNewTitle('')
     setNewArtist('')
     setSuggestions([])
-    setShowSuggestions(false)
     setSelectedLyrics(null)
   }
 
@@ -221,54 +223,85 @@ export default function AdminSongsPage() {
       )}
 
       {showModal && (
-        <div className={styles.overlay}>
-          <div className={styles.modal}>
-            <h2 className={styles.modalTitle}>曲を追加</h2>
-            <div className={styles.inputWrapper} ref={suggestRef}>
-              <input
-                className={styles.input}
-                value={newTitle}
-                onChange={e => handleTitleChange(e.target.value)}
-                onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-                placeholder="曲名（必須）"
-                autoFocus
-                autoComplete="off"
-              />
-              {searching && <span className={styles.searchingIndicator}>検索中...</span>}
-              {showSuggestions && suggestions.length > 0 && (
-                <div className={styles.suggestions}>
-                  {suggestions.map(item => (
-                    <button
-                      key={item.id}
-                      className={styles.suggestionItem}
-                      onMouseDown={() => selectSuggestion(item)}
-                    >
-                      <span className={styles.suggestionTrack}>{item.trackName}</span>
-                      <span className={styles.suggestionMeta}>{item.artistName}{item.albumName ? ` / ${item.albumName}` : ''}</span>
-                    </button>
-                  ))}
+        <div className={styles.overlay} onClick={closeModal}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            {step === 'search' ? (
+              <>
+                <h2 className={styles.modalTitle}>曲を追加</h2>
+                <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>
+                  <a href="https://lrclib.net" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'underline' }}>LRCLIB</a> で曲名を検索して歌詞を取得できます
+                </p>
+                <div className={styles.modalSearchRow}>
+                  <input
+                    className={styles.input}
+                    value={searchQuery}
+                    onChange={e => handleSearchChange(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleSearch(searchQuery)}
+                    placeholder="曲名で検索..."
+                    autoFocus
+                    autoComplete="off"
+                  />
+                  <button
+                    className={styles.modalSearchBtn}
+                    onClick={() => handleSearch(searchQuery)}
+                    disabled={!searchQuery.trim() || searching}
+                  >
+                    {searching
+                      ? <span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle' }} />
+                      : '🔍'
+                    }
+                  </button>
                 </div>
-              )}
-            </div>
-            <input
-              className={styles.input}
-              value={newArtist}
-              onChange={e => setNewArtist(e.target.value)}
-              placeholder="アーティスト名"
-            />
-            {selectedLyrics && (
-              <p className={styles.lyricsReady}>✅ 歌詞データあり（作成時に自動保存されます）</p>
+                {searched && !searching && suggestions.length === 0 && (
+                  <p style={{ color: '#555', fontSize: '0.85rem', margin: 0 }}>見つかりません</p>
+                )}
+                {suggestions.length > 0 && (
+                  <div className={styles.suggestionList}>
+                    {suggestions.map(item => (
+                      <button key={item.id} className={styles.suggestionItem} onClick={() => selectSuggestion(item)}>
+                        <span className={styles.suggestionTrack}>{item.trackName}</span>
+                        <span className={styles.suggestionMeta}>{item.artistName}{item.albumName ? ` / ${item.albumName}` : ''}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className={styles.modalDivider}>
+                  <span>または</span>
+                </div>
+                <button className={styles.manualBtn} onClick={goManualInput}>
+                  手動で曲名・アーティストを入力する
+                </button>
+                <button className={styles.cancelBtn} onClick={closeModal} style={{ alignSelf: 'center', fontSize: '0.85rem' }}>キャンセル</button>
+              </>
+            ) : (
+              <>
+                <h2 className={styles.modalTitle}>曲の情報を確認</h2>
+                {selectedLyrics && <p className={styles.lyricsReady}>✅ 歌詞データあり（作成時に自動保存）</p>}
+                <input
+                  className={styles.input}
+                  value={newTitle}
+                  onChange={e => setNewTitle(e.target.value)}
+                  placeholder="曲名（必須）"
+                  autoFocus
+                />
+                <input
+                  className={styles.input}
+                  value={newArtist}
+                  onChange={e => setNewArtist(e.target.value)}
+                  placeholder="アーティスト名"
+                />
+                <div className={styles.modalActions}>
+                  <button className={styles.cancelBtn} onClick={() => setStep('search')}>← 戻る</button>
+                  <button
+                    className={styles.submitBtn}
+                    onClick={createSong}
+                    disabled={!newTitle.trim() || creating}
+                  >
+                    {creating ? '作成中...' : '作成して編集'}
+                  </button>
+                </div>
+              </>
             )}
-            <div className={styles.modalActions}>
-              <button className={styles.cancelBtn} onClick={closeModal}>キャンセル</button>
-              <button
-                className={styles.submitBtn}
-                onClick={createSong}
-                disabled={!newTitle.trim() || creating}
-              >
-                {creating ? '作成中...' : '作成して編集'}
-              </button>
-            </div>
           </div>
         </div>
       )}
