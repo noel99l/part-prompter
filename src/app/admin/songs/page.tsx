@@ -222,8 +222,8 @@ export default function AdminSongsPage() {
                 </div>
               </div>
               <div className={styles.cardActions}>
-                <Link href={`/admin/${s.id}`} className={styles.editBtn}>✏️ 編集</Link>
-                <Link href={`/prompter/${s.id}`} className={styles.viewBtn} target="_blank">▶ 表示</Link>
+                <Link href={`/admin/${s.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
+                <Link href={`/prompter/${s.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
                 <button
                   className={styles.deleteBtn}
                   onClick={() => deleteSong(s.id)}
