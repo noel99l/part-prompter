@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import Loading from '@/components/Loading'
+import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
 const PALETTE = [
@@ -124,6 +124,7 @@ export default function LyricsEditor() {
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingArtist, setEditingArtist] = useState(false)
   const [memberSaving, setMemberSaving] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
   const [expandedLine, setExpandedLine] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -345,6 +346,11 @@ export default function LyricsEditor() {
     setExpandedLine(null)
   }
 
+  const showToast = (msg: string) => {
+    setToast(msg)
+    setTimeout(() => setToast(null), 2500)
+  }
+
   // ---- 歌詞保存 ----
   const saveLyrics = async () => {
     setSaving(true)
@@ -353,7 +359,7 @@ export default function LyricsEditor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(toDbFormat(lines, breaks)),
     })
-    setSaving(false); alert('歌詞を保存しました')
+    setSaving(false); showToast('パート分けを保存しました')
   }
 
   // ---- 表示ヘルパー ----
@@ -368,48 +374,30 @@ export default function LyricsEditor() {
     return { backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
   }
 
-  function GradientText({ text, memberIds, id }: { text: string; memberIds: number[]; id: string }) {
+  function GradientText({ text, memberIds }: { text: string; memberIds: number[]; id?: string }) {
     const colors = memberIds.map(mid => memberMap[mid]?.color || '#fff')
-    const gradientId = `grad-${id}`
-    const fontSize = 17, height = 28
+    const stops = colors.map((c, i) => `${c} ${(i / colors.length) * 100}%, ${c} ${((i + 1) / colors.length) * 100}%`).join(', ')
     return (
-      <svg className={styles.lyricSvg} height={height} style={{ overflow: 'visible', flex: 1 }}>
-        <defs>
-          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2={height} gradientUnits="userSpaceOnUse">
-            {colors.map((color, i) => (
-              <React.Fragment key={i}>
-                <stop offset={`${(i / colors.length) * 100}%`} stopColor={color} />
-                <stop offset={`${((i + 1) / colors.length) * 100}%`} stopColor={color} />
-              </React.Fragment>
-            ))}
-          </linearGradient>
-        </defs>
-        <text x="0" y={fontSize} fontSize={fontSize} fontFamily="'Hiragino Sans', sans-serif" fill={`url(#${gradientId})`}>{text}</text>
-      </svg>
+      <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{text}</span>
     )
   }
 
-  // 単語分割モードのテキスト表示
   function renderLineText(line: FlatLine, lineIdx: number) {
     if (line.word_members.length > 0) {
       return (
         <span className={styles.lyricText}>
           {line.word_members.map((w, wi) => {
             const isSpace = w.text === ' ' || w.text === '　'
-            if (isSpace) return <span key={wi} style={{ color: 'transparent' }}>{w.text}</span>
+            if (isSpace) return <span key={wi}>{w.text}</span>
             if (w.member_ids.length === 0) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
             if (w.member_ids.length === 1) return <span key={wi} style={{ color: memberMap[w.member_ids[0]]?.color || '#fff' }}>{w.text}</span>
-            return <GradientText key={wi} text={w.text} memberIds={w.member_ids} id={`w-${lineIdx}-${wi}`} />
+            return <GradientText key={wi} text={w.text} memberIds={w.member_ids} />
           })}
         </span>
       )
     }
     if (line.member_ids.length > 1) {
-      return (
-        <span className={styles.lyricText}>
-          <GradientText text={line.text} memberIds={line.member_ids} id={`${lineIdx}`} />
-        </span>
-      )
+      return <span className={styles.lyricText}><GradientText text={line.text} memberIds={line.member_ids} /></span>
     }
     return <span className={styles.lyricText} style={lineGradient(line.member_ids)}>{line.text}</span>
   }
@@ -490,10 +478,35 @@ export default function LyricsEditor() {
     )
   }
 
-  if (!song) return <Loading label="歌詞編集" />
+  if (!song) return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={skStyles.sk} style={{ width: 160, height: 28 }} />
+        <div className={skStyles.sk} style={{ width: 140, height: 20, marginLeft: 'auto' }} />
+      </div>
+      <div className={styles.tabs}>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className={skStyles.sk} style={{ width: 90, height: 36, borderRadius: '6px 6px 0 0' }} />
+        ))}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 600 }}>
+        <div className={skStyles.sk} style={{ width: '60%', height: 36, borderRadius: 8 }} />
+        <div className={skStyles.sk} style={{ width: '40%', height: 24, borderRadius: 8 }} />
+        <div className={skStyles.sk} style={{ width: '100%', height: 1, borderRadius: 0 }} />
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className={skStyles.sk} style={{ width: '100%', height: 64, borderRadius: 8 }} />
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.container} onPointerUp={handlePointerUp}>
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#222', border: '1px solid #444', color: '#fff', padding: '10px 20px', borderRadius: 8, fontSize: '0.9rem', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
+          <span style={{ color: '#7CFC00' }}>✓</span> {toast}
+        </div>
+      )}
       <div className={styles.header}>
         <h1 className={styles.title}>🎨 パート分け</h1>
         <div className={styles.headerActions}>
@@ -523,7 +536,7 @@ export default function LyricsEditor() {
                   autoFocus
                   style={{ flex: 1, fontSize: '1.3rem' }}
                 />
-                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? '...' : '✓'}</button>
+                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle' }} /> : '✓'}</button>
                 <button className={styles.cancelInlineBtn} onClick={() => { setEditTitle(song.title); setEditingTitle(false) }}>✕</button>
               </div>
             ) : (
@@ -543,7 +556,7 @@ export default function LyricsEditor() {
                   autoFocus
                   style={{ flex: 1 }}
                 />
-                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? '...' : '✓'}</button>
+                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle' }} /> : '✓'}</button>
                 <button className={styles.cancelInlineBtn} onClick={() => { setEditArtist(song.artist || ''); setEditingArtist(false) }}>✕</button>
               </div>
             ) : (
@@ -580,7 +593,9 @@ export default function LyricsEditor() {
           </div>
           <div className={styles.memberActions}>
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
-            <button className={styles.saveBtn} onClick={saveMembers} disabled={memberSaving}>{memberSaving ? '保存中...' : '💾 メンバーを保存'}</button>
+            <button className={styles.saveBtn} onClick={saveMembers} disabled={memberSaving}>
+              {memberSaving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 メンバーを保存'}
+            </button>
           </div>
         </div>
       )}
@@ -590,7 +605,9 @@ export default function LyricsEditor() {
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
             <input ref={fileRef} type="file" accept=".lrc,.txt" style={{ display: 'none' }} onChange={handleLrcImport} />
-            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>{saving ? '保存中...' : '💾 保存'}</button>
+            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>
+              {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 保存'}
+            </button>
           </div>
           <p className={styles.hint}>LRCテキストを直接編集できます。「パート分けに反映」でパート分けタブに反映されます。</p>
           <textarea
@@ -606,7 +623,9 @@ export default function LyricsEditor() {
       {tab === 'parts' && (
         <div className={styles.lyricsPanel}>
           <div className={styles.lyricsToolbar}>
-            <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>{saving ? '保存中...' : '💾 パート分けを保存'}</button>
+            <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>
+              {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 パート分けを保存'}
+            </button>
           </div>
           <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。行を長押しで単語ごとのパート分けができます。</p>
 

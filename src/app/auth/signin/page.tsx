@@ -9,8 +9,8 @@ function SignInContent() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#111', gap: '24px' }}>
-      <h1 style={{ color: '#fff', fontSize: '24px', margin: 0 }}>🎤 管理画面へのログイン</h1>
-      <p style={{ color: '#aaa', margin: 0 }}>Googleアカウントでログインしてください</p>
+      <h1 style={{ color: '#fff', fontSize: '24px', margin: 0 }}>🎤 Part Prompter</h1>
+      <p style={{ color: '#aaa', margin: 0, textAlign: 'center', lineHeight: '1.6' }}>歌詞プロンプター＆パート分け管理画面<br/>Googleアカウントでログインしてください</p>
       <button
         onClick={() => signIn('google', { callbackUrl })}
         style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#fff', color: '#333', border: 'none', borderRadius: '8px', padding: '12px 24px', fontSize: '16px', cursor: 'pointer', fontWeight: 'bold' }}

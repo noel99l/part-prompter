@@ -580,16 +580,12 @@
   font-size: 1.1rem;
   flex: 1;
   line-height: 1.6;
-  display: inline-block;
+  display: inline;
   padding: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
 }
 
-.lyricSvg {
-  flex: 1;
-  display: block;
-  overflow: visible;
-  height: 1.76rem;
-}
 
 .memberBadges {
   display: flex;

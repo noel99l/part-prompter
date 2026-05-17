@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import Loading from '@/components/Loading'
 import {
   DndContext,
   closestCenter,
@@ -19,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import styles from '../../page.module.css'
+import skStyles from '@/components/skeleton.module.css'
 
 interface Song { id: number; title: string; artist: string; sort_order: number }
 interface SearchResult { id: number; title: string; artist: string }
@@ -160,7 +160,32 @@ export default function PlaylistEditPage() {
     setEditingName(false)
   }
 
-  if (loading) return <Loading label="プレイリスト" />
+  if (loading) return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={skStyles.sk} style={{ width: 180, height: 28 }} />
+        <div className={skStyles.sk} style={{ width: 80, height: 20, marginLeft: 'auto' }} />
+      </div>
+      <div className={skStyles.sk} style={{ width: 260, height: 36, marginBottom: 24, borderRadius: 8 }} />
+      <div className={skStyles.sk} style={{ width: '100%', maxWidth: 700, height: 44, marginBottom: 24, borderRadius: 8 }} />
+      <div className={styles.list}>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className={styles.card}>
+            <div className={skStyles.sk} style={{ width: 20, height: 20, borderRadius: 4 }} />
+            <div className={skStyles.sk} style={{ width: 24, height: 18, borderRadius: 4 }} />
+            <div className={styles.cardInfo}>
+              <div className={skStyles.sk} style={{ width: '50%', height: 18, marginBottom: 8 }} />
+              <div className={skStyles.sk} style={{ width: '30%', height: 14 }} />
+            </div>
+            <div className={styles.cardActions}>
+              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 36, height: 32, borderRadius: 6 }} />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.container}>
