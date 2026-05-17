@@ -183,13 +183,17 @@ export default function AdminSongsPage() {
         {[...Array(5)].map((_, i) => (
           <div key={i} className={styles.card}>
             <div className={styles.cardInfo}>
-              <div className={skStyles.sk} style={{ width: '55%', height: 18, marginBottom: 8 }} />
-              <div className={skStyles.sk} style={{ width: '35%', height: 14 }} />
+              <div className={skStyles.sk} style={{ width: '55%', height: 18, marginBottom: 6 }} />
+              <div className={skStyles.sk} style={{ width: '35%', height: 13, marginBottom: 8 }} />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <div className={skStyles.sk} style={{ width: 52, height: 18, borderRadius: 99 }} />
+                <div className={skStyles.sk} style={{ width: 36, height: 18, borderRadius: 99 }} />
+              </div>
             </div>
             <div className={styles.cardActions}>
-              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 36, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
+              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
             </div>
           </div>
         ))}
@@ -286,7 +290,7 @@ export default function AdminSongsPage() {
                 <button className={styles.manualBtn} onClick={goManualInput}>
                   手動で曲名・アーティストを入力する
                 </button>
-                <button className={styles.cancelBtn} onClick={closeModal} style={{ alignSelf: 'center', fontSize: '0.85rem' }}>キャンセル</button>
+                <button className={styles.cancelBtn} onClick={closeModal} style={{ alignSelf: 'stretch', fontSize: '0.9rem', textAlign: 'center' }}>キャンセル</button>
               </>
             ) : (
               <>
