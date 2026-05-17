@@ -125,6 +125,7 @@ export default function LyricsEditor() {
   const [editingArtist, setEditingArtist] = useState(false)
   const [memberSaving, setMemberSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(true)
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
   const [expandedLine, setExpandedLine] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -633,7 +634,7 @@ export default function LyricsEditor() {
             <p className={styles.hint}>LRCファイルをインポートして歌詞を読み込んでください。</p>
           ) : (
             <div className={styles.editorLayout}>
-              <div className={styles.memberSelector}>
+            <div className={`${styles.memberSelector} ${drawerOpen ? styles.memberSelectorOpen : ''}`}>
                 <p className={styles.selectorTitle}>歌唱者を選択してから歌詞をなぞってください</p>
                 {members.length === 0 ? (
                   <p className={styles.hint}>先にメンバーを登録してください</p>
@@ -648,18 +649,26 @@ export default function LyricsEditor() {
                     ))}
                   </div>
                 )}
-                {checkedMemberIds.length > 0 && (
-                  <div className={styles.selectedPreview}>
+                <div className={styles.selectedPreview}>
                     選択中：
-                    {checkedMemberIds.map(id => (
-                      <span key={id} className={styles.selectedDot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
-                    ))}
+                    {checkedMemberIds.length > 0
+                      ? checkedMemberIds.map(id => (
+                          <span key={id} className={styles.selectedDot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
+                        ))
+                      : <span style={{ color: '#555', fontSize: '0.75rem' }}>なし</span>
+                    }
                   </div>
-                )}
                 <button className={styles.clearBtn} onClick={() => setCheckedMemberIds([])}>選択解除</button>
               </div>
 
               <div className={styles.blocksArea}>
+                <button
+                  className={styles.drawerToggleBtn}
+                  style={{ right: drawerOpen ? 220 : 0 }}
+                  onClick={() => setDrawerOpen(v => !v)}
+                >
+                  {drawerOpen ? '>' : '<'}
+                </button>
                 {lines.map((line, i) => (
                   <div key={i}>
                     {breaks.has(i) ? (

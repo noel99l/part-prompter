@@ -778,6 +778,18 @@
   border-color: #FF4444;
 }
 
+.drawerClose {
+  display: none;
+}
+
+.drawerToggleRow {
+  display: none;
+}
+
+.drawerToggleBtn {
+  display: none;
+}
+
 /* レスポンシブ */
 @media (max-width: 640px) {
   .container {
@@ -860,29 +872,58 @@
   }
 
   .memberSelector {
-    width: 100%;
+    width: 220px;
     position: fixed;
-    bottom: 0;
-    left: 0;
+    right: 0;
+    bottom: 32px;
     top: auto;
-    max-height: 40vh;
-    border-radius: 12px 12px 0 0;
+    max-height: 70vh;
+    border-radius: 12px 0 0 0;
     border: none;
-    border-top: 2px solid #FF69B4;
-    box-shadow: 0 -4px 24px rgba(0,0,0,0.7);
+    border-left: 2px solid #FF69B4;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.7);
     background: #161616;
-    z-index: 100;
+    z-index: 200;
     overflow-y: auto;
+    transition: transform 0.25s ease;
+    transform: translateX(100%);
+  }
+
+  .memberSelectorOpen {
+    transform: translateX(0);
+  }
+
+  .drawerClose {
+    display: none;
+  }
+
+  .drawerToggleRow {
+    display: none;
+  }
+
+  .drawerToggleBtn {
+    display: flex;
+    position: fixed;
+    right: 220px;
+    bottom: 32px;
+    z-index: 201;
+    background: #FF69B4;
+    border: none;
+    color: #fff;
+    font-size: 1rem;
+    width: 28px;
+    height: 44px;
+    border-radius: 8px 0 0 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    box-shadow: -2px 2px 8px rgba(0,0,0,0.5);
+    transition: right 0.25s ease;
   }
 
   .blocksArea {
     margin-left: 0;
-    margin-bottom: 220px;
-  }
-
-  .selectorList {
-    flex-direction: row;
-    flex-wrap: wrap;
+    margin-bottom: 0;
   }
 
   .lyricText {
