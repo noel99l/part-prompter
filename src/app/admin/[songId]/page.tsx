@@ -445,6 +445,8 @@ export default function LyricsEditor() {
     return <span className={styles.lyricText} style={lineGradient(line.member_ids)}>{line.text}</span>
   }
 
+  const hasTimestamp = useMemo(() => lines.some(l => l.timestamp_ms != null), [lines])
+
   const toggleMemberCheck = (id: number) =>
     setCheckedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
@@ -736,11 +738,13 @@ export default function LyricsEditor() {
                       onPointerUp={handleLineLongPressEnd}
                       onPointerCancel={handleLineLongPressEnd}
                     >
-                      <span className={styles.timestamp}>
-                        {line.timestamp_ms != null
-                          ? `${String(Math.floor(line.timestamp_ms / 60000)).padStart(2, '0')}:${String(Math.floor((line.timestamp_ms % 60000) / 1000)).padStart(2, '0')}`
-                          : '--:--'}
-                      </span>
+                      {hasTimestamp && (
+                        <span className={styles.timestamp}>
+                          {line.timestamp_ms != null
+                            ? `${String(Math.floor(line.timestamp_ms / 60000)).padStart(2, '0')}:${String(Math.floor((line.timestamp_ms % 60000) / 1000)).padStart(2, '0')}`
+                            : '--:--'}
+                        </span>
+                      )}
                       {renderLineText(line, i)}
                       {line.word_members.length > 0 && (
                         <span className={styles.wordModeIndicator} title="単語分割設定あり">✂</span>

@@ -137,6 +137,15 @@ export default function AdminSongsPage() {
       })
     }
 
+    await fetch(`/api/songs/${song.id}/members`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([
+        { name: '', color: '#FF4444', sort_order: 0 },
+        { name: '', color: '#1E90FF', sort_order: 1 },
+      ]),
+    })
+
     setCreating(false)
     setShowModal(false)
     setNewTitle('')
