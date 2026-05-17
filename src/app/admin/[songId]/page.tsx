@@ -128,7 +128,6 @@ export default function LyricsEditor() {
   const [lines, setLines] = useState<FlatLine[]>([])
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
-  const [isDragging, setIsDragging] = useState(false)
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'export'>('info')
   const [editTitle, setEditTitle] = useState('')
@@ -300,19 +299,13 @@ export default function LyricsEditor() {
 
   const handleLineLongPressStart = (e: React.PointerEvent, i: number) => {
     pointerStartPos.current = { x: e.clientX, y: e.clientY }
-    if (expandedLine === i) {
-      if (checkedMemberIds.length === 0) return
-      e.currentTarget.setPointerCapture(e.pointerId)
-      isDraggingRef.current = true; setIsDragging(true); assignMembers(i)
-      return
-    }
+    if (expandedLine === i) return
     longPressTimer.current = setTimeout(() => {
       longPressTimer.current = null
       toggleExpand(i)
     }, 500)
     if (checkedMemberIds.length > 0) {
-      e.currentTarget.setPointerCapture(e.pointerId)
-      isDraggingRef.current = true; setIsDragging(true); assignMembers(i)
+      isDraggingRef.current = true; assignMembers(i)
     }
   }
 
@@ -334,14 +327,19 @@ export default function LyricsEditor() {
           clearTimeout(longPressTimer.current)
           longPressTimer.current = null
         }
-        isDraggingRef.current = false; setIsDragging(false)
+        isDraggingRef.current = false
         pointerStartPos.current = null
       }
     }
     if (!isDraggingRef.current || expandedLine === i) return
     assignMembers(i)
   }
-  const handlePointerUp = () => { isDraggingRef.current = false; setIsDragging(false) }
+  const handlePointerUp = useCallback(() => { isDraggingRef.current = false }, [])
+
+  useEffect(() => {
+    document.addEventListener('pointerup', handlePointerUp)
+    return () => document.removeEventListener('pointerup', handlePointerUp)
+  }, [handlePointerUp])
 
   // ---- 単語分割モード ----
   const wordMembersSnapshot = useRef<WordMember[]>([])
@@ -546,7 +544,7 @@ export default function LyricsEditor() {
   )
 
   return (
-    <div className={styles.container} onPointerUp={handlePointerUp}>
+    <div className={styles.container}>
       {toast && (
         <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#222', border: '1px solid #444', color: '#fff', padding: '10px 20px', borderRadius: 8, fontSize: '0.9rem', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
           <span style={{ color: '#7CFC00' }}>✓</span> {toast}
@@ -732,11 +730,12 @@ export default function LyricsEditor() {
 
                     {/* 通常行 */}
                     <div
-                      className={`${styles.lyricLine} ${isDragging && checkedMemberIds.length > 0 ? styles.lyricLineDragging : ''} ${expandedLine === i ? styles.lyricLineExpanded : ''}`}
-                      onPointerDown={e => handleLineLongPressStart(e, i)}
-                      onPointerMove={e => handleLinePointerMove(e, i)}
-                      onPointerUp={handleLineLongPressEnd}
-                      onPointerCancel={handleLineLongPressEnd}
+                      className={`${styles.lyricLine} ${expandedLine === i ? styles.lyricLineExpanded : ''}`}
+                      style={expandedLine === i ? { touchAction: 'auto' } : undefined}
+                      onPointerDown={e => expandedLine === i ? undefined : handleLineLongPressStart(e, i)}
+                      onPointerMove={e => expandedLine === i ? undefined : handleLinePointerMove(e, i)}
+                      onPointerUp={expandedLine === i ? undefined : handleLineLongPressEnd}
+                      onPointerCancel={expandedLine === i ? undefined : handleLineLongPressEnd}
                     >
                       {hasTimestamp && (
                         <span className={styles.timestamp}>
@@ -774,21 +773,25 @@ export default function LyricsEditor() {
                         <div className={styles.wordPanelHint}>
                           <span>メンバーを選択して単語をクリックで割り当て</span>
                           <div className={styles.wordPanelActions}>
-                            <button className={styles.wordPanelClose} onClick={() => toggleExpand(i)}>✕ 閉じる</button>
-                            <button className={styles.wordPanelClear} onClick={() => clearWordMembers(i)}>単語分割を解除</button>
+                            <button className={styles.wordPanelClose} onClick={() => toggleExpand(i)}>✕</button>
+                            <button className={styles.wordPanelClear} onClick={() => clearWordMembers(i)}>解除</button>
                           </div>
                         </div>
                         <div className={styles.wordTokens}>
                           {line.word_members.map((w, wi) => {
                             const isSpace = w.text === ' ' || w.text === '　'
                             if (isSpace) return <span key={wi} className={styles.wordSpace}>{w.text}</span>
-                            const color = w.member_ids.length > 0 ? (memberMap[w.member_ids[0]]?.color || '#888') : '#444'
                             const hasAssign = w.member_ids.length > 0
+                            const colors = w.member_ids.map(id => memberMap[id]?.color || '#888')
+                            const borderColor = colors.length > 0 ? colors[0] : '#444'
+                            const textStyle: React.CSSProperties = colors.length > 1
+                              ? { backgroundImage: `linear-gradient(to bottom, ${colors.map((c, ci) => `${c} ${ci / colors.length * 100}%, ${c} ${(ci + 1) / colors.length * 100}%`).join(', ')})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
+                              : { color: hasAssign ? colors[0] : '#aaa' }
                             return (
                               <button
                                 key={wi}
                                 className={`${styles.wordToken} ${hasAssign ? styles.wordTokenAssigned : ''}`}
-                                style={{ borderColor: color, color: hasAssign ? color : '#aaa' }}
+                                style={{ borderColor, ...textStyle }}
                                 onClick={e => { e.stopPropagation(); assignWordMember(i, wi) }}
                                 onContextMenu={e => {
                                   e.preventDefault(); e.stopPropagation()
