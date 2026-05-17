@@ -558,7 +558,6 @@
   border-bottom: 1px solid #1a1a1a;
   transition: background 0.1s;
   user-select: none;
-  touch-action: none;
   -webkit-user-select: none;
 }
 
@@ -620,6 +619,7 @@
 .lyricLineExpanded {
   background: #1a1a2a !important;
   border-bottom: none;
+  touch-action: auto;
 }
 
 .wordModeIndicator {
@@ -633,6 +633,9 @@
   background: #12121e;
   border-bottom: 1px solid #1a1a1a;
   padding: 0.6rem 0.75rem 0.75rem;
+  touch-action: auto;
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 .wordPanelHint {
