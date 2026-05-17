@@ -265,7 +265,8 @@ export default function LyricsEditor() {
   // ---- 行ドラッグでメンバー割り当て ----
   const assignMembers = useCallback((i: number) => {
     if (checkedMemberIds.length === 0) return
-    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: [...checkedMemberIds] } : l))
+    const sorted = [...checkedMemberIds].sort((a, b) => a - b)
+    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: sorted } : l))
   }, [checkedMemberIds])
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
@@ -331,10 +332,11 @@ export default function LyricsEditor() {
 
   const assignWordMember = (lineIdx: number, wordIdx: number) => {
     if (checkedMemberIds.length === 0) return
+    const sorted = [...checkedMemberIds].sort((a, b) => a - b)
     setLines(prev => prev.map((l, i) => {
       if (i !== lineIdx) return l
       const wm = l.word_members.map((w, wi) =>
-        wi === wordIdx ? { ...w, member_ids: [...checkedMemberIds] } : w
+        wi === wordIdx ? { ...w, member_ids: sorted } : w
       )
       return { ...l, word_members: wm }
     }))
