@@ -94,8 +94,26 @@
   white-space: nowrap;
 }
 
+.tagRow {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.tagGray, .tagBlue, .tagGreen, .tagPink {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.tagGray  { background: #222; color: #666; }
+.tagBlue  { background: #1a2a3a; color: #6ab0f5; }
+.tagGreen { background: #1a2e1a; color: #7CFC00; }
+.tagPink  { background: #2a1a22; color: #FF69B4; }
+
 .artist {
-  font-size: 0.9rem;
   color: #888;
   margin-top: 0.2rem;
 }
