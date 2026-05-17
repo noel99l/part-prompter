@@ -282,21 +282,21 @@ export default function LyricsEditor() {
   }, [checkedMemberIds])
 
   const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const pointerStartPos = useRef<{ x: number; y: number } | null>(null)
+  const SCROLL_THRESHOLD = 8
 
   const handleLineLongPressStart = (e: React.PointerEvent, i: number) => {
-    // 展開済みの行はドラッグ割り当てのみ
+    pointerStartPos.current = { x: e.clientX, y: e.clientY }
     if (expandedLine === i) {
       if (checkedMemberIds.length === 0) return
       e.currentTarget.setPointerCapture(e.pointerId)
       isDraggingRef.current = true; setIsDragging(true); assignMembers(i)
       return
     }
-    // 長押タイマー開始
     longPressTimer.current = setTimeout(() => {
       longPressTimer.current = null
       toggleExpand(i)
     }, 500)
-    // 通常のドラッグも並行して開始
     if (checkedMemberIds.length > 0) {
       e.currentTarget.setPointerCapture(e.pointerId)
       isDraggingRef.current = true; setIsDragging(true); assignMembers(i)
@@ -308,8 +308,23 @@ export default function LyricsEditor() {
       clearTimeout(longPressTimer.current)
       longPressTimer.current = null
     }
+    pointerStartPos.current = null
   }
-  const handleLinePointerEnter = (i: number) => {
+
+  const handleLinePointerMove = (e: React.PointerEvent, i: number) => {
+    if (pointerStartPos.current) {
+      const dx = Math.abs(e.clientX - pointerStartPos.current.x)
+      const dy = Math.abs(e.clientY - pointerStartPos.current.y)
+      if (dy > SCROLL_THRESHOLD || dx > SCROLL_THRESHOLD) {
+        // スクロール判定：ドラッグ割り当てとタイマーをキャンセル
+        if (longPressTimer.current) {
+          clearTimeout(longPressTimer.current)
+          longPressTimer.current = null
+        }
+        isDraggingRef.current = false; setIsDragging(false)
+        pointerStartPos.current = null
+      }
+    }
     if (!isDraggingRef.current || expandedLine === i) return
     assignMembers(i)
   }
@@ -704,9 +719,9 @@ export default function LyricsEditor() {
                     <div
                       className={`${styles.lyricLine} ${isDragging && checkedMemberIds.length > 0 ? styles.lyricLineDragging : ''} ${expandedLine === i ? styles.lyricLineExpanded : ''}`}
                       onPointerDown={e => handleLineLongPressStart(e, i)}
+                      onPointerMove={e => handleLinePointerMove(e, i)}
                       onPointerUp={handleLineLongPressEnd}
                       onPointerCancel={handleLineLongPressEnd}
-                      onPointerEnter={() => handleLinePointerEnter(i)}
                     >
                       <span className={styles.timestamp}>
                         {line.timestamp_ms != null
