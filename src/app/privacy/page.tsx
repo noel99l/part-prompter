@@ -48,7 +48,7 @@ export default function PrivacyPage() {
 
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={h2}>5. データの保管・削除</h2>
-          <p style={p}>ユーザーデータはNeonのデータベースに保管されます。アカウントの削除を希望する場合は、管理者にお問い合わせください。</p>
+          <p style={p}>ユーザーデータはNeonのデータベースに保管されます。退会はアカウント設定ページから行えます。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
@@ -63,6 +63,12 @@ export default function PrivacyPage() {
 
         <p style={{ color: '#555', fontSize: '0.85rem', borderTop: '1px solid #222', paddingTop: '1.5rem', marginTop: '2rem' }}>
           PART-PROMPTER
+        </p>
+        <p style={{ color: '#555', fontSize: '0.85rem', marginTop: '0.75rem' }}>
+          お問い合わせ：
+          <a href="https://x.com/noel99l" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'none', marginLeft: '0.5rem' }}>X @noel99l</a>
+          <span style={{ margin: '0 0.5rem', color: '#333' }}>|</span>
+          <a href="https://github.com/noel99l" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'none' }}>GitHub @noel99l</a>
         </p>
       </div>
     </div>
