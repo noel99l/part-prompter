@@ -205,6 +205,12 @@ export default function AdminSongsPage() {
                 <div className={styles.songTitle}>{s.title}</div>
                 {s.artist && <div className={styles.artist}>{s.artist}</div>}
                 {s.created_by_name && <div className={styles.artist}>作成者: {s.created_by_name}</div>}
+                <div className={styles.tagRow}>
+                  {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+                  {parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 && <span className={styles.tagBlue}>テキスト</span>}
+                  {parseInt(s.timestamp_count) > 0 && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
+                  {parseInt(s.member_count) > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
+                </div>
               </div>
               <div className={styles.cardActions}>
                 <Link href={`/admin/${s.id}`} className={styles.editBtn}>✏️ 編集</Link>

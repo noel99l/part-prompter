@@ -34,7 +34,11 @@ function parseLrc(lrc: string): { lines: FlatLine[]; breaks: Set<number> } {
   const lines: FlatLine[] = []
   const breaks = new Set<number>()
   let prevWasEmpty = true
-  for (const raw of lrc.split('\n')) {
+
+  const rawLines = lrc.split('\n')
+  const hasTimestamp = rawLines.some(l => /^\[\d+:\d+[.::]\d+\]/.test(l.trim()))
+
+  for (const raw of rawLines) {
     const trimmed = raw.trim()
     const match = trimmed.match(/^\[(\d+):(\d+)[.:](\d+)\](.*)$/)
     if (match) {
@@ -44,6 +48,15 @@ function parseLrc(lrc: string): { lines: FlatLine[]; breaks: Set<number> } {
       if (prevWasEmpty && lines.length > 0) breaks.add(lines.length)
       lines.push({ text, member_ids: [], timestamp_ms: ms, word_members: [] })
       prevWasEmpty = false
+    } else if (!hasTimestamp) {
+      // プレーンテキストモード
+      if (trimmed === '') {
+        prevWasEmpty = true
+      } else {
+        if (prevWasEmpty && lines.length > 0) breaks.add(lines.length)
+        lines.push({ text: trimmed, member_ids: [], timestamp_ms: null, word_members: [] })
+        prevWasEmpty = false
+      }
     } else if (trimmed === '') {
       prevWasEmpty = true
     }
@@ -639,12 +652,12 @@ export default function LyricsEditor() {
               {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 保存'}
             </button>
           </div>
-          <p className={styles.hint}>LRCテキストを直接編集できます。「パート分けに反映」でパート分けタブに反映されます。</p>
+          <p className={styles.hint}>LRC形式またはプレーンテキスト（空行でブロック区切り）を貼り付けて保存してください。</p>
           <textarea
             className={styles.lrcEditor}
             value={lrcText}
             onChange={e => setLrcText(e.target.value)}
-            placeholder="[00:00.00]歌詞テキストをここに貼り付け..."
+            placeholder="LRC形式またはテキスト形式の歌詞を貼り付け..."
             spellCheck={false}
           />
         </div>
