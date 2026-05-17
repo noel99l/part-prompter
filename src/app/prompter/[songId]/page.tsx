@@ -198,7 +198,13 @@ export default function PrompterView() {
                 key={bi}
                 ref={el => { blockRefs.current[bi] = el }}
                 className={`${styles.scrollBlock} ${bi === currentBlock ? styles.scrollBlockActive : ''}`}
-                onClick={() => setCurrentBlock(bi)}
+                onClick={() => {
+                  if (isPlaying) {
+                    startLoop(bi)
+                  } else {
+                    setCurrentBlock(bi)
+                  }
+                }}
               >
                 {block.map(line => (
                   <div key={line.id} className={styles.scrollLine}>{renderLine(line)}</div>
