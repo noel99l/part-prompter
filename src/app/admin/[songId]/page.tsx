@@ -149,6 +149,16 @@ export default function LyricsEditor() {
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
+  useEffect(() => {
+    const validIds = new Set(members.map(m => m.id))
+    setCheckedMemberIds(prev => prev.filter(id => validIds.has(id)))
+    setLines(prev => prev.map(l => ({
+      ...l,
+      member_ids: l.member_ids.filter(id => validIds.has(id)),
+      word_members: l.word_members.map(w => ({ ...w, member_ids: w.member_ids.filter(id => validIds.has(id)) })),
+    })))
+  }, [members])
+
   // ---- メンバー操作 ----
   const saveMembersApi = async (newMembers: Member[]) => {
     setMemberSaving(true)
