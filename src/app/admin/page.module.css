@@ -116,6 +116,9 @@
 .artist {
   color: #888;
   margin-top: 0.2rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cardActions {
@@ -526,6 +529,9 @@
   font-family: 'Hiragino Sans', sans-serif;
 }
 
+.btnIcon { }
+.btnLabel { }
+
 @media (max-width: 600px) {
   .container {
     padding: 1rem;
@@ -565,6 +571,10 @@
   .editBtn, .viewBtn {
     padding: 0.35rem 0.6rem;
     font-size: 0.8rem;
+  }
+
+  .btnLabel {
+    display: none;
   }
 
   .modal {

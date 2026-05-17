@@ -54,6 +54,9 @@ export default function PrompterList() {
           ))}
         </div>
       )}
+      <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #111' }}>
+        <Link href="/privacy" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>プライバシーポリシー</Link>
+      </footer>
     </div>
   )
 }
