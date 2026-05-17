@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const members: { id?: number; name: string; color: string; sort_order: number }[] = await req.json()
 
   const existingResult = await query(`SELECT id FROM prompter_members WHERE song_id=$1`, [id])
-  const existingIds = new Set(existingResult.rows.map((r: { id: number }) => r.id))
+  const existingIds = new Set<number>(existingResult.rows.map((r: { id: number }) => r.id))
 
   const incomingIds = new Set(members.filter(m => m.id && m.id > 0).map(m => m.id!))
 
