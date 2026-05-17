@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams } from 'next/navigation'
-import Loading from '@/components/Loading'
+import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
 interface LyricLine {
@@ -153,7 +153,21 @@ export default function PrompterView() {
     return <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{line.text}</span>
   }
 
-  if (!song) return <Loading label="プロンプター" />
+  if (!song) return (
+    <div style={{ background: '#000', minHeight: '100vh', padding: '3vw 4vw', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div className={skStyles.sk} style={{ width: '60%', height: 'clamp(2.5rem, 6vw, 5rem)', borderRadius: 8 }} />
+      <div className={skStyles.sk} style={{ width: '35%', height: 'clamp(1.2rem, 3vw, 2rem)', borderRadius: 6 }} />
+      <div className={skStyles.sk} style={{ width: '100%', height: 4, borderRadius: 2, margin: '0.5rem 0' }} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem 2rem', marginTop: '0.5rem' }}>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <div className={skStyles.sk} style={{ width: 18, height: 18, borderRadius: 4 }} />
+            <div className={skStyles.sk} style={{ width: 80, height: 'clamp(1.2rem, 2.5vw, 1.8rem)', borderRadius: 6 }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <>
