@@ -237,23 +237,29 @@ export default function PrompterView() {
                 ))}
               </div>
               <div className={styles.separator} />
-              <div className={styles.nextBlock}>
-                {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
-                  <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
-                ))}
-              </div>
+              {currentBlock === blocks.length - 1 ? (
+                <div className={styles.nextBlock} style={{ opacity: 0.4, fontStyle: 'italic' }}>
+                  <div className={styles.nextLine}>― End ―</div>
+                </div>
+              ) : (
+                <div className={styles.nextBlock}>
+                  {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
+                    <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
+                  ))}
+                </div>
+              )}
             </>
           )
         )}
 
         <div className={styles.controls} onClick={e => e.stopPropagation()}>
-          <button className={styles.btn} onClick={handlePrev}>◀</button>
+          <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
           {hasTimestamp && (
             <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
               {isPlaying ? '⏸ Auto' : 'Auto'}
             </button>
           )}
-          <button className={styles.btn} onClick={handleNext}>▶</button>
+          <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
           <button className={styles.btn} onClick={() => {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {})
             else document.exitFullscreen?.()
