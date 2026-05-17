@@ -13,7 +13,7 @@ interface LyricLine {
   timestamp_ms: number | null
   word_members?: { text: string; member_id: number | null }[]
 }
-interface Member { id: number; name: string; color: string }
+interface Member { id: number; name: string; color: string; sort_order?: number }
 
 export default function PrompterView() {
   const { songId } = useParams<{ songId: string }>()
@@ -23,12 +23,18 @@ export default function PrompterView() {
   const [currentBlock, setCurrentBlock] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isPortrait, setIsPortrait] = useState(false)
+  const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number | null>(null)
 
   useEffect(() => {
     setIsMobile(/iphone|ipad|ipod|android/i.test(navigator.userAgent))
+    const update = () => setIsPortrait(window.innerHeight > window.innerWidth)
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
   }, [])
 
   useEffect(() => {
@@ -53,10 +59,17 @@ export default function PrompterView() {
     [members]
   )
 
+  const hasTimestamp = useMemo(() => lyrics.some(l => l.timestamp_ms != null), [lyrics])
+
   const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null })
 
   useEffect(() => { stateRef.current.blocks = blocks }, [blocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
+
+  useEffect(() => {
+    if (!isPortrait || currentBlock < 0) return
+    blockRefs.current[currentBlock]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [currentBlock, isPortrait])
 
   const stopLoop = () => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
@@ -148,47 +161,79 @@ export default function PrompterView() {
         <div style={{ fontSize: '3rem' }}>↺</div>
         <p style={{ fontSize: '1.1rem' }}>端末を横向きにしてください</p>
       </div>
-      <div className={styles.container} onClick={isMobile ? handleTap : undefined}>
-        {currentBlock === -1 ? (
-          <div className={styles.cover}>
-            <div className={styles.coverTitle}>{song.title}</div>
-            {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
-            <div className={styles.coverSeparator} />
-            <div className={styles.coverMembers}>
-              {members.map(m => (
-                <div key={m.id} className={styles.coverMember}>
-                  <span className={styles.coverMemberDot} style={{ background: m.color }} />
-                  <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name}</span>
+      <div className={styles.container} onClick={isMobile && !isPortrait ? handleTap : undefined}>
+        {isPortrait ? (
+          // 縦表示：全ブロックをスクロール表示
+          <div className={styles.scrollView}>
+            <div className={styles.scrollCover}>
+              <div className={styles.coverTitle}>{song.title}</div>
+              {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+              {members.length > 0 && (
+                <div className={styles.coverMembers}>
+                  {members.map((m, i) => (
+                    <div key={m.id} className={styles.coverMember}>
+                      <span className={styles.coverMemberDot} style={{ background: m.color }} />
+                      <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
+            {blocks.map((block, bi) => (
+              <div
+                key={bi}
+                ref={el => { blockRefs.current[bi] = el }}
+                className={`${styles.scrollBlock} ${bi === currentBlock ? styles.scrollBlockActive : ''}`}
+                onClick={() => setCurrentBlock(bi)}
+              >
+                {block.map(line => (
+                  <div key={line.id} className={styles.scrollLine}>{renderLine(line)}</div>
+                ))}
+              </div>
+            ))}
+            <div style={{ height: '40vw' }} />
           </div>
         ) : (
-          <>
-            <div className={styles.currentBlock}>
-              {(blocks[currentBlock] || []).map(line => (
-                <div key={line.id} className={styles.line}>{renderLine(line)}</div>
-              ))}
+          // 横表示：スライド表示
+          currentBlock === -1 ? (
+            <div className={styles.cover}>
+              <div className={styles.coverTitle}>{song.title}</div>
+              {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+              <div className={styles.coverSeparator} />
+              <div className={styles.coverMembers}>
+                {members.map((m, i) => (
+                  <div key={m.id} className={styles.coverMember}>
+                    <span className={styles.coverMemberDot} style={{ background: m.color }} />
+                    <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className={styles.separator} />
-            <div className={styles.nextBlock}>
-              {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
-                <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
-              ))}
-            </div>
-          </>
+          ) : (
+            <>
+              <div className={styles.currentBlock}>
+                {(blocks[currentBlock] || []).map(line => (
+                  <div key={line.id} className={styles.line}>{renderLine(line)}</div>
+                ))}
+              </div>
+              <div className={styles.separator} />
+              <div className={styles.nextBlock}>
+                {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
+                  <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
+                ))}
+              </div>
+            </>
+          )
         )}
 
         <div className={styles.controls} onClick={e => e.stopPropagation()}>
-          {!isMobile && (
-            <>
-              <button className={styles.btn} onClick={handlePrev}>◀</button>
-              <button className={styles.btn} onClick={handleNext}>▶▶</button>
-            </>
+          <button className={styles.btn} onClick={handlePrev}>◀</button>
+          {hasTimestamp && (
+            <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
+              {isPlaying ? '⏸ Auto' : 'Auto'}
+            </button>
           )}
-          <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
-            {isPlaying ? '⏸' : '▶'}
-          </button>
+          <button className={styles.btn} onClick={handleNext}>▶</button>
           <button className={styles.btn} onClick={() => {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {})
             else document.exitFullscreen?.()
