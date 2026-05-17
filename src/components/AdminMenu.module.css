@@ -75,15 +75,16 @@
 
 .logoutBtn {
   background: none;
-  border: 1px solid #333;
-  color: #888;
-  padding: 0.5rem 0.75rem;
+  border: none;
+  color: #ccc;
+  padding: 0.6rem 0.75rem;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   margin-top: 0.25rem;
   transition: background 0.15s;
   text-align: left;
+  width: 100%;
 }
 
 .logoutBtn:hover { background: #1a1a1a; color: #fff; }
