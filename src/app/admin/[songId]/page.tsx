@@ -159,27 +159,29 @@ export default function LyricsEditor() {
     })
     const saved: Member[] = await res.json()
 
-    // 仮ID（負の値）→本IDのマッピングのみ作成
     const idMap = new Map<number, number>()
     newMembers.forEach((old, i) => {
       if (old.id < 0 && saved[i]) idMap.set(old.id, saved[i].id)
     })
-
-    // 削除されたメンバーのIDセット
     const savedIds = new Set(saved.map(m => m.id))
-
     const remapIds = (ids: number[]) =>
-      ids
-        .map(id => idMap.get(id) ?? id)  // 仮IDのみ本IDに変換
-        .filter(id => savedIds.has(id))   // 削除されたメンバーのみ除外
+      ids.map(id => idMap.get(id) ?? id).filter(id => savedIds.has(id))
 
-    setLines(prev => prev.map(l => ({
+    const remappedLines = lines.map(l => ({
       ...l,
       member_ids: remapIds(l.member_ids),
       word_members: l.word_members.map(w => ({ ...w, member_ids: remapIds(w.member_ids) })),
-    })))
+    }))
+
+    setLines(remappedLines)
     setMembers(saved)
     setMemberSaving(false)
+
+    await fetch(`/api/songs/${songId}/lyrics`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(toDbFormat(remappedLines, breaks)),
+    })
   }
 
   const addMember = () => {
@@ -242,13 +244,13 @@ export default function LyricsEditor() {
 
   // LRCテキストを直接編集して保存＆反映
   const saveLrcAndApply = async () => {
-    applyLrcText(lrcText)
     setSaving(true)
     const { lines: fl, breaks: br } = parseLrc(lrcText)
     if (br.size === 0 && fl.length > 0) for (let i = 4; i < fl.length; i += 4) br.add(i)
     const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
     lines.forEach(l => { if (!existingMap.has(l.text)) existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members }) })
     const merged = fl.map(l => { const e = existingMap.get(l.text); return e ? { ...l, ...e } : l })
+    setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
