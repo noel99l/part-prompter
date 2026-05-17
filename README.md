@@ -117,3 +117,10 @@ HTTPS（自己署名証明書）で https://localhost:3000 で起動します。
 ## 仕様書
 
 詳細な仕様（URL構成・データモデル・APIフロー・コンポーネント構成）は [SPEC.md](./SPEC.md) を参照してください。
+
+## 開発者
+
+| | |
+|---|---|
+| GitHub | [@noel99l](https://github.com/noel99l) |
+| X (Twitter) | [@noel99l](https://x.com/noel99l) |
