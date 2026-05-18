@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
@@ -53,8 +54,8 @@ export default function PrompterList() {
       ) : (
         <div className={styles.list}>
           {filtered.map(s => (
-            <Link key={s.id} href={`/prompter/${s.id}/detail`} className={styles.card}>
-              <div className={styles.cardMain}>
+            <div key={s.id} className={styles.card}>
+              <Link href={`/prompter/${s.id}/detail`} className={styles.cardMain}>
                 <div className={styles.titleRow}>
                   <span className={styles.songTitle}>{s.title}</span>
                   {parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 && <span className={styles.tagBlue}>テキスト</span>}
@@ -62,13 +63,14 @@ export default function PrompterList() {
                   {parseInt(s.member_count) > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
                 </div>
                 {s.artist && <div className={styles.artist}>{s.artist}</div>}
-                {s.created_by_name && <div className={styles.createdBy}>✍️ {s.created_by_name}</div>}
                 <div className={styles.tagRow}>
                   {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+                  {s.created_by_name && <span className={styles.updatedAt}>✍️ {s.created_by_name}</span>}
                   {s.updated_at && <span className={styles.updatedAt}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
                 </div>
-              </div>
-            </Link>
+              </Link>
+              <AddToPlaylistMenu songId={s.id} />
+            </div>
           ))}
         </div>
       )}

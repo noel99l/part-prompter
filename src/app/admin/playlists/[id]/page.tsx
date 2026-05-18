@@ -21,7 +21,11 @@ import styles from '../../page.module.css'
 import skStyles from '@/components/skeleton.module.css'
 
 interface Song { id: number; title: string; artist: string; sort_order: number }
-interface SearchResult { id: number; title: string; artist: string }
+interface SearchResult {
+  id: number; title: string; artist: string
+  created_by_name?: string; updated_at?: string
+  lyric_count?: string; timestamp_count?: string; member_count?: string
+}
 
 function SortableItem({ song, index, total, onRemove }: {
   song: Song
@@ -72,12 +76,11 @@ export default function PlaylistEditPage() {
   const [saving, setSaving] = useState(false)
   const nameInputRef = useRef<HTMLInputElement>(null)
 
+  const [showAddModal, setShowAddModal] = useState(false)
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SearchResult[]>([])
   const [searching, setSearching] = useState(false)
-  const [showSuggestions, setShowSuggestions] = useState(false)
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
-  const suggestRef = useRef<HTMLDivElement>(null)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
@@ -87,18 +90,10 @@ export default function PlaylistEditPage() {
       .then(data => { setName(data.name); setDescription(data.description || ''); setSongs(data.songs || []); setLoading(false) })
   }, [id])
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (suggestRef.current && !suggestRef.current.contains(e.target as Node)) setShowSuggestions(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value)
     if (searchTimer.current) clearTimeout(searchTimer.current)
-    if (!value.trim()) { setSuggestions([]); setShowSuggestions(false); return }
+    if (!value.trim()) { setSuggestions([]); return }
     searchTimer.current = setTimeout(async () => {
       setSearching(true)
       try {
@@ -106,7 +101,6 @@ export default function PlaylistEditPage() {
         const data: SearchResult[] = await res.json()
         const addedIds = new Set(songs.map(s => s.id))
         setSuggestions(data.filter(s => !addedIds.has(s.id)))
-        setShowSuggestions(true)
       } catch {
         setSuggestions([])
       } finally {
@@ -124,7 +118,7 @@ export default function PlaylistEditPage() {
     const res = await fetch(`/api/playlists/${id}`)
     const data = await res.json()
     setSongs(data.songs || [])
-    setQuery(''); setSuggestions([]); setShowSuggestions(false)
+    setQuery(''); setSuggestions([]); setShowAddModal(false)
   }
 
   const removeSong = async (songId: number) => {
@@ -236,34 +230,50 @@ export default function PlaylistEditPage() {
         </div>
       </div>
 
-      <div className={styles.inputWrapper} ref={suggestRef} style={{ marginBottom: '24px', maxWidth: '700px' }}>
-        <input
-          className={styles.input}
-          value={query}
-          onChange={e => handleQueryChange(e.target.value)}
-          onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-          placeholder="曲名・アーティスト・歌詞で検索して追加..."
-          autoComplete="off"
-        />
-        {searching && <span className={styles.searchingIndicator}>検索中...</span>}
-        {showSuggestions && suggestions.length > 0 && (
-          <div className={styles.suggestions}>
-            {suggestions.map(s => (
-              <button key={s.id} className={styles.suggestionItem} onMouseDown={() => addSong(s.id)}>
-                <span className={styles.suggestionTrack}>{s.title}</span>
-                {s.artist && <span className={styles.suggestionMeta}>{s.artist}</span>}
-              </button>
-            ))}
-          </div>
-        )}
-        {showSuggestions && suggestions.length === 0 && !searching && (
-          <div className={styles.suggestions}>
-            <div className={styles.suggestionItem} style={{ color: '#666', cursor: 'default' }}>
-              <span className={styles.suggestionTrack}>該当する曲が見つかりません</span>
-            </div>
-          </div>
-        )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+        <button className={styles.createBtn} onClick={() => { setShowAddModal(true); setQuery(''); setSuggestions([]) }}>＋ 曲を追加</button>
       </div>
+
+      {showAddModal && (
+        <div className={styles.overlay} onClick={() => setShowAddModal(false)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>曲を追加</h2>
+            <div className={styles.modalSearchRow}>
+              <input
+                className={styles.input}
+                value={query}
+                onChange={e => handleQueryChange(e.target.value)}
+                placeholder="曲名・アーティスト・歌詞で検索..."
+                autoComplete="off"
+                autoFocus
+              />
+              {searching && (
+                <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+              )}
+            </div>
+            {suggestions.length > 0 ? (
+              <div className={styles.suggestionList}>
+                {suggestions.map(s => (
+                  <button key={s.id} className={styles.suggestionItem} onClick={() => addSong(s.id)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' as const }}>
+                      <span className={styles.suggestionTrack}>{s.title}</span>
+                      {parseInt(s.member_count ?? '0') > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
+                    </div>
+                    {s.artist && <span className={styles.suggestionMeta}>{s.artist}</span>}
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' as const, alignItems: 'center' }}>
+                      {s.created_by_name && <span className={styles.suggestionMeta}>✍️ {s.created_by_name}</span>}
+                      {s.updated_at && <span className={styles.suggestionMeta}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : query.trim() && !searching ? (
+              <p style={{ color: '#555', fontSize: '0.85rem', margin: 0 }}>該当する曲が見つかりません</p>
+            ) : null}
+            <button className={styles.cancelBtn} onClick={() => setShowAddModal(false)} style={{ alignSelf: 'stretch', textAlign: 'center' }}>キャンセル</button>
+          </div>
+        </div>
+      )}
 
       {songs.length === 0 ? (
         <p className={styles.empty}>曲が追加されていません。</p>
