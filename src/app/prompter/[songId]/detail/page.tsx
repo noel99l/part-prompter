@@ -81,13 +81,25 @@ export default function SongDetailPage() {
   }
 
   const buildCopyText = (): string => {
+    const getSymbol = (id: number): string => {
+      const idx = members.findIndex(m => m.id === id)
+      return idx >= 0 ? String.fromCharCode(65 + idx) : '?'
+    }
     const getLabel = (ids: number[]) => {
       if (!ids?.length) return '全員'
       if (ids.length === members.length && members.length > 0) return '全員'
-      return ids.map(id => memberMap[id]?.name || String.fromCharCode(65 + (members.findIndex(m => m.id === id)))).join('')
+      return ids.map(id => getSymbol(id)).join('')
     }
+    // ヘッダー
+    const header: string[] = []
+    if (song?.title) header.push(song.title)
+    if (song?.artist) header.push(song.artist)
+    const memberLine = members
+      .map((m, i) => m.name ? `${String.fromCharCode(65 + i)}:${m.name}` : null)
+      .filter(Boolean)
+      .join(' ')
+    const result: string[] = [...header, memberLine, '']
     const lines = [...lyrics].sort((a, b) => a.block_index - b.block_index || a.line_index - b.line_index)
-    const result: string[] = []
     let prevBlock = -1
     let prevLabel = ''
     lines.forEach(line => {
@@ -162,6 +174,25 @@ export default function SongDetailPage() {
 
   return (
     <div className={styles.container}>
+      <div className={styles.headerActions}>
+        <Link href={`/prompter/${songId}`} className={styles.prompterBtn}>▶ プロンプター</Link>
+        <div className={styles.menuWrapper} ref={menuRef}>
+          <button className={styles.menuBtn} onClick={() => setMenuOpen(v => !v)}>⋯</button>
+          {menuOpen && (
+            <div className={styles.menuDropdown}>
+              <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
+                {copied ? '✓ コピー済み' : '📋 パート分けをコピー'}
+              </button>
+              {session && (
+                <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
+                  {duplicating ? '複製中...' : '📋 複製して編集'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
       <div className={styles.header}>
         <div className={styles.headerTop}>
           <div className={styles.headerCenter}>
@@ -173,48 +204,20 @@ export default function SongDetailPage() {
               {lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagGreen}>タイムスタンプ</span>}
               {members.length > 0 && <span className={styles.tagPink}>👥 {members.length}</span>}
             </div>
-          </div>
-        </div>
-        <div className={styles.headerActions}>
-          <Link href={`/prompter/${songId}`} className={styles.prompterBtn}>▶ プロンプター</Link>
-          <div className={styles.menuWrapper} ref={menuRef}>
-            <button className={styles.menuBtn} onClick={() => setMenuOpen(v => !v)}>⋯</button>
-            {menuOpen && (
-              <div className={styles.menuDropdown}>
-                <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
-                  {copied ? '✓ コピー済み' : '📋 パート分けをコピー'}
-                </button>
-                {session && (
-                  <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
-                    {duplicating ? '複製中...' : '📋 複製して編集'}
-                  </button>
-                )}
+            {song.description && (
+              <p className={styles.description}>{song.description}</p>
+            )}
+            {members.length > 0 && (
+              <div className={styles.memberList}>
+                {members.map((m, i) => (
+                  <span key={m.id} className={styles.memberBadge} style={{ borderColor: m.color, color: m.color }}>
+                    {m.name || String.fromCharCode(65 + i)}
+                  </span>
+                ))}
               </div>
             )}
           </div>
         </div>
-      </div>
-
-      {/* 作者・メンバー */}
-      <div className={styles.infoSection}>
-        {song.description && (
-          <div className={styles.infoRow} style={{ alignItems: 'flex-start' }}>
-            <span className={styles.infoLabel}>概要</span>
-            <span className={styles.infoValue} style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: '#aaa' }}>{song.description}</span>
-          </div>
-        )}
-        {members.length > 0 && (
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>パート</span>
-            <div className={styles.memberList}>
-              {members.map((m, i) => (
-                <span key={m.id} className={styles.memberBadge} style={{ borderColor: m.color, color: m.color }}>
-                  {m.name || String.fromCharCode(65 + i)}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 歌詞 */}
