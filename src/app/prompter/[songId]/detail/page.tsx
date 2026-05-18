@@ -59,15 +59,11 @@ export default function SongDetailPage() {
     return map.filter(Boolean)
   }, [lyrics])
 
-  function lineColor(memberIds: number[]): React.CSSProperties {
-    if (!memberIds?.length) return { color: '#fff' }
-    if (memberIds.length === 1) return { color: memberMap[memberIds[0]]?.color || '#fff' }
-    const stops = memberIds.map((id, i) => {
-      const pct = 100 / memberIds.length
-      const color = memberMap[id]?.color || '#fff'
-      return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%`
-    }).join(', ')
-    return { backgroundImage: `linear-gradient(to right, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
+  function gradientStyle(ids: number[]): React.CSSProperties {
+    if (!ids?.length) return { color: '#fff' }
+    if (ids.length === 1) return { color: memberMap[ids[0]]?.color || '#fff' }
+    const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
+    return { backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
   }
 
   function renderLineText(line: LyricLine) {
@@ -76,19 +72,19 @@ export default function SongDetailPage() {
         <span>
           {line.word_members.map((w, wi) => {
             if (!w.member_ids?.length) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
-            return <span key={wi} style={lineColor(w.member_ids)}>{w.text}</span>
+            return <span key={wi} style={gradientStyle(w.member_ids)}>{w.text}</span>
           })}
         </span>
       )
     }
-    return <span style={lineColor(line.member_ids)}>{line.text}</span>
+    return <span style={gradientStyle(line.member_ids)}>{line.text}</span>
   }
 
   const buildCopyText = (): string => {
     const getLabel = (ids: number[]) => {
       if (!ids?.length) return '全員'
       if (ids.length === members.length && members.length > 0) return '全員'
-      return ids.map(id => memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))).join('')
+      return ids.map(id => memberMap[id]?.name || String.fromCharCode(65 + (members.findIndex(m => m.id === id)))).join('')
     }
     const lines = [...lyrics].sort((a, b) => a.block_index - b.block_index || a.line_index - b.line_index)
     const result: string[] = []
@@ -171,6 +167,12 @@ export default function SongDetailPage() {
           <div className={styles.headerCenter}>
             <h1 className={styles.title}>{song.title}</h1>
             {song.artist && <p className={styles.artist}>{song.artist}</p>}
+            <div className={styles.tagRow}>
+              {lyrics.length === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+              {lyrics.length > 0 && !lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagBlue}>テキスト</span>}
+              {lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
+              {members.length > 0 && <span className={styles.tagPink}>👥 {members.length}</span>}
+            </div>
           </div>
         </div>
         <div className={styles.headerActions}>
@@ -195,12 +197,6 @@ export default function SongDetailPage() {
 
       {/* 作者・メンバー */}
       <div className={styles.infoSection}>
-        {song.created_by_name && (
-          <div className={styles.infoRow}>
-            <span className={styles.infoLabel}>作者</span>
-            <span className={styles.infoValue}>{song.created_by_name}</span>
-          </div>
-        )}
         {song.description && (
           <div className={styles.infoRow} style={{ alignItems: 'flex-start' }}>
             <span className={styles.infoLabel}>概要</span>
@@ -211,9 +207,9 @@ export default function SongDetailPage() {
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>パート</span>
             <div className={styles.memberList}>
-              {members.map(m => (
+              {members.map((m, i) => (
                 <span key={m.id} className={styles.memberBadge} style={{ borderColor: m.color, color: m.color }}>
-                  {m.name}
+                  {m.name || String.fromCharCode(65 + i)}
                 </span>
               ))}
             </div>
@@ -236,7 +232,7 @@ export default function SongDetailPage() {
                 {line.member_ids?.length > 0 && line.word_members?.length === 0 && (
                   <span className={styles.lineBadges}>
                     {line.member_ids.map(id => (
-                      <span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
+                      <span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />
                     ))}
                   </span>
                 )}
@@ -244,6 +240,12 @@ export default function SongDetailPage() {
             ))}
           </div>
         ))}
+      </div>
+
+      {/* フッター */}
+      <div className={styles.footer}>
+        {song.created_by_name && <span>✗️ {song.created_by_name}</span>}
+        {song.updated_at && <span>🕒 {new Date(song.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>}
       </div>
     </div>
   )

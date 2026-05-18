@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
 import AdminMenu from '@/components/AppMenu'
+import SideNav from '@/components/SideNav'
 import styles from './layout.module.css'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </a>
         <AdminMenu accountName={accountName} />
       </header>
-      <main className={styles.main}>{children}</main>
+      <div className={styles.body}>
+        <aside className={styles.sidebar}>
+          <SideNav />
+        </aside>
+        <main className={styles.main}>{children}</main>
+      </div>
     </div>
   )
 }

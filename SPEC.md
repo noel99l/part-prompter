@@ -19,7 +19,7 @@ graph TD
   PROMPTER --> PROMPTER_PLAYLIST["/prompter/playlist/[id]\nプレイリストプロンプター"]
 
   ADMIN --> ADMIN_TOP["/admin\n管理トップ"]
-  ADMIN_TOP --> ADMIN_SONGS["/admin/songs\n楽曲管理"]
+  ADMIN_TOP --> ADMIN_SONGS["/admin/songs\nパート分け管理"]
   ADMIN_TOP --> ADMIN_PLAYLISTS["/admin/playlists\nプレイリスト管理"]
   ADMIN_TOP --> ADMIN_SETTINGS["/admin/settings\nアカウント設定"]
   ADMIN_SONGS --> ADMIN_SONG_EDIT["/admin/[songId]\n楽曲編集"]

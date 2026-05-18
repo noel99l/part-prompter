@@ -14,6 +14,10 @@
   justify-content: center;
 }
 
+@media (min-width: 768px) {
+  .hamburger { display: none; }
+}
+
 .bar {
   display: block;
   width: 24px;
