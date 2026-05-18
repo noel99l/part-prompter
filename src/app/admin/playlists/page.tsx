@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ItemMenu from '@/components/ItemMenu'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
@@ -92,14 +93,12 @@ export default function PlaylistsPage() {
             <div key={p.id} className={styles.card}>
               <div className={styles.cardInfo}>
                 <div className={styles.songTitle}>{p.name}</div>
-                {p.description && <div className={styles.descriptionTooltip}>{p.description}</div>}
+                {p.description && <div className={styles.artist}>{p.description}</div>}
               </div>
               <div className={styles.cardActions}>
                 <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
                 <Link href={`/prompter/playlist/${p.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
-                <button className={styles.deleteBtn} onClick={() => remove(p.id)} disabled={deletingId === p.id}>
-                  {deletingId === p.id ? '...' : '🗑️'}
-                </button>
+                <ItemMenu onDelete={() => remove(p.id)} />
               </div>
             </div>
           ))}

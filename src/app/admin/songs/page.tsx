@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
@@ -233,13 +234,7 @@ export default function AdminSongsPage() {
               <div className={styles.cardActions}>
                 <Link href={`/admin/${s.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
                 <Link href={`/prompter/${s.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
-                <button
-                  className={styles.deleteBtn}
-                  onClick={() => deleteSong(s.id)}
-                  disabled={deletingId === s.id}
-                >
-                  {deletingId === s.id ? '...' : '🗑️'}
-                </button>
+                <AddToPlaylistMenu songId={s.id} onDelete={() => deleteSong(s.id)} />
               </div>
             </div>
           ))}
