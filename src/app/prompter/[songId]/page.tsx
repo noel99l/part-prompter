@@ -222,6 +222,7 @@ export default function PrompterView() {
                 ))}
               </div>
             ))}
+            <div className={styles.scrollEnd}>― End ―</div>
             <div style={{ height: '40vw' }} />
           </div>
         ) : (
