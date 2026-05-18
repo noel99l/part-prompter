@@ -738,6 +738,13 @@ export default function LyricsEditor() {
                   style={{ right: drawerOpen ? 220 : 0 }}
                   onClick={() => setDrawerOpen(v => !v)}
                 >
+                  {checkedMemberIds.length > 0 && (
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
+                      {checkedMemberIds.map(id => (
+                        <span key={id} style={{ width: 10, height: 10, borderRadius: '50%', background: memberMap[id]?.color, display: 'block', flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.7)' }} />
+                      ))}
+                    </span>
+                  )}
                   {drawerOpen ? '>' : '<'}
                 </button>
                 {lines.map((line, i) => (
