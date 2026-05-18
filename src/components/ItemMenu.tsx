@@ -1,8 +1,11 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import styles from './ItemMenu.module.css'
 
-export default function ItemMenu({ onDelete }: { onDelete: () => void }) {
+interface MenuItem { label: string; href: string; target?: string }
+
+export default function ItemMenu({ onDelete, menuItems }: { onDelete: () => void; menuItems?: MenuItem[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -26,6 +29,12 @@ export default function ItemMenu({ onDelete }: { onDelete: () => void }) {
       <button className={styles.menuBtn} onClick={e => { e.stopPropagation(); setOpen(v => !v) }} title="メニュー">⋯</button>
       {open && (
         <div className={styles.dropdown}>
+          {menuItems?.map((item, i) => (
+            <Link key={i} href={item.href} target={item.target} className={styles.item} onClick={() => setOpen(false)}>
+              {item.label}
+            </Link>
+          ))}
+          {menuItems && menuItems.length > 0 && <div className={styles.divider} />}
           <button className={`${styles.item} ${styles.itemDanger}`} onClick={handleDelete}>
             🗑️ 削除
           </button>

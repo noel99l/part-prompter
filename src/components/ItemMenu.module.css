@@ -35,7 +35,7 @@
 .item {
   background: none;
   border: none;
-  color: #FF4444;
+  color: #ccc;
   padding: 0.55rem 0.75rem;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -43,6 +43,17 @@
   text-align: left;
   transition: background 0.15s;
   white-space: nowrap;
+  text-decoration: none;
+  display: block;
 }
 
-.item:hover { background: #1a0a0a; }
+.item:hover { background: #1a1a1a; color: #fff; }
+
+.itemDanger { color: #FF4444 !important; }
+.itemDanger:hover { background: #1a0a0a !important; }
+
+.divider {
+  height: 1px;
+  background: #222;
+  margin: 0.3rem 0;
+}

@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import SongCard from '@/components/SongCard'
+import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
@@ -185,23 +186,7 @@ export default function AdminSongsPage() {
         <div className={skStyles.sk} style={{ width: 100, height: 36, borderRadius: 8, marginLeft: 'auto' }} />
       </div>
       <div className={styles.list}>
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className={styles.card}>
-            <div className={styles.cardInfo}>
-              <div className={skStyles.sk} style={{ width: '55%', height: 18, marginBottom: 6 }} />
-              <div className={skStyles.sk} style={{ width: '35%', height: 13, marginBottom: 8 }} />
-              <div style={{ display: 'flex', gap: 6 }}>
-                <div className={skStyles.sk} style={{ width: 52, height: 18, borderRadius: 99 }} />
-                <div className={skStyles.sk} style={{ width: 36, height: 18, borderRadius: 99 }} />
-              </div>
-            </div>
-            <div className={styles.cardActions}>
-              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 32, height: 32, borderRadius: 6 }} />
-            </div>
-          </div>
-        ))}
+        <SongCardSkeleton count={5} showActions />
       </div>
     </div>
   )
