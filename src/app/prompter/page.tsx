@@ -24,7 +24,7 @@ export default function PrompterList() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>🎵 歌詞分け一覧</h1>
+      <h1 className={styles.title}>🎵 パート分け一覧</h1>
       <input
         className={styles.searchInput}
         value={query}

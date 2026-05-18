@@ -462,8 +462,8 @@ export default function LyricsEditor() {
     const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/prompter/${songId}/detail`
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <code style={{ background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#aaa', wordBreak: 'break-all' }}>{url}</code>
-        <button className={styles.saveBtn} onClick={async () => {
+        <code style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#aaa', wordBreak: 'break-all', flex: 1 }}>{url}</code>
+        <button className={styles.exportBtn} style={{ background: '#444' }} onClick={async () => {
           await navigator.clipboard.writeText(url)
           setCopied(true)
           setTimeout(() => setCopied(false), 2000)
@@ -477,23 +477,35 @@ export default function LyricsEditor() {
   function LyricsTextExport({ lines, breaks, members }: { lines: FlatLine[]; breaks: Set<number>; members: Member[] }) {
     const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
 
+    // メンバーIDをアルファベット記号に変換（A, B, C...）
+    const getSymbol = (id: number): string => {
+      const idx = members.findIndex(m => m.id === id)
+      return idx >= 0 ? String.fromCharCode(65 + idx) : '?'
+    }
+
     const getLabel = (memberIds: number[]): string => {
       if (!memberIds || memberIds.length === 0) return '全員'
       if (memberIds.length === members.length && members.length > 0) return '全員'
-      return memberIds.map(id => {
-        const m = memberMap[id]
-        if (!m) return '?'
-        return m.name || String.fromCharCode(65 + (m.sort_order ?? 0))
-      }).join('')
+      return memberIds.map(id => getSymbol(id)).join('')
     }
 
     const buildText = (): string => {
-      const result: string[] = []
+      // ヘッダー：曲名・アーティスト
+      const header: string[] = []
+      if (song?.title) header.push(song.title)
+      if (song?.artist) header.push(song.artist)
+      // メンバー一覧：A:名前 B:名前 ...（名前がないメンバーは除外）
+      const memberLine = members
+        .map((m, i) => m.name ? `${String.fromCharCode(65 + i)}:${m.name}` : null)
+        .filter(Boolean)
+        .join(' ')
+
+      const result: string[] = [...header, memberLine, '']
       let prevLabel = ''
       lines.forEach((line, i) => {
         if (i > 0 && breaks.has(i)) result.push('')
 
-        // word_membersがある場合は単語ごとに(パート名)テキストを構築
+        // word_membersがある場合は単語ごとに(記号)テキストを構築
         if (line.word_members.length > 0) {
           let text = ''
           let curLabel = ''
@@ -533,10 +545,10 @@ export default function LyricsEditor() {
 
     return (
       <div>
-        <button className={styles.saveBtn} onClick={handleCopy} style={{ marginBottom: '1rem' }}>
+        <button className={styles.exportBtn} style={{ background: '#444', marginBottom: '1rem' }} onClick={handleCopy}>
           {copied ? '✓ コピーしました' : '📋 テキストをコピー'}
         </button>
-        <pre style={{ background: '#111', border: '1px solid #222', borderRadius: '8px', padding: '1rem', color: '#ccc', fontSize: '0.85rem', lineHeight: '1.8', whiteSpace: 'pre-wrap', maxWidth: '600px', maxHeight: '60vh', overflowY: 'auto' }}>{text}</pre>
+        <pre style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '1rem', color: '#ccc', fontSize: '0.85rem', lineHeight: '1.8', whiteSpace: 'pre-wrap', maxWidth: '600px', maxHeight: '60vh', overflowY: 'auto' }}>{text}</pre>
       </div>
     )
   }
@@ -581,7 +593,7 @@ export default function LyricsEditor() {
         <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>📝 楽曲情報</button>
         <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>🎵 歌詞編集</button>
         <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>🎨 パート分け</button>
-        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力・共有</button>
+        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力</button>
       </div>
 
       {tab === 'info' && (
@@ -864,17 +876,28 @@ export default function LyricsEditor() {
 
       {tab === 'export' && (
         <div className={styles.membersPanel}>
-          <p className={styles.hint}>歌詞分けページのURLをコピーできます。</p>
-          <CopyUrlButton songId={songId} />
-          <hr className={styles.divider} />
-          <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
-          <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
-          <hr className={styles.divider} />
-          <p className={styles.hint}>パート分けをPDFとして出力します。</p>
-          <a href={`/admin/${songId}/print`} target="_blank" className={styles.exportBtn} style={{ background: '#e74c3c' }}>🖨️ PDF出力</a>
-          <hr className={styles.divider} />
-          <p className={styles.hint}>パート分けをテキスト形式でコピーできます。</p>
-          <LyricsTextExport lines={lines} breaks={breaks} members={members} />
+          {isPublic && (
+            <div className={styles.exportCard}>
+              <p className={styles.exportCardLabel}>🔗 共有URL</p>
+              <p className={styles.hint}>パート分けページのURLをコピーできます。</p>
+              <CopyUrlButton songId={songId} />
+            </div>
+          )}
+          <div className={styles.exportCard}>
+            <p className={styles.exportCardLabel}>📥 PPTX出力</p>
+            <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
+            <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
+          </div>
+          <div className={styles.exportCard}>
+            <p className={styles.exportCardLabel}>🖨️ PDF出力</p>
+            <p className={styles.hint}>パート分けをPDFとして出力します。</p>
+            <a href={`/admin/${songId}/print`} target="_blank" className={styles.exportBtn}>🖨️ PDF出力</a>
+          </div>
+          <div className={styles.exportCard}>
+            <p className={styles.exportCardLabel}>📝 テキストコピー</p>
+            <p className={styles.hint}>パート分けをテキスト形式でコピーできます。</p>
+            <LyricsTextExport lines={lines} breaks={breaks} members={members} />
+          </div>
         </div>
       )}
     </div>

@@ -180,7 +180,7 @@ export default function SongDetailPage() {
             {menuOpen && (
               <div className={styles.menuDropdown}>
                 <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
-                  {copied ? '✓ コピー済み' : '📋 歌詞分けをコピー'}
+                  {copied ? '✓ コピー済み' : '📋 パート分けをコピー'}
                 </button>
                 {session && (
                   <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
