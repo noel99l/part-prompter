@@ -283,10 +283,7 @@ export default function PrompterView() {
               if (next) router.push(`/prompter/${next.id}?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
             }} title="次の曲">⏭</button>
           )}
-          <button className={styles.btn} onClick={() => {
-            if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {})
-            else document.exitFullscreen?.()
-          }}>⛶</button>
+          {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}>⛶</button>}
         </div>
       </div>
     </>

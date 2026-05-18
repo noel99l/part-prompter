@@ -146,6 +146,15 @@
   }
 }
 
+.description {
+  color: #666;
+  font-size: 0.75rem;
+  margin-top: 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .updatedAt {
   font-size: 0.7rem;
   color: #555;

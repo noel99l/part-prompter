@@ -152,7 +152,7 @@ export default function SongDetailPage() {
         {[...Array(4)].map((_, bi) => (
           <div key={bi} className={styles.block}>
             {[...Array(3)].map((_, li) => (
-              <div key={li} className={skStyles.sk} style={{ width: `${70 + Math.random() * 25}%`, height: 16, borderRadius: 4 }} />
+              <div key={li} className={skStyles.sk} style={{ width: `${[75, 85, 70][li % 3]}%`, height: 16, borderRadius: 4 }} />
             ))}
           </div>
         ))}
@@ -170,7 +170,7 @@ export default function SongDetailPage() {
             <div className={styles.tagRow}>
               {lyrics.length === 0 && <span className={styles.tagGray}>歌詞なし</span>}
               {lyrics.length > 0 && !lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagBlue}>テキスト</span>}
-              {lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
+              {lyrics.some(l => l.timestamp_ms != null) && <span className={styles.tagGreen}>タイムスタンプ</span>}
               {members.length > 0 && <span className={styles.tagPink}>👥 {members.length}</span>}
             </div>
           </div>

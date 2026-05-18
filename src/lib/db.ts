@@ -40,15 +40,6 @@ export async function query(text: string, params?: any[], retries = 2): Promise<
 export async function initDb() {
   try {
     await query(`
-      CREATE TABLE IF NOT EXISTS admins (
-        id SERIAL PRIMARY KEY,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
-
-    await query(`
       CREATE TABLE IF NOT EXISTS prompter_songs (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -113,13 +104,6 @@ export async function initDb() {
       )
     `)
 
-    // デフォルト管理者（パスワード: admin123）
-    const bcrypt = require('bcrypt')
-    const hashedPassword = await bcrypt.hash('admin123', 10)
-    await query(
-      `INSERT INTO admins (email, password) VALUES ('admin@example.com', $1) ON CONFLICT (email) DO NOTHING`,
-      [hashedPassword]
-    )
   } catch (error) {
     console.error('Database initialization error:', error)
   }

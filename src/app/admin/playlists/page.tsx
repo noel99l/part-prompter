@@ -2,7 +2,9 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SongCard from '@/components/SongCard'
 import ItemMenu from '@/components/ItemMenu'
+import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
@@ -16,6 +18,8 @@ export default function PlaylistsPage() {
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [page, setPage] = useState(1)
+  const PER_PAGE = 20
 
   useEffect(() => { load() }, [])
 
@@ -88,21 +92,24 @@ export default function PlaylistsPage() {
       {playlists.length === 0 ? (
         <p className={styles.empty}>プレイリストがありません。「プレイリストを追加」から作成してください。</p>
       ) : (
-        <div className={styles.list}>
-          {playlists.map(p => (
-            <div key={p.id} className={styles.card}>
-              <div className={styles.cardInfo}>
-                <div className={styles.songTitle}>{p.name}</div>
-                {p.description && <div className={styles.artist}>{p.description}</div>}
-              </div>
-              <div className={styles.cardActions}>
-                <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
-                <Link href={`/prompter/playlist/${p.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
-                <ItemMenu onDelete={() => remove(p.id)} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className={styles.list}>
+            {playlists.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(p => (
+              <SongCard
+                key={p.id}
+                href={`/admin/playlists/${p.id}`}
+                title={p.name}
+                description={p.description}
+                actions={<>
+                  <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
+                  <Link href={`/prompter/playlist/${p.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
+                  <ItemMenu onDelete={() => remove(p.id)} />
+                </>}
+              />
+            ))}
+          </div>
+          <Pagination page={page} total={playlists.length} perPage={PER_PAGE} onChange={setPage} />
+        </>
       )}
 
       {showModal && (
