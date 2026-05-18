@@ -31,6 +31,14 @@
 
 .itemSub:hover { color: #aaa; }
 
+.sectionHeader {
+  color: #FF69B4;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.3rem 0.75rem 0.2rem;
+  letter-spacing: 0.05em;
+}
+
 .account {
   color: #666;
   font-size: 0.8rem;
