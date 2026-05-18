@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
+import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -21,6 +22,7 @@ export default function SongDetailPage() {
   const [members, setMembers] = useState<Member[]>([])
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [loading, setLoading] = useState(true)
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -68,19 +70,92 @@ export default function SongDetailPage() {
     return <span style={lineColor(line.member_ids)}>{line.text}</span>
   }
 
-  if (loading) return <Loading label="楽曲詳細" />
+  const buildCopyText = (): string => {
+    const getLabel = (ids: number[]) => {
+      if (!ids?.length) return '全員'
+      if (ids.length === members.length && members.length > 0) return '全員'
+      return ids.map(id => memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))).join('')
+    }
+    const lines = [...lyrics].sort((a, b) => a.block_index - b.block_index || a.line_index - b.line_index)
+    const result: string[] = []
+    let prevBlock = -1
+    let prevLabel = ''
+    lines.forEach(line => {
+      if (line.block_index !== prevBlock && prevBlock !== -1) result.push('')
+      prevBlock = line.block_index
+      if (line.word_members?.length) {
+        let text = ''
+        let curLabel = ''
+        line.word_members.forEach(w => {
+          const isSpace = w.text === ' ' || w.text === '　'
+          if (!isSpace) {
+            const label = getLabel(w.member_ids)
+            if (label !== curLabel) { text += `(${label})`; curLabel = label }
+          }
+          text += w.text
+        })
+        result.push(text); prevLabel = ''; return
+      }
+      const label = getLabel(line.member_ids)
+      const prefix = label !== prevLabel ? `(${label})` : ''
+      result.push(prefix ? `${prefix}${line.text}` : line.text)
+      prevLabel = label
+    })
+    return result.join('\n')
+  }
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(buildCopyText())
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (loading) return (
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <div className={styles.headerTop}>
+          <div className={styles.headerCenter}>
+            <div className={skStyles.sk} style={{ width: '60%', height: 28, marginBottom: 6, borderRadius: 6 }} />
+            <div className={skStyles.sk} style={{ width: '35%', height: 16, borderRadius: 6 }} />
+          </div>
+        </div>
+        <div className={styles.headerActions}>
+          <div className={skStyles.sk} style={{ width: 80, height: 34, borderRadius: 8 }} />
+          <div className={skStyles.sk} style={{ width: 100, height: 34, borderRadius: 8 }} />
+        </div>
+      </div>
+      <div className={styles.infoSection}>
+        <div className={skStyles.sk} style={{ width: '40%', height: 14, borderRadius: 4 }} />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+          {[...Array(3)].map((_, i) => <div key={i} className={skStyles.sk} style={{ width: 56, height: 24, borderRadius: 20 }} />)}
+        </div>
+      </div>
+      <div className={styles.lyrics}>
+        {[...Array(4)].map((_, bi) => (
+          <div key={bi} className={styles.block}>
+            {[...Array(3)].map((_, li) => (
+              <div key={li} className={skStyles.sk} style={{ width: `${70 + Math.random() * 25}%`, height: 16, borderRadius: 4 }} />
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/prompter" className={styles.backLink}>← 一覧</Link>
-        <div className={styles.headerCenter}>
-          <h1 className={styles.title}>{song.title}</h1>
-          {song.artist && <p className={styles.artist}>{song.artist}</p>}
+        <div className={styles.headerTop}>
+          <div className={styles.headerCenter}>
+            <h1 className={styles.title}>{song.title}</h1>
+            {song.artist && <p className={styles.artist}>{song.artist}</p>}
+          </div>
         </div>
         <div className={styles.headerActions}>
+          <button className={styles.copyBtn} onClick={handleCopy}>
+            {copied ? '✓ コピー済み' : '📋 コピー'}
+          </button>
           <Link href={`/prompter/${songId}`} className={styles.prompterBtn}>▶ プロンプター</Link>
-          <Link href={`/admin/${songId}`} className={styles.editBtn}>✏️ 編集</Link>
         </div>
       </div>
 
