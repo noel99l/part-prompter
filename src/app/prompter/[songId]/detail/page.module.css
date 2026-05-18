@@ -41,6 +41,7 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .copyBtn {
@@ -167,6 +168,25 @@
   font-size: 0.8rem;
 }
 
+.tagRow {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.4rem;
+}
+
+.tagGray, .tagBlue, .tagGreen, .tagPink {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.tagGray  { background: #222; color: #666; }
+.tagBlue  { background: #1a2a3a; color: #6ab0f5; }
+.tagGreen { background: #1a2e1a; color: #7CFC00; }
+.tagPink  { background: #2a1a22; color: #FF69B4; }
+
 .lyrics {
   max-width: 700px;
   display: flex;
@@ -211,6 +231,18 @@
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+}
+
+.footer {
+  max-width: 700px;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid #1a1a1a;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: #555;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 600px) {

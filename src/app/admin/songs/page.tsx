@@ -204,7 +204,7 @@ export default function AdminSongsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>🎤 楽曲管理</h1>
+        <h1 className={styles.title}>🎤 パート分け管理</h1>
         <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
       </div>
 

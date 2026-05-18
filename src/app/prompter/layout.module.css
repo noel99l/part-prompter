@@ -25,8 +25,32 @@
   text-decoration: none;
 }
 
+.body {
+  flex: 1;
+  display: flex;
+}
+
+.sidebar {
+  display: none;
+}
+
 .main {
   flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: block;
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid #1a1a1a;
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 49px;
+    height: calc(100vh - 49px);
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 600px) {

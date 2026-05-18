@@ -23,7 +23,7 @@ export default async function SongEditLayout({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', color: '#fff', gap: '1rem', fontFamily: 'Hiragino Sans, sans-serif' }}>
         <p style={{ fontSize: '1.2rem', color: '#888' }}>この楽曲を編集する権限がありません</p>
-        <a href="/admin/songs" style={{ color: '#FF69B4', textDecoration: 'none', fontSize: '0.95rem' }}>← 楽曲管理に戻る</a>
+        <a href="/admin/songs" style={{ color: '#FF69B4', textDecoration: 'none', fontSize: '0.95rem' }}>← パート分け管理に戻る</a>
       </div>
     )
   }
