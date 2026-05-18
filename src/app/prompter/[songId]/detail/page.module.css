@@ -57,6 +57,59 @@
 
 .copyBtn:hover { background: #222; }
 
+.menuWrapper {
+  position: relative;
+}
+
+.menuBtn {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.menuBtn:hover { background: #222; }
+
+.menuDropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-width: 180px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.menuItem {
+  background: none;
+  border: none;
+  color: #ccc;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.menuItem:hover:not(:disabled) { background: #1a1a1a; color: #fff; }
+.menuItem:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .prompterBtn {
   background: #FF69B4;
   color: #fff;
