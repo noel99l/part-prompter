@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
-import AdminMenu from '@/components/AdminMenu'
+import AdminMenu from '@/components/AppMenu'
 import styles from './layout.module.css'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
