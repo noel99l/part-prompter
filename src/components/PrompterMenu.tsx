@@ -28,7 +28,7 @@ export default function PrompterMenu() {
       {open && (
         <div className={styles.drawer}>
           <Link href="/prompter" className={styles.item} onClick={() => setOpen(false)}>
-            🎵 歌詞分け一覧
+            🎵 パート分け一覧
           </Link>
           {session ? (
             <>

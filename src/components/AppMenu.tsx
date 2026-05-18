@@ -46,7 +46,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
 
           <nav className={styles.nav}>
             <Link href="/prompter" className={`${styles.navItem} ${pathname === '/prompter' ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
-              🎵 歌詞分け一覧
+              🎵 パート分け一覧
             </Link>
 
             {isLoggedIn ? (
