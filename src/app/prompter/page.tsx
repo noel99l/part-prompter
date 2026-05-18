@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import SongCard from '@/components/SongCard'
+import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
@@ -32,7 +33,9 @@ export default function PrompterList() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>🎵 パート分け一覧</h1>
+      <div className={styles.header}>
+        <h1 className={styles.title}>🎵 パート分け一覧</h1>
+      </div>
       <input
         className={styles.searchInput}
         value={query}
@@ -42,19 +45,7 @@ export default function PrompterList() {
 
       {loading ? (
         <div className={styles.list}>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className={styles.card} style={{ pointerEvents: 'none' }}>
-              <div className={styles.cardMain}>
-                <div className={skStyles.sk} style={{ width: '55%', height: 16, marginBottom: 6 }} />
-                <div className={skStyles.sk} style={{ width: '35%', height: 13, marginBottom: 6 }} />
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <div className={skStyles.sk} style={{ width: 52, height: 18, borderRadius: 99 }} />
-                  <div className={skStyles.sk} style={{ width: 36, height: 18, borderRadius: 99 }} />
-                </div>
-              </div>
-              <div className={skStyles.sk} style={{ width: 48, height: 13, borderRadius: 4 }} />
-            </div>
-          ))}
+          <SongCardSkeleton count={5} showActions />
         </div>
       ) : filtered.length === 0 ? (
         <p className={styles.empty}>{query ? '該当する曲が見つかりません' : '曲が登録されていません'}</p>

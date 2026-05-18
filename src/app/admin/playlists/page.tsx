@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import SongCard from '@/components/SongCard'
+import SongCardSkeleton from '@/components/SongCardSkeleton'
 import ItemMenu from '@/components/ItemMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
@@ -65,19 +65,7 @@ export default function PlaylistsPage() {
         <div className={skStyles.sk} style={{ width: 140, height: 36, borderRadius: 8, marginLeft: 'auto' }} />
       </div>
       <div className={styles.list}>
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className={styles.card}>
-            <div className={styles.cardInfo}>
-              <div className={skStyles.sk} style={{ width: '50%', height: 18, marginBottom: 8 }} />
-              <div className={skStyles.sk} style={{ width: '30%', height: 14 }} />
-            </div>
-            <div className={styles.cardActions}>
-              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 60, height: 32, borderRadius: 6 }} />
-              <div className={skStyles.sk} style={{ width: 36, height: 32, borderRadius: 6 }} />
-            </div>
-          </div>
-        ))}
+        <SongCardSkeleton count={4} showActions showMeta={false} />
       </div>
     </div>
   )
@@ -100,11 +88,13 @@ export default function PlaylistsPage() {
                 href={`/admin/playlists/${p.id}`}
                 title={p.name}
                 description={p.description}
-                actions={<>
-                  <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
-                  <Link href={`/prompter/playlist/${p.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
-                  <ItemMenu onDelete={() => remove(p.id)} />
-                </>}
+                actions={<ItemMenu
+                  onDelete={() => remove(p.id)}
+                  menuItems={[
+                    { label: '✏️ 編集', href: `/admin/playlists/${p.id}` },
+                    { label: '▶ プレイリスト再生', href: `/prompter/playlist/${p.id}`, target: '_blank' },
+                  ]}
+                />}
               />
             ))}
           </div>
