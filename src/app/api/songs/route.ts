@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
           (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
         FROM prompter_songs s
         LEFT JOIN users u ON u.id = s.created_by
+        WHERE s.is_public = true
         ORDER BY s.created_at DESC
       `)
 

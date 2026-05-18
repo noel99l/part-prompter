@@ -215,13 +215,16 @@ export default function AdminSongsPage() {
           {songs.map(s => (
             <div key={s.id} className={styles.card}>
               <div className={styles.cardInfo}>
-                <div className={styles.songTitle}>{s.title}</div>
-                {s.artist && <div className={styles.artist}>{s.artist}</div>}
-                <div className={styles.tagRow}>
-                  {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+                <div className={styles.titleRow}>
+                  <span className={styles.songTitle}>{s.title}</span>
                   {parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 && <span className={styles.tagBlue}>テキスト</span>}
                   {parseInt(s.timestamp_count) > 0 && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
                   {parseInt(s.member_count) > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
+                </div>
+                {s.artist && <div className={styles.artist}>{s.artist}</div>}
+                <div className={styles.tagRow}>
+                  {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+                  {s.updated_at && <span className={styles.updatedAt}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
                 </div>
               </div>
               <div className={styles.cardActions}>

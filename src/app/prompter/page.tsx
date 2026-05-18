@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Loading from '@/components/Loading'
+import PrompterMenu from '@/components/PrompterMenu'
+import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
 export default function PrompterList() {
@@ -22,13 +23,11 @@ export default function PrompterList() {
     s.created_by_name?.toLowerCase().includes(query.toLowerCase())
   )
 
-  if (loading) return <Loading label="曲一覧" />
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>🎵 歌詞分け一覧</h1>
-        <Link href="/admin" className={styles.adminLink}>⚙️ 管理画面</Link>
+        <PrompterMenu />
       </div>
       <input
         className={styles.searchInput}
@@ -36,24 +35,48 @@ export default function PrompterList() {
         onChange={e => setQuery(e.target.value)}
         placeholder="曲名・アーティスト・作者で検索..."
       />
-      {filtered.length === 0 ? (
+
+      {loading ? (
+        <div className={styles.list}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className={styles.card} style={{ pointerEvents: 'none' }}>
+              <div className={styles.cardMain}>
+                <div className={skStyles.sk} style={{ width: '55%', height: 16, marginBottom: 6 }} />
+                <div className={skStyles.sk} style={{ width: '35%', height: 13, marginBottom: 6 }} />
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div className={skStyles.sk} style={{ width: 52, height: 18, borderRadius: 99 }} />
+                  <div className={skStyles.sk} style={{ width: 36, height: 18, borderRadius: 99 }} />
+                </div>
+              </div>
+              <div className={skStyles.sk} style={{ width: 48, height: 13, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
         <p className={styles.empty}>{query ? '該当する曲が見つかりません' : '曲が登録されていません'}</p>
       ) : (
         <div className={styles.list}>
           {filtered.map(s => (
             <Link key={s.id} href={`/prompter/${s.id}/detail`} className={styles.card}>
               <div className={styles.cardMain}>
-                <div className={styles.songTitle}>{s.title}</div>
+                <div className={styles.titleRow}>
+                  <span className={styles.songTitle}>{s.title}</span>
+                  {parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 && <span className={styles.tagBlue}>テキスト</span>}
+                  {parseInt(s.timestamp_count) > 0 && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
+                  {parseInt(s.member_count) > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
+                </div>
                 {s.artist && <div className={styles.artist}>{s.artist}</div>}
-              </div>
-              <div className={styles.cardMeta}>
-                {s.created_by_name && <span className={styles.metaItem}>✍️ {s.created_by_name}</span>}
-                {s.member_count > 0 && <span className={styles.metaItem}>👥 {s.member_count}人</span>}
+                {s.created_by_name && <div className={styles.createdBy}>✍️ {s.created_by_name}</div>}
+                <div className={styles.tagRow}>
+                  {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
+                  {s.updated_at && <span className={styles.updatedAt}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
+                </div>
               </div>
             </Link>
           ))}
         </div>
       )}
+
       <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #111', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <Link href="/privacy" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>プライバシーポリシー</Link>
         <span style={{ color: '#333', fontSize: '0.8rem' }}>|</span>
