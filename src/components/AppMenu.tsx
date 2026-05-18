@@ -6,7 +6,6 @@ import { useSession, signOut } from 'next-auth/react'
 import styles from './AdminMenu.module.css'
 
 const ADMIN_NAV = [
-  { href: '/admin', label: '🎛️ 管理トップ' },
   { href: '/admin/songs', label: '🎤 パート分け管理' },
   { href: '/admin/playlists', label: '📋 プレイリスト管理' },
   { href: '/admin/settings', label: '⚙️ アカウント設定' },
@@ -52,6 +51,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
             {isLoggedIn ? (
               <>
                 <div className={styles.navDivider} />
+                <div className={styles.navSectionHeader}>⚙️ 管理メニュー</div>
                 {ADMIN_NAV.map(item => (
                   <Link
                     key={item.href}

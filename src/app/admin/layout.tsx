@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </header>
       <div className={styles.body}>
         <aside className={styles.sidebar}>
-          <SideNav />
+          <SideNav accountName={accountName} />
         </aside>
         <main className={styles.main}>{children}</main>
       </div>

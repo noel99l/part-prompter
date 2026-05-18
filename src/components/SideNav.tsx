@@ -5,17 +5,16 @@ import { useSession, signOut } from 'next-auth/react'
 import styles from './SideNav.module.css'
 
 const ADMIN_NAV = [
-  { href: '/admin', label: '🎛️ 管理トップ' },
   { href: '/admin/songs', label: '🎤 パート分け管理' },
   { href: '/admin/playlists', label: '📋 プレイリスト管理' },
   { href: '/admin/settings', label: '⚙️ アカウント設定' },
 ]
 
-export default function SideNav() {
+export default function SideNav({ accountName }: { accountName?: string }) {
   const { data: session } = useSession()
   const pathname = usePathname()
   const isLoggedIn = !!session
-  const name = session?.user?.accountName
+  const name = accountName ?? session?.user?.accountName ?? null
 
   return (
     <nav className={styles.nav}>
@@ -26,6 +25,7 @@ export default function SideNav() {
       {isLoggedIn ? (
         <>
           <div className={styles.divider} />
+          <div className={styles.sectionHeader}>⚙️ 管理メニュー</div>
           {name && <div className={styles.account}>{name}</div>}
           {ADMIN_NAV.map(item => (
             <Link
