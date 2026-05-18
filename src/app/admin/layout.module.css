@@ -10,11 +10,18 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid #1a1a1a;
-  background: #0a0a0a;
+  border-bottom: 2px solid #FF69B4;
+  background: #0d0a0d;
   position: sticky;
   top: 0;
   z-index: 200;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
 }
 
 .logo {
@@ -23,6 +30,17 @@
   font-family: 'Hiragino Sans', sans-serif;
   font-weight: bold;
   text-decoration: none;
+}
+
+.badge {
+  background: #FF69B4;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
 .main {
