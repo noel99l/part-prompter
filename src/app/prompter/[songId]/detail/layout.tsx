@@ -3,6 +3,7 @@ export default function DetailLayout({ children }: { children: React.ReactNode }
     <>
       <style>{`
         header { display: flex !important; }
+        aside { display: block !important; }
       `}</style>
       {children}
     </>
