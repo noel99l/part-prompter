@@ -76,7 +76,7 @@ export default function AdminSongsPage() {
 
   const loadSongs = async () => {
     setLoading(true)
-    const res = await fetch('/api/songs')
+    const res = await fetch('/api/songs?mine=1')
     const data = await res.json()
     setSongs(Array.isArray(data) ? data : [])
     setLoading(false)
