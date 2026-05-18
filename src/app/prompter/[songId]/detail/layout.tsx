@@ -3,7 +3,10 @@ export default function DetailLayout({ children }: { children: React.ReactNode }
     <>
       <style>{`
         header { display: flex !important; }
-        aside { display: block !important; }
+        @media (min-width: 768px) {
+          aside { display: block !important; }
+          .hamburger { display: none !important; }
+        }
       `}</style>
       {children}
     </>
