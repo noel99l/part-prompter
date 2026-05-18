@@ -1,7 +1,8 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useState, useMemo, useRef } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import Loading from '@/components/Loading'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
@@ -18,11 +19,24 @@ interface LyricLine {
 
 export default function SongDetailPage() {
   const { songId } = useParams<{ songId: string }>()
+  const router = useRouter()
+  const { data: session } = useSession()
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -110,6 +124,14 @@ export default function SongDetailPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
+  const handleDuplicate = async () => {
+    setDuplicating(true)
+    const res = await fetch(`/api/songs/${songId}/duplicate`, { method: 'POST' })
+    const data = await res.json()
+    if (data.id) router.push(`/admin/${data.id}`)
+    else setDuplicating(false)
+  }
+
   if (loading) return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -120,8 +142,8 @@ export default function SongDetailPage() {
           </div>
         </div>
         <div className={styles.headerActions}>
-          <div className={skStyles.sk} style={{ width: 80, height: 34, borderRadius: 8 }} />
           <div className={skStyles.sk} style={{ width: 100, height: 34, borderRadius: 8 }} />
+          <div className={skStyles.sk} style={{ width: 36, height: 36, borderRadius: 8 }} />
         </div>
       </div>
       <div className={styles.infoSection}>
@@ -152,10 +174,22 @@ export default function SongDetailPage() {
           </div>
         </div>
         <div className={styles.headerActions}>
-          <button className={styles.copyBtn} onClick={handleCopy}>
-            {copied ? '✓ コピー済み' : '📋 コピー'}
-          </button>
           <Link href={`/prompter/${songId}`} className={styles.prompterBtn}>▶ プロンプター</Link>
+          <div className={styles.menuWrapper} ref={menuRef}>
+            <button className={styles.menuBtn} onClick={() => setMenuOpen(v => !v)}>⋯</button>
+            {menuOpen && (
+              <div className={styles.menuDropdown}>
+                <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
+                  {copied ? '✓ コピー済み' : '📋 歌詞分けをコピー'}
+                </button>
+                {session && (
+                  <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
+                    {duplicating ? '複製中...' : '📋 複製して編集'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
