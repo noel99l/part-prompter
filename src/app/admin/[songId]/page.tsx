@@ -821,6 +821,9 @@ export default function LyricsEditor() {
           <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
           <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
           <hr className={styles.divider} />
+          <p className={styles.hint}>パート分けをPDFとして出力します。</p>
+          <a href={`/admin/${songId}/print`} target="_blank" className={styles.exportBtn} style={{ background: '#e74c3c' }}>🖨️ PDF出力</a>
+          <hr className={styles.divider} />
           <p className={styles.hint}>パート分けをテキスト形式でコピーできます。</p>
           <LyricsTextExport lines={lines} breaks={breaks} members={members} />
         </div>
