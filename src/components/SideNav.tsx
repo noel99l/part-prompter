@@ -52,6 +52,7 @@ export default function SideNav() {
 
       <div className={styles.divider} />
       <Link href="/how-to-use" className={styles.itemSub}>HOW TO USE</Link>
+      <Link href="/terms" className={styles.itemSub}>利用規約</Link>
       <Link href="/privacy" className={styles.itemSub}>プライバシーポリシー</Link>
     </nav>
   )

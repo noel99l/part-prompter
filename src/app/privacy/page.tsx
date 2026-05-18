@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <Link href="/prompter" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>← 一覧に戻る</Link>
 
         <h1 style={{ color: '#fff', fontSize: '1.6rem', margin: '1.5rem 0 0.5rem' }}>プライバシーポリシー</h1>
-        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2025年1月</p>
+        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2025年6月</p>
 
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={h2}>1. 収集する情報</h2>

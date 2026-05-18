@@ -78,6 +78,8 @@ export default function PrompterList() {
       <footer style={{ marginTop: '3rem', paddingTop: '1rem', borderTop: '1px solid #111', display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
         <Link href="/privacy" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>プライバシーポリシー</Link>
         <span style={{ color: '#333', fontSize: '0.8rem' }}>|</span>
+        <Link href="/terms" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>利用規約</Link>
+        <span style={{ color: '#333', fontSize: '0.8rem' }}>|</span>
         <Link href="/how-to-use" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>HOW TO USE</Link>
         <span style={{ color: '#333', fontSize: '0.8rem' }}>|</span>
         <a href="https://x.com/noel99l" target="_blank" rel="noreferrer" style={{ color: '#555', fontSize: '0.8rem', textDecoration: 'none' }}>お問い合わせ: X @noel99l</a>
