@@ -16,7 +16,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <a href="/admin" className={styles.logo}>PART-PROMPTER</a>
+        <a href="/admin" className={styles.logoWrap}>
+          <span className={styles.logo}>PART-PROMPTER</span>
+          <span className={styles.badge}>管理</span>
+        </a>
         <AdminMenu accountName={accountName} />
       </header>
       <main className={styles.main}>{children}</main>
