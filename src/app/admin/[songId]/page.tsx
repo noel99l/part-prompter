@@ -457,6 +457,23 @@ export default function LyricsEditor() {
     return b
   }
 
+  function CopyUrlButton({ songId }: { songId: string }) {
+    const [copied, setCopied] = React.useState(false)
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/prompter/${songId}/detail`
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <code style={{ background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#aaa', wordBreak: 'break-all' }}>{url}</code>
+        <button className={styles.saveBtn} onClick={async () => {
+          await navigator.clipboard.writeText(url)
+          setCopied(true)
+          setTimeout(() => setCopied(false), 2000)
+        }}>
+          {copied ? '✓ コピー済み' : '📋 URLをコピー'}
+        </button>
+      </div>
+    )
+  }
+
   function LyricsTextExport({ lines, breaks, members }: { lines: FlatLine[]; breaks: Set<number>; members: Member[] }) {
     const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
 
@@ -564,7 +581,7 @@ export default function LyricsEditor() {
         <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>📝 楽曲情報</button>
         <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>🎵 歌詞編集</button>
         <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>🎨 パート分け</button>
-        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力</button>
+        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力・共有</button>
       </div>
 
       {tab === 'info' && (
@@ -847,6 +864,9 @@ export default function LyricsEditor() {
 
       {tab === 'export' && (
         <div className={styles.membersPanel}>
+          <p className={styles.hint}>歌詞分けページのURLをコピーできます。</p>
+          <CopyUrlButton songId={songId} />
+          <hr className={styles.divider} />
           <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
           <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
           <hr className={styles.divider} />

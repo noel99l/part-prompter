@@ -88,3 +88,9 @@
 }
 
 .logoutBtn:hover { background: #1a1a1a; color: #fff; }
+
+.navDivider {
+  height: 1px;
+  background: #222;
+  margin: 0.25rem 0;
+}

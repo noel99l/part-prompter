@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import PrompterMenu from '@/components/PrompterMenu'
+import AppMenu from '@/components/AppMenu'
 import styles from './layout.module.css'
 
 export default function PrompterLayout({ children }: { children: React.ReactNode }) {
@@ -7,7 +7,7 @@ export default function PrompterLayout({ children }: { children: React.ReactNode
     <div className={styles.root}>
       <header className={styles.header}>
         <Link href="/prompter" className={styles.logo}>PART-PROMPTER</Link>
-        <PrompterMenu />
+        <AppMenu />
       </header>
       <main className={styles.main}>{children}</main>
     </div>

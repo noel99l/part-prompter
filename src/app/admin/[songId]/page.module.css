@@ -447,10 +447,15 @@
   gap: 0.75rem;
 }
 
+.infoFormRow .metaInput,
+.infoFormRow .descriptionInput {
+  flex: 1;
+}
+
 .infoFormLabel {
   color: #666;
   font-size: 0.85rem;
-  min-width: 64px;
+  min-width: 80px;
   flex-shrink: 0;
 }
 
