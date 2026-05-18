@@ -1,10 +1,20 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import styles from './AddToPlaylistMenu.module.css'
 
 interface Playlist { id: number; name: string }
+interface MenuItem { label: string; href: string; target?: string }
 
-export default function AddToPlaylistMenu({ songId, onDelete }: { songId: number; onDelete?: () => void }) {
+export default function AddToPlaylistMenu({
+  songId,
+  onDelete,
+  menuItems,
+}: {
+  songId: number
+  onDelete?: () => void
+  menuItems?: MenuItem[]
+}) {
   const [open, setOpen] = useState(false)
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(false)
@@ -54,6 +64,16 @@ export default function AddToPlaylistMenu({ songId, onDelete }: { songId: number
       <button className={styles.menuBtn} onClick={handleOpen} title="メニュー">⋯</button>
       {open && (
         <div className={styles.dropdown}>
+          {menuItems && menuItems.length > 0 && (
+            <>
+              {menuItems.map((item, i) => (
+                <Link key={i} href={item.href} target={item.target} className={styles.item} onClick={() => setOpen(false)}>
+                  {item.label}
+                </Link>
+              ))}
+              <div className={styles.divider} />
+            </>
+          )}
           <div className={styles.label}>プレイリストに追加</div>
           {loading ? (
             <div className={styles.item} style={{ color: '#555' }}>読み込み中...</div>

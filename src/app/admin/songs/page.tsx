@@ -2,7 +2,9 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import SongCard from '@/components/SongCard'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
+import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
@@ -71,7 +73,9 @@ export default function AdminSongsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searched, setSearched] = useState(false)
   const [selectedLyrics, setSelectedLyrics] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
+  const PER_PAGE = 20
 
   useEffect(() => { loadSongs() }, [])
 
@@ -212,33 +216,31 @@ export default function AdminSongsPage() {
       {songs.length === 0 ? (
         <p className={styles.empty}>曲が登録されていません。「曲を追加」から登録してください。</p>
       ) : (
-        <div className={styles.list}>
-          {songs.map(s => (
-            <div key={s.id} className={styles.card}>
-              {s.description && (
-                <div className={styles.descriptionTooltip}>{s.description}</div>
-              )}
-              <div className={styles.cardInfo}>
-                <div className={styles.titleRow}>
-                  <span className={styles.songTitle}>{s.title}</span>
-                  {parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 && <span className={styles.tagBlue}>テキスト</span>}
-                  {parseInt(s.timestamp_count) > 0 && <span className={styles.tagGreen}>タイムスタンプ付き</span>}
-                  {parseInt(s.member_count) > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
-                </div>
-                {s.artist && <div className={styles.artist}>{s.artist}</div>}
-                <div className={styles.tagRow}>
-                  {parseInt(s.lyric_count) === 0 && <span className={styles.tagGray}>歌詞なし</span>}
-                  {s.updated_at && <span className={styles.updatedAt}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
-                </div>
-              </div>
-              <div className={styles.cardActions}>
-                <Link href={`/admin/${s.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>
-                <Link href={`/prompter/${s.id}`} className={styles.viewBtn} target="_blank"><span className={styles.btnIcon}>▶</span><span className={styles.btnLabel}> 表示</span></Link>
-                <AddToPlaylistMenu songId={s.id} onDelete={() => deleteSong(s.id)} />
-              </div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div className={styles.list}>
+            {songs.slice((page - 1) * PER_PAGE, page * PER_PAGE).map(s => (
+              <SongCard
+                key={s.id}
+                href={`/admin/${s.id}`}
+                title={s.title}
+                artist={s.artist}
+                description={s.description}
+                tags={[
+                  ...(parseInt(s.member_count) > 0 ? [{ label: `👥 ${s.member_count}`, type: 'pink' as const }] : []),
+                  ...(parseInt(s.lyric_count) > 0 && parseInt(s.timestamp_count) === 0 ? [{ label: 'テキスト', type: 'blue' as const }] : []),
+                  ...(parseInt(s.timestamp_count) > 0 ? [{ label: 'タイムスタンプ', type: 'green' as const }] : []),
+                  ...(parseInt(s.lyric_count) === 0 ? [{ label: '歌詞なし', type: 'gray' as const }] : []),
+                ]}
+                meta={s.updated_at ? [`🕒 ${new Date(s.updated_at).toLocaleString('ja-JP')}`] : []}
+                actions={<AddToPlaylistMenu songId={s.id} onDelete={() => deleteSong(s.id)} menuItems={[
+                  { label: '✏️ 編集', href: `/admin/${s.id}` },
+                  { label: '▶ プロンプター', href: `/prompter/${s.id}`, target: '_blank' },
+                ]} />}
+              />
+            ))}
+          </div>
+          <Pagination page={page} total={songs.length} perPage={PER_PAGE} onChange={setPage} />
+        </>
       )}
 
       {showModal && (
