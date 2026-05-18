@@ -5,7 +5,7 @@ import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '../page.module.css'
 
-interface Playlist { id: number; name: string; created_at: string; created_by_name?: string }
+interface Playlist { id: number; name: string; created_at: string; created_by_name?: string; description?: string }
 
 export default function PlaylistsPage() {
   const router = useRouter()
@@ -81,7 +81,7 @@ export default function PlaylistsPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>📋 プレイリスト管理</h1>
-        <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ プレイリストを追加</button>
+        <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋追加</button>
       </div>
 
       {playlists.length === 0 ? (
@@ -92,7 +92,7 @@ export default function PlaylistsPage() {
             <div key={p.id} className={styles.card}>
               <div className={styles.cardInfo}>
                 <div className={styles.songTitle}>{p.name}</div>
-                {p.created_by_name && <div className={styles.artist}>作成者: {p.created_by_name}</div>}
+                {p.description && <div className={styles.descriptionTooltip}>{p.description}</div>}
               </div>
               <div className={styles.cardActions}>
                 <Link href={`/admin/playlists/${p.id}`} className={styles.editBtn}><span className={styles.btnIcon}>✏️</span><span className={styles.btnLabel}> 編集</span></Link>

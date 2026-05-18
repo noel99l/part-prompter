@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useRef, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
@@ -17,6 +17,11 @@ interface Member { id: number; name: string; color: string; sort_order?: number 
 
 export default function PrompterView() {
   const { songId } = useParams<{ songId: string }>()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const playlistId = searchParams.get('playlist')
+  const playlistIndex = parseInt(searchParams.get('index') ?? '-1')
+  const playlistTotal = parseInt(searchParams.get('total') ?? '0')
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
@@ -24,6 +29,7 @@ export default function PrompterView() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isPortrait, setIsPortrait] = useState(false)
+  const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const rafRef = useRef<number | null>(null)
@@ -44,6 +50,11 @@ export default function PrompterView() {
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => { setSong(s); setMembers(m); setLyrics(l) })
   }, [songId])
+
+  useEffect(() => {
+    if (!playlistId) return
+    fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistSongs(data.songs || []))
+  }, [playlistId])
 
   const blocks = useMemo(() => {
     const map: LyricLine[][] = []
@@ -253,6 +264,12 @@ export default function PrompterView() {
         )}
 
         <div className={styles.controls} onClick={e => e.stopPropagation()}>
+          {playlistId && (
+            <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={() => {
+              const prev = playlistSongs[playlistIndex - 1]
+              if (prev) router.push(`/prompter/${prev.id}?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
+            }} title="前の曲">⏮</button>
+          )}
           <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
           {hasTimestamp && (
             <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
@@ -260,6 +277,12 @@ export default function PrompterView() {
             </button>
           )}
           <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
+          {playlistId && (
+            <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={() => {
+              const next = playlistSongs[playlistIndex + 1]
+              if (next) router.push(`/prompter/${next.id}?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
+            }} title="次の曲">⏭</button>
+          )}
           <button className={styles.btn} onClick={() => {
             if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {})
             else document.exitFullscreen?.()

@@ -17,8 +17,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { name } = await req.json()
-  const result = await query(`UPDATE playlists SET name=$1 WHERE id=$2 RETURNING *`, [name, id])
+  const { name, description } = await req.json()
+  const result = await query(`UPDATE playlists SET name=$1, description=$2 WHERE id=$3 RETURNING *`, [name, description ?? null, id])
   return NextResponse.json(result.rows[0])
 }
 
