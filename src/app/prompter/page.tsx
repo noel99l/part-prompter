@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import PrompterMenu from '@/components/PrompterMenu'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
@@ -25,10 +24,7 @@ export default function PrompterList() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h1 className={styles.title}>🎵 歌詞分け一覧</h1>
-        <PrompterMenu />
-      </div>
+      <h1 className={styles.title}>🎵 歌詞分け一覧</h1>
       <input
         className={styles.searchInput}
         value={query}

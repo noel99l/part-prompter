@@ -3,27 +3,21 @@
   background: #0a0a0a;
   color: #fff;
   font-family: 'Hiragino Sans', sans-serif;
-  padding: 1.5rem 2rem;
+  padding: 1.2rem 1.5rem;
   box-sizing: border-box;
 }
 
 .header {
+  margin-bottom: 1.5rem;
+}
+
+.headerTop {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
-
-.backLink {
-  color: #888;
-  text-decoration: none;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  padding-top: 0.3rem;
-}
-
-.backLink:hover { color: #fff; }
 
 .headerCenter {
   flex: 1;
@@ -31,134 +25,158 @@
 }
 
 .title {
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   margin: 0 0 0.2rem;
   color: #fff;
+  word-break: break-word;
 }
 
 .artist {
   color: #888;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .headerActions {
   display: flex;
   gap: 0.5rem;
-  flex-shrink: 0;
   align-items: center;
 }
+
+.copyBtn {
+  background: #1a1a1a;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.45rem 0.9rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.copyBtn:hover { background: #222; }
 
 .prompterBtn {
   background: #FF69B4;
   color: #fff;
   text-decoration: none;
-  padding: 0.5rem 1.2rem;
+  padding: 0.45rem 1rem;
   border-radius: 8px;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   white-space: nowrap;
   transition: opacity 0.2s;
 }
 
 .prompterBtn:hover { opacity: 0.85; }
 
-.editBtn {
-  background: #1a1a1a;
-  border: 1px solid #444;
-  color: #fff;
-  text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.editBtn:hover { background: #222; }
-
 .infoSection {
   background: #111;
   border: 1px solid #222;
   border-radius: 8px;
-  padding: 1rem 1.2rem;
-  margin-bottom: 2rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.5rem;
   max-width: 700px;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.6rem;
 }
 
 .infoRow {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
 .infoLabel {
   color: #666;
-  font-size: 0.85rem;
-  min-width: 40px;
+  font-size: 0.8rem;
+  min-width: 36px;
+  flex-shrink: 0;
 }
 
 .infoValue {
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
 }
 
 .memberList {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
 .memberBadge {
   border: 1px solid;
   border-radius: 20px;
-  padding: 0.2rem 0.8rem;
-  font-size: 0.85rem;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.8rem;
 }
 
 .lyrics {
   max-width: 700px;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .block {
   background: #111;
   border: 1px solid #1a1a1a;
   border-radius: 8px;
-  padding: 1rem 1.2rem;
+  padding: 0.85rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .line {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  font-size: 1rem;
+  gap: 0.5rem;
+  font-size: 0.95rem;
 }
 
 .timestamp {
   color: #444;
-  font-size: 0.75rem;
-  min-width: 36px;
+  font-size: 0.7rem;
+  min-width: 32px;
+  flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
 
 .lineBadges {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   margin-left: auto;
+  flex-shrink: 0;
 }
 
 .dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   display: inline-block;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 1rem;
+  }
+
+  .title {
+    font-size: 1.1rem;
+  }
+
+  .headerActions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .copyBtn, .prompterBtn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
 }
