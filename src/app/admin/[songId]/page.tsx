@@ -135,6 +135,8 @@ export default function LyricsEditor() {
   const [savingMeta, setSavingMeta] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingArtist, setEditingArtist] = useState(false)
+  const [editDescription, setEditDescription] = useState('')
+  const [savingDescription, setSavingDescription] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
   const [memberSaving, setMemberSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
@@ -151,7 +153,7 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setIsPublic(s.is_public !== false); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setMembers(m)
       if (Array.isArray(l) && l.length > 0) {
         const { lines: fl, breaks: br } = fromDbFormat(l)
         setLines(fl); setBreaks(br)
@@ -223,17 +225,17 @@ export default function LyricsEditor() {
 
   const saveMembers = async () => saveMembersApi(members)
 
-  const saveMeta = async () => {
+  const saveAll = async () => {
     setSavingMeta(true)
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic }),
+      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }),
     })
-    setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic }))
+    setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
+    await saveMembersApi(members)
     setSavingMeta(false)
-    setEditingTitle(false)
-    setEditingArtist(false)
+    showToast('保存しました')
   }
 
   // ---- LRCインポート ----
@@ -568,78 +570,66 @@ export default function LyricsEditor() {
       {tab === 'info' && (
         <div className={styles.membersPanel}>
           {/* 楽曲情報 */}
-          <div className={styles.metaSection}>
-            {/* 曲名 */}
-            {editingTitle ? (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '4px' }}>
-                <input
-                  className={styles.metaInput}
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') saveMeta(); if (e.key === 'Escape') setEditingTitle(false) }}
-                  autoFocus
-                  style={{ flex: 1, fontSize: '1.3rem' }}
+          <div className={styles.infoForm}>
+            <div className={styles.infoFormRow}>
+              <label className={styles.infoFormLabel}>曲名</label>
+              <input
+                className={styles.metaInput}
+                value={editTitle}
+                onChange={e => setEditTitle(e.target.value)}
+                placeholder="曲名"
+              />
+            </div>
+            <div className={styles.infoFormRow}>
+              <label className={styles.infoFormLabel}>アーティスト</label>
+              <input
+                className={styles.metaInput}
+                value={editArtist}
+                onChange={e => setEditArtist(e.target.value)}
+                placeholder="アーティスト名"
+              />
+            </div>
+            <div className={styles.infoFormRow} style={{ alignItems: 'flex-start' }}>
+              <label className={styles.infoFormLabel} style={{ paddingTop: '0.5rem' }}>概要</label>
+              <div style={{ flex: 1 }}>
+                <textarea
+                  className={styles.descriptionInput}
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value.slice(0, 200))}
+                  placeholder="概要（200文字まで）"
+                  rows={3}
                 />
-                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle' }} /> : '✓'}</button>
-                <button className={styles.cancelInlineBtn} onClick={() => { setEditTitle(song.title); setEditingTitle(false) }}>✕</button>
+                <div style={{ textAlign: 'right', fontSize: '0.75rem', color: editDescription.length >= 200 ? '#FF4444' : '#555', marginTop: '4px' }}>
+                  {editDescription.length}/200
+                </div>
               </div>
-            ) : (
-              <button className={styles.inlineEditBtn} onClick={() => setEditingTitle(true)}>
-                <span className={styles.inlineEditBtnTitle}>{editTitle || '曲名未設定'}</span>
-                <span className={styles.inlineEditIcon}>✎</span>
-              </button>
-            )}
-            {/* アーティスト */}
-            {editingArtist ? (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <input
-                  className={styles.metaInput}
-                  value={editArtist}
-                  onChange={e => setEditArtist(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') saveMeta(); if (e.key === 'Escape') setEditingArtist(false) }}
-                  autoFocus
-                  style={{ flex: 1 }}
-                />
-                <button className={styles.saveBtn} onClick={saveMeta} disabled={savingMeta}>{savingMeta ? <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle' }} /> : '✓'}</button>
-                <button className={styles.cancelInlineBtn} onClick={() => { setEditArtist(song.artist || ''); setEditingArtist(false) }}>✕</button>
-              </div>
-            ) : (
-              <button className={styles.inlineEditBtn} onClick={() => setEditingArtist(true)}>
-                <span className={styles.inlineEditBtnArtist}>{editArtist || 'アーティスト未設定'}</span>
-                <span className={styles.inlineEditIcon}>✎</span>
-              </button>
-            )}
+            </div>
+            <div className={styles.infoFormRow}>
+              <label className={styles.infoFormLabel}>公開</label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsPublic(v => !v)}
+                  style={{
+                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                    background: isPublic ? '#7CFC00' : '#444',
+                    position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                  }}
+                >
+                  <span style={{
+                    position: 'absolute', top: 2, left: isPublic ? 22 : 2,
+                    width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                    transition: 'left 0.2s', display: 'block',
+                  }} />
+                </button>
+                <span style={{ color: '#888', fontSize: '0.85rem' }}>
+                  {isPublic ? '一覧に公開' : '一覧に表示しない'}
+                </span>
+              </label>
+            </div>
           </div>
           <hr className={styles.divider} />
-          {/* 公開設定 */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '1rem' }}>
-            <button
-              onClick={async () => {
-                const next = !isPublic
-                setIsPublic(next)
-                await fetch(`/api/songs/${songId}`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: next }),
-                })
-              }}
-              style={{
-                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                background: isPublic ? '#7CFC00' : '#444',
-                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
-              }}
-            >
-              <span style={{
-                position: 'absolute', top: 2, left: isPublic ? 22 : 2,
-                width: 20, height: 20, borderRadius: '50%', background: '#fff',
-                transition: 'left 0.2s', display: 'block',
-              }} />
-            </button>
-            <span style={{ color: '#888', fontSize: '0.85rem' }}>
-              {isPublic ? '一覧に公開' : '一覧に表示しない'}
-            </span>
-          </label>
-          <hr className={styles.divider} />
+          {/* メンバー設定 */}
           <p className={styles.hint}>最大10名まで登録できます。色はパレットから選択してください。</p>
           <div className={styles.memberList}>
             {members.map((m, i) => (
@@ -665,8 +655,11 @@ export default function LyricsEditor() {
           </div>
           <div className={styles.memberActions}>
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
-            <button className={styles.saveBtn} onClick={saveMembers} disabled={memberSaving}>
-              {memberSaving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 メンバーを保存'}
+          </div>
+          <hr className={styles.divider} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button className={styles.saveBtn} onClick={saveAll} disabled={savingMeta}>
+              {savingMeta ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 保存'}
             </button>
           </div>
         </div>

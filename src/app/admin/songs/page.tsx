@@ -214,6 +214,9 @@ export default function AdminSongsPage() {
         <div className={styles.list}>
           {songs.map(s => (
             <div key={s.id} className={styles.card}>
+              {s.description && (
+                <div className={styles.descriptionTooltip}>{s.description}</div>
+              )}
               <div className={styles.cardInfo}>
                 <div className={styles.titleRow}>
                   <span className={styles.songTitle}>{s.title}</span>
