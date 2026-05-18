@@ -113,6 +113,19 @@
 .tagGreen { background: #1a2e1a; color: #7CFC00; }
 .tagPink  { background: #2a1a22; color: #FF69B4; }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.updatedAt {
+  font-size: 0.7rem;
+  color: #555;
+  white-space: nowrap;
+}
+
 .artist {
   color: #888;
   margin-top: 0.2rem;

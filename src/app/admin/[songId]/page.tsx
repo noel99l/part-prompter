@@ -135,6 +135,7 @@ export default function LyricsEditor() {
   const [savingMeta, setSavingMeta] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingArtist, setEditingArtist] = useState(false)
+  const [isPublic, setIsPublic] = useState(true)
   const [memberSaving, setMemberSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
@@ -150,7 +151,7 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setIsPublic(s.is_public !== false); setMembers(m)
       if (Array.isArray(l) && l.length > 0) {
         const { lines: fl, breaks: br } = fromDbFormat(l)
         setLines(fl); setBreaks(br)
@@ -227,9 +228,9 @@ export default function LyricsEditor() {
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist }),
+      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic }),
     })
-    setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist }))
+    setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic }))
     setSavingMeta(false)
     setEditingTitle(false)
     setEditingArtist(false)
@@ -610,7 +611,35 @@ export default function LyricsEditor() {
             )}
           </div>
           <hr className={styles.divider} />
-          {/* メンバー設定 */}
+          {/* 公開設定 */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '1rem' }}>
+            <button
+              onClick={async () => {
+                const next = !isPublic
+                setIsPublic(next)
+                await fetch(`/api/songs/${songId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: next }),
+                })
+              }}
+              style={{
+                width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                background: isPublic ? '#7CFC00' : '#444',
+                position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+              }}
+            >
+              <span style={{
+                position: 'absolute', top: 2, left: isPublic ? 22 : 2,
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                transition: 'left 0.2s', display: 'block',
+              }} />
+            </button>
+            <span style={{ color: '#888', fontSize: '0.85rem' }}>
+              {isPublic ? '一覧に公開' : '一覧に表示しない'}
+            </span>
+          </label>
+          <hr className={styles.divider} />
           <p className={styles.hint}>最大10名まで登録できます。色はパレットから選択してください。</p>
           <div className={styles.memberList}>
             {members.map((m, i) => (

@@ -81,6 +81,7 @@ export async function initDb() {
     `)
 
     await query(`ALTER TABLE prompter_lyrics ADD COLUMN IF NOT EXISTS word_members JSONB DEFAULT '[]'`)
+    await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT true`)
 
     await query(`
       CREATE TABLE IF NOT EXISTS users (

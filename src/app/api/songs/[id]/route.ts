@@ -15,10 +15,10 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const { title, artist } = await req.json()
+  const { title, artist, is_public } = await req.json()
   const result = await query(
-    `UPDATE prompter_songs SET title=$1, artist=$2 WHERE id=$3 RETURNING *`,
-    [title, artist, id]
+    `UPDATE prompter_songs SET title=$1, artist=$2, is_public=$3, updated_at=(NOW() AT TIME ZONE 'Asia/Tokyo') WHERE id=$4 RETURNING *`,
+    [title, artist, is_public ?? true, id]
   )
   return NextResponse.json(result.rows[0])
 }

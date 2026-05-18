@@ -69,19 +69,47 @@
   font-size: 0.85rem;
   color: #888;
   margin-top: 0.1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.cardMeta {
-  display: flex;
-  gap: 0.75rem;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.metaItem {
-  font-size: 0.85rem;
+.createdBy {
+  font-size: 0.8rem;
   color: #666;
+  margin-top: 0.1rem;
+}
+
+.tagRow {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.tagGray, .tagBlue, .tagGreen, .tagPink {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+
+.tagGray  { background: #222; color: #666; }
+.tagBlue  { background: #1a2a3a; color: #6ab0f5; }
+.tagGreen { background: #1a2e1a; color: #7CFC00; }
+.tagPink  { background: #2a1a22; color: #FF69B4; }
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.updatedAt {
+  font-size: 0.7rem;
+  color: #555;
+  white-space: nowrap;
 }
 
 .empty { color: #555; }

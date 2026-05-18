@@ -23,5 +23,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       [id, l.block_index, l.line_index, l.text, l.member_ids, l.timestamp_ms, JSON.stringify(l.word_members ?? [])]
     )
   }
+  await query(`UPDATE prompter_songs SET updated_at=(NOW() AT TIME ZONE 'Asia/Tokyo') WHERE id=$1`, [id])
   return NextResponse.json({ ok: true })
 }
