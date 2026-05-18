@@ -65,6 +65,7 @@ function SortableItem({ song, index, total, onRemove }: {
 export default function PlaylistEditPage() {
   const { id } = useParams<{ id: string }>()
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
   const [editingName, setEditingName] = useState(false)
@@ -83,7 +84,7 @@ export default function PlaylistEditPage() {
   useEffect(() => {
     fetch(`/api/playlists/${id}`)
       .then(r => r.json())
-      .then(data => { setName(data.name); setSongs(data.songs || []); setLoading(false) })
+      .then(data => { setName(data.name); setDescription(data.description || ''); setSongs(data.songs || []); setLoading(false) })
   }, [id])
 
   useEffect(() => {
@@ -154,7 +155,7 @@ export default function PlaylistEditPage() {
     await fetch(`/api/playlists/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, description }),
     })
     setSaving(false)
     setEditingName(false)
@@ -194,7 +195,7 @@ export default function PlaylistEditPage() {
         <Link href={`/prompter/playlist/${id}`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
         {editingName ? (
           <>
             <input
@@ -219,6 +220,20 @@ export default function PlaylistEditPage() {
             {name} ✎
           </button>
         )}
+      </div>
+
+      <div style={{ marginBottom: '24px', maxWidth: '700px' }}>
+        <textarea
+          className={styles.descriptionInput}
+          value={description}
+          onChange={e => setDescription(e.target.value.slice(0, 200))}
+          onBlur={saveName}
+          placeholder="概要（200文字まで）"
+          rows={2}
+        />
+        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: description.length >= 200 ? '#FF4444' : '#555', marginTop: '4px' }}>
+          {description.length}/200
+        </div>
       </div>
 
       <div className={styles.inputWrapper} ref={suggestRef} style={{ marginBottom: '24px', maxWidth: '700px' }}>

@@ -95,6 +95,7 @@ export async function initDb() {
 
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
+    await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description TEXT`)
     await query(`
       CREATE TABLE IF NOT EXISTS playlists (
         id SERIAL PRIMARY KEY,

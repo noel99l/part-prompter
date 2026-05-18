@@ -42,9 +42,9 @@ export default function PlaylistPrompterPage() {
       </div>
       <div className={styles.list}>
         {songs.map((s, i) => (
-          <Link key={s.id} href={`/prompter/${s.id}`} className={styles.card}>
-            <span style={{ color: '#666', marginRight: '12px' }}>{i + 1}</span>
-            <div>
+        <Link key={s.id} href={`/prompter/${s.id}?playlist=${id}&index=${i}&total=${songs.length}`} className={styles.card}>
+            <span style={{ color: '#666', flexShrink: 0, minWidth: '1.5rem', textAlign: 'right' }}>{i + 1}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div className={styles.songTitle}>{s.title}</div>
               {s.artist && <div className={styles.artist}>{s.artist}</div>}
             </div>

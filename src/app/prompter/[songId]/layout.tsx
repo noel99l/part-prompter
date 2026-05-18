@@ -13,8 +13,8 @@ export default function SongPrompterLayout({ children }: { children: React.React
   return (
     <>
       <style>{`
-        /* プロンプター表示時はヘッダーを非表示 */
         header { display: none !important; }
+        aside { display: none !important; }
         main { flex: 1; }
       `}</style>
       {children}

@@ -546,6 +546,23 @@
 
 .inlineEditBtn:hover { background: #1a1a1a; }
 
+.descriptionInput {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: 'Hiragino Sans', sans-serif;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.descriptionInput:focus { outline: none; border-color: #FF69B4; }
+.descriptionInput::placeholder { color: #555; }
+
 .cancelInlineBtn {
   background: none;
   border: 1px solid #444;
