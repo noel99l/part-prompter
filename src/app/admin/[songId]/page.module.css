@@ -316,6 +316,23 @@
   color: #7CFC00;
 }
 
+.descriptionInput {
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.9rem;
+  font-family: 'Hiragino Sans', sans-serif;
+  resize: vertical;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+.descriptionInput:focus { outline: none; border-color: #FF69B4; }
+.descriptionInput::placeholder { color: #555; }
+
 .inlineEditBtn {
   background: none;
   border: none;
@@ -414,6 +431,27 @@
   border: none;
   border-top: 1px solid #222;
   margin: 1rem 0;
+}
+
+.infoForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  max-width: 600px;
+}
+
+.infoFormRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.infoFormLabel {
+  color: #666;
+  font-size: 0.85rem;
+  min-width: 64px;
+  flex-shrink: 0;
 }
 
 .editorLayout {

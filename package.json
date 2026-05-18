@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "lsof -ti:3000 | xargs kill -9 2>/dev/null; NODE_TLS_REJECT_UNAUTHORIZED=0 node server.js",
+    "dev": "lsof -ti:3000 | xargs kill -9 2>/dev/null; NODE_TLS_REJECT_UNAUTHORIZED=0 next dev --experimental-https --experimental-https-key certificates/localhost-key.pem --experimental-https-cert certificates/localhost.pem -p 3000",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

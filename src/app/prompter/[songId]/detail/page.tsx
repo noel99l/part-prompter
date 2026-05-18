@@ -201,6 +201,12 @@ export default function SongDetailPage() {
             <span className={styles.infoValue}>{song.created_by_name}</span>
           </div>
         )}
+        {song.description && (
+          <div className={styles.infoRow} style={{ alignItems: 'flex-start' }}>
+            <span className={styles.infoLabel}>概要</span>
+            <span className={styles.infoValue} style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem', color: '#aaa' }}>{song.description}</span>
+          </div>
+        )}
         {members.length > 0 && (
           <div className={styles.infoRow}>
             <span className={styles.infoLabel}>パート</span>
