@@ -127,6 +127,23 @@
   background: rgba(255, 255, 255, 0.28);
 }
 
+.btnAuto {
+  position: relative;
+  overflow: hidden;
+  width: 4.5rem;
+}
+
+.autoProgress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.2);
+  pointer-events: none;
+}
+
 /* 表紙 */
 .cover {
   display: flex;

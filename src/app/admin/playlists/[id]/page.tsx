@@ -185,7 +185,7 @@ export default function PlaylistEditPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>📋 プレイリスト編集</h1>
+        <h1 className={styles.title}>📋 セットリスト編集</h1>
         <Link href={`/prompter/playlist/${id}`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
       </div>
 
@@ -198,7 +198,7 @@ export default function PlaylistEditPage() {
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
-              placeholder="プレイリスト名"
+              placeholder="セットリスト名"
               autoFocus
               style={{ flex: 1 }}
             />

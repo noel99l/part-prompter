@@ -6,7 +6,7 @@ import styles from './SideNav.module.css'
 
 const ADMIN_NAV = [
   { href: '/admin/songs', label: '🎤 パート分け管理' },
-  { href: '/admin/playlists', label: '📋 プレイリスト管理' },
+  { href: '/admin/playlists', label: '📋 セットリスト管理' },
   { href: '/admin/settings', label: '⚙️ アカウント設定' },
 ]
 

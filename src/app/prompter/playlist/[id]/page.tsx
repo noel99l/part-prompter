@@ -25,7 +25,7 @@ export default function PlaylistPrompterPage() {
       })
   }, [id])
 
-  if (loading) return <Loading label="プレイリスト" />
+  if (loading) return <Loading label="セットリスト" />
 
   if (songs.length === 0) return (
     <div className={styles.container}>

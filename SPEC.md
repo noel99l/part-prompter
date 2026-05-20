@@ -16,14 +16,14 @@ graph TD
 
   PROMPTER --> PROMPTER_DETAIL["/prompter/[songId]/detail\n楽曲詳細・歌詞一覧"]
   PROMPTER --> PROMPTER_VIEW["/prompter/[songId]\nプロンプター表示"]
-  PROMPTER --> PROMPTER_PLAYLIST["/prompter/playlist/[id]\nプレイリストプロンプター"]
+  PROMPTER --> PROMPTER_PLAYLIST["/prompter/playlist/[id]\nセットリストプロンプター"]
 
   ADMIN --> ADMIN_TOP["/admin\n管理トップ"]
   ADMIN_TOP --> ADMIN_SONGS["/admin/songs\nパート分け管理"]
-  ADMIN_TOP --> ADMIN_PLAYLISTS["/admin/playlists\nプレイリスト管理"]
+  ADMIN_TOP --> ADMIN_PLAYLISTS["/admin/playlists\nセットリスト管理"]
   ADMIN_TOP --> ADMIN_SETTINGS["/admin/settings\nアカウント設定"]
   ADMIN_SONGS --> ADMIN_SONG_EDIT["/admin/[songId]\n楽曲編集"]
-  ADMIN_PLAYLISTS --> ADMIN_PLAYLIST_EDIT["/admin/playlists/[id]\nプレイリスト編集"]
+  ADMIN_PLAYLISTS --> ADMIN_PLAYLIST_EDIT["/admin/playlists/[id]\nセットリスト編集"]
 
   AUTH --> AUTH_SETUP["/auth/setup\nアカウント名設定"]
 ```
@@ -139,8 +139,8 @@ graph LR
   end
 
   subgraph playlists["/api/playlists"]
-    P1["GET / POST\nプレイリスト一覧・作成"]
-    P2["GET/PUT/DELETE /[id]\nプレイリスト操作"]
+    P1["GET / POST\nセットリスト一覧・作成"]
+    P2["GET/PUT/DELETE /[id]\nセットリスト操作"]
     P3["POST/PUT/DELETE /[id]/songs\n曲の追加・並び替え・削除"]
   end
 

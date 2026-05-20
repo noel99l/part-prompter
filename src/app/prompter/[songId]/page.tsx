@@ -27,6 +27,8 @@ export default function PrompterView() {
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [currentBlock, setCurrentBlock] = useState(-1)
   const [isPlaying, setIsPlaying] = useState(false)
+  const progressRef = useRef(0)
+  const pausedElapsedRef = useRef<number | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isPortrait, setIsPortrait] = useState(false)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
@@ -86,11 +88,13 @@ export default function PrompterView() {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
   }
 
-  const startLoop = (fromBlock: number) => {
+  const startLoop = (fromBlock: number, resumeElapsed?: number) => {
     stopLoop()
     const startFrom = Math.max(0, fromBlock)
     const bl = stateRef.current.blocks
-    const ts = fromBlock < 0 ? 0 : (bl[startFrom]?.[0]?.timestamp_ms ?? 0)
+    const ts = resumeElapsed != null ? resumeElapsed
+      : fromBlock < 0 ? 0
+      : (bl[startFrom]?.[0]?.timestamp_ms ?? 0)
     startTimeRef.current = Date.now() - ts
     stateRef.current.isPlaying = true
     stateRef.current.startTime = startTimeRef.current
@@ -107,21 +111,55 @@ export default function PrompterView() {
       }
       stateRef.current.currentBlock = next
       setCurrentBlock(next)
+      // シークバー進捗計算・DOM直接更新
+      const curTs = next === 0 && elapsed < (bl2[0]?.[0]?.timestamp_ms ?? 0)
+        ? 0
+        : (bl2[next]?.[0]?.timestamp_ms ?? 0)
+      const nextTs = next === 0 && elapsed < (bl2[0]?.[0]?.timestamp_ms ?? 0)
+        ? (bl2[0]?.[0]?.timestamp_ms ?? null)
+        : bl2[next + 1]?.[0]?.timestamp_ms
+      const el = document.getElementById('auto-progress-bar')
+      if (nextTs != null && nextTs > curTs) {
+        const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs - curTs)))
+        progressRef.current = progress
+        if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }
+      } else {
+        progressRef.current = 0
+        if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+      }
       rafRef.current = requestAnimationFrame(tick)
     }
     rafRef.current = requestAnimationFrame(tick)
   }
 
-  const handlePlay = () => { setIsPlaying(true); startLoop(stateRef.current.currentBlock) }
-  const handlePause = () => { stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop() }
+  const handlePlay = () => {
+    setIsPlaying(true)
+    const elapsed = pausedElapsedRef.current
+    pausedElapsedRef.current = null
+    startLoop(stateRef.current.currentBlock, elapsed ?? undefined)
+  }
+  const handlePause = () => {
+    pausedElapsedRef.current = Date.now() - (stateRef.current.startTime ?? 0)
+    stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
+  }
   const handlePrev = () => {
     stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
     const next = Math.max(-1, stateRef.current.currentBlock - 1)
     stateRef.current.currentBlock = next; setCurrentBlock(next)
+    pausedElapsedRef.current = null
+    const el = document.getElementById('auto-progress-bar')
+    if (el) { el.style.width = '0%'; el.style.opacity = '0' }
   }
   const handleNext = () => {
     const next = Math.min(stateRef.current.blocks.length - 1, stateRef.current.currentBlock + 1)
-    stateRef.current.currentBlock = next; setCurrentBlock(next)
+    stateRef.current.currentBlock = next
+    setCurrentBlock(next)
+    if (stateRef.current.isPlaying) startLoop(next)
+    else {
+      pausedElapsedRef.current = null
+      const el = document.getElementById('auto-progress-bar')
+      if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+    }
   }
 
   useEffect(() => {
@@ -273,8 +311,9 @@ export default function PrompterView() {
           )}
           <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
           {hasTimestamp && (
-            <button className={styles.btn} onClick={isPlaying ? handlePause : handlePlay}>
-              {isPlaying ? '⏸ Auto' : 'Auto'}
+            <button className={`${styles.btn} ${styles.btnAuto}`} onClick={isPlaying ? handlePause : handlePlay}>
+              <span id="auto-progress-bar" className={styles.autoProgress} />
+              <span style={{ position: 'relative', zIndex: 1 }}>{isPlaying ? '⏸' : 'Auto'}</span>
             </button>
           )}
           <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
