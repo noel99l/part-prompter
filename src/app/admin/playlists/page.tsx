@@ -51,7 +51,7 @@ export default function PlaylistsPage() {
   }
 
   const remove = async (id: number) => {
-    if (!confirm('このプレイリストを削除しますか？')) return
+    if (!confirm('このセットリストを削除しますか？')) return
     setDeletingId(id)
     await fetch(`/api/playlists/${id}`, { method: 'DELETE' })
     setPlaylists(prev => prev.filter(p => p.id !== id))
@@ -73,12 +73,12 @@ export default function PlaylistsPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>📋 プレイリスト管理</h1>
+        <h1 className={styles.title}>📋 セットリスト管理</h1>
         <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋追加</button>
       </div>
 
       {playlists.length === 0 ? (
-        <p className={styles.empty}>プレイリストがありません。「プレイリストを追加」から作成してください。</p>
+        <p className={styles.empty}>セットリストがありません。「セットリストを追加」から作成してください。</p>
       ) : (
         <>
           <div className={styles.list}>
@@ -92,7 +92,7 @@ export default function PlaylistsPage() {
                   onDelete={() => remove(p.id)}
                   menuItems={[
                     { label: '✏️ 編集', href: `/admin/playlists/${p.id}` },
-                    { label: '▶ プレイリスト再生', href: `/prompter/playlist/${p.id}`, target: '_blank' },
+                    { label: '▶ セットリスト再生', href: `/prompter/playlist/${p.id}`, target: '_blank' },
                   ]}
                 />}
               />
@@ -105,13 +105,13 @@ export default function PlaylistsPage() {
       {showModal && (
         <div className={styles.overlay}>
           <div className={styles.modal}>
-            <h2 className={styles.modalTitle}>プレイリストを追加</h2>
+            <h2 className={styles.modalTitle}>セットリストを追加</h2>
             <input
               className={styles.input}
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && create()}
-              placeholder="プレイリスト名（必須）"
+              placeholder="セットリスト名（必須）"
               autoFocus
             />
             <div className={styles.modalActions}>

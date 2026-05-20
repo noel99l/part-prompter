@@ -20,8 +20,8 @@ export default function AdminDashboard() {
 
         <Link href="/admin/playlists" className={styles.card}>
           <div className={styles.cardInfo}>
-            <div className={styles.songTitle}>📋 プレイリスト管理</div>
-            <div className={styles.artist}>プレイリストの作成・曲の並び替え</div>
+            <div className={styles.songTitle}>📋 セットリスト管理</div>
+            <div className={styles.artist}>セットリストの作成・曲の並び替え</div>
           </div>
           <span className={styles.viewBtn}>開く →</span>
         </Link>

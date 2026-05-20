@@ -4,7 +4,7 @@ export default function Loading({ label }: { label: string }) {
   return (
     <div className={styles.wrapper}>
       <div className={`${styles.skeleton} ${styles.header}`} />
-      {label === '曲一覧' || label === '楽曲一覧' || label === 'プレイリスト' ? (
+      {label === '曲一覧' || label === '楽曲一覧' || label === 'セットリスト' ? (
         <>
           {[...Array(5)].map((_, i) => (
             <div key={i} className={`${styles.skeleton} ${styles.card}`} />
