@@ -107,14 +107,19 @@
   background: none;
   border: none;
   color: #888;
-  font-size: 1rem;
-  padding: 0.5rem 1.2rem;
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
   border-radius: 6px 6px 0 0;
   transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
 }
 
+.tabIcon { margin-right: 0.3rem; }
+.tabLabel { }
+
 .tab:hover { color: #fff; background: #1a1a1a; }
+
 
 .tabActive {
   color: #fff;
@@ -885,6 +890,9 @@
     font-size: 0.8rem;
     padding: 0.4rem 0.6rem;
   }
+
+  .tabLabel { display: none; }
+  .tabIcon { margin-right: 0; font-size: 1.1rem; }
 
   .metaSection {
     flex-direction: column;

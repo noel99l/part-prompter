@@ -224,13 +224,14 @@ export default function PrompterView() {
         <div className={styles.rotateIcon}>↺</div>
         <p className={styles.rotateText}>端末を横向きにしてください</p>
       </div>
-      <div className={styles.container} onClick={isMobile && !isPortrait ? handleTap : undefined}>
+      <div className={styles.container} style={{ background: song?.bg_color || '#000' }} onClick={isMobile && !isPortrait ? handleTap : undefined}>
         {isPortrait ? (
           // 縦表示：全ブロックをスクロール表示
           <div className={styles.scrollView}>
             <div className={styles.scrollCover}>
               <div className={styles.coverTitle}>{song.title}</div>
               {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+              {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
               {members.length > 0 && (
                 <div className={styles.coverMembers}>
                   {members.map((m, i) => (
@@ -269,6 +270,7 @@ export default function PrompterView() {
             <div className={styles.cover}>
               <div className={styles.coverTitle}>{song.title}</div>
               {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+              {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
               <div className={styles.coverSeparator} />
               <div className={styles.coverMembers}>
                 {members.map((m, i) => (
