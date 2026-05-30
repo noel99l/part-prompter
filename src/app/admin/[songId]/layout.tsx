@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { query } from '@/lib/db'
+import { query, initDb } from '@/lib/db'
 
 export default async function SongEditLayout({
   children,
@@ -13,10 +13,16 @@ export default async function SongEditLayout({
   const session = await auth()
   if (!session?.user?.email) redirect('/auth/signin')
 
+  await initDb()
+
   const result = await query(`
     SELECT s.id FROM prompter_songs s
-    JOIN users u ON u.id = s.created_by
-    WHERE s.id = $1 AND u.email = $2
+    LEFT JOIN users u ON u.id = s.created_by
+    LEFT JOIN song_collaborators sc ON sc.song_id = s.id
+    LEFT JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
+    LEFT JOIN users cu ON cu.id = scm.user_id
+    WHERE s.id = $1 AND (u.email = $2 OR cu.email = $2)
+    LIMIT 1
   `, [songId, session.user.email])
 
   if (!result.rows[0]) {

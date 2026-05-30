@@ -88,6 +88,25 @@ export async function initDb() {
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description TEXT`)
     await query(`
+      CREATE TABLE IF NOT EXISTS song_collaborators (
+        id SERIAL PRIMARY KEY,
+        song_id INTEGER NOT NULL REFERENCES prompter_songs(id) ON DELETE CASCADE,
+        invited_by INTEGER REFERENCES users(id),
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await query(`
+      CREATE TABLE IF NOT EXISTS song_collaborator_members (
+        id SERIAL PRIMARY KEY,
+        collaborator_id INTEGER NOT NULL REFERENCES song_collaborators(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(collaborator_id, user_id)
+      )
+    `)
+    await query(`
       CREATE TABLE IF NOT EXISTS playlists (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
