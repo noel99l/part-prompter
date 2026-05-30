@@ -11,7 +11,7 @@ const GROUPS = [
       {
         id: 'list',
         label: 'パート分け一覧',
-        path: '/prompter',
+        path: '/songs',
         sections: [
           { title: '楽曲を探す', body: '曲名・アーティスト・作者名で絞り込み検索ができます。カードには歌詞の種類（テキスト / タイムスタンプ）・パート数・作者・最終更新日時が表示されます。' },
           { title: 'カードをタップ', body: '楽曲カードをタップすると詳細ページに移動します。パート分けの内容・メンバーを確認できます。' },
@@ -23,7 +23,7 @@ const GROUPS = [
       {
         id: 'detail',
         label: '楽曲詳細',
-        path: '/prompter/[id]/detail',
+        path: '/songs/[id]',
         sections: [
           { title: 'パート・歌詞の確認', body: 'パートメンバー・パート分けの内容を閲覧できます。各行の右端にパートの色ドットが表示されます。複数パートの行はグラデーションで色分けされます。' },
           { title: 'タグ表示', body: '曲名の下にテキスト / タイムスタンプ / 👥パート数のタグが表示されます。' },
@@ -37,7 +37,7 @@ const GROUPS = [
       {
         id: 'prompter',
         label: 'プロンプター',
-        path: '/prompter/[id]',
+        path: '/songs/[id]/prompter',
         sections: [
           { title: 'SP操作（タップ）', body: '画面左半分タップで前のブロック、右半分タップで次のブロックに移動します。縦向き時は全ブロックをスクロール表示します。' },
           { title: 'PC操作（キーボード）', body: '← / → キーまたはスペースキーでブロック移動・再生/一時停止ができます。' },
@@ -49,7 +49,7 @@ const GROUPS = [
       {
         id: 'playlist-prompter',
         label: 'セットリスト',
-        path: '/prompter/playlist/[id]',
+        path: '/playlists/[id]/prompter',
         sections: [
           { title: '曲一覧', body: 'セットリストに登録された曲が番号付きで表示されます。曲をタップするとプロンプター表示に移動します。' },
           { title: '前後の曲移動', body: 'プロンプター表示中に⏮⏭ボタンで前後の曲に移動できます。' },
@@ -64,7 +64,7 @@ const GROUPS = [
       {
         id: 'admin',
         label: '管理トップ',
-        path: '/admin',
+        path: '/manage/songs',
         sections: [
           { title: 'ログイン', body: 'Googleアカウントでログインします。初回ログイン時にアカウント名を設定します。' },
           { title: 'サイドメニュー（PC）', body: 'PC表示時は左側にサイドメニューが常時表示されます。各管理ページに移動できます。' },
@@ -74,7 +74,7 @@ const GROUPS = [
       {
         id: 'songs',
         label: 'パート分け管理',
-        path: '/admin/songs',
+        path: '/manage/songs',
         sections: [
           { title: '楽曲追加', body: '「＋ 曲を追加」からLRCLIBで曲名検索して歌詞を自動取得するか、手動で曲名・アーティストを入力して追加できます。' },
           { title: '表示される楽曲', body: '自分が追加した楽曲のみ表示されます。他のユーザーの楽曲は表示されません。' },
@@ -84,7 +84,7 @@ const GROUPS = [
       {
         id: 'edit',
         label: 'パート分け編集',
-        path: '/admin/[id]',
+        path: '/manage/songs/[id]',
         tabs: [
           {
             name: '📝 楽曲情報',
@@ -127,7 +127,7 @@ const GROUPS = [
       {
         id: 'playlist',
         label: 'セットリスト管理',
-        path: '/admin/playlists',
+        path: '/manage/playlists',
         sections: [
           { title: 'セットリスト作成', body: '「＋ セットリストを追加」からセットリスト名を入力して作成します。作成後すぐに編集ページに移動します。' },
           { title: '表示されるセットリスト', body: '自分が作成したセットリストのみ表示されます。' },
@@ -138,7 +138,7 @@ const GROUPS = [
       {
         id: 'playlist-edit',
         label: 'セットリスト編集',
-        path: '/admin/playlists/[id]',
+        path: '/manage/playlists/[id]',
         sections: [
           { title: 'セットリスト名・概要', body: 'セットリスト名をクリックするとインライン編集できます。概要はテキストエリアに入力し、フォーカスを外すと自動保存されます（200文字まで）。' },
           { title: '曲を追加', body: '右上の「＋ 曲を追加」ボタンからモーダルを開き、曲名・アーティスト・歌詞で検索して追加できます。自分以外のユーザーの公開楽曲も追加可能です。' },
@@ -167,7 +167,7 @@ export default function HowToUsePage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <Link href="/prompter" className={styles.backLink}>← 一覧に戻る</Link>
+        <Link href="/songs" className={styles.backLink}>← 一覧に戻る</Link>
         <h1 className={styles.title}>HOW TO USE</h1>
       </div>
 

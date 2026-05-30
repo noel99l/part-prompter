@@ -185,9 +185,9 @@ export default function PrompterView() {
         <>
           {line.word_members.map((w, wi) => {
             const isSpace = w.text === ' ' || w.text === '　'
-            if (isSpace) return <span key={wi} style={{ color: 'transparent' }}>{w.text}</span>
+            if (isSpace) return <span key={wi} className={styles.textTransparent}>{w.text}</span>
             const ids: number[] = (w as any).member_ids ?? ((w as any).member_id ? [(w as any).member_id] : [])
-            if (ids.length === 0) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
+            if (ids.length === 0) return <span key={wi} className={styles.textWhite}>{w.text}</span>
             if (ids.length === 1) return <span key={wi} style={{ color: memberMap[ids[0]]?.color || '#fff' }}>{w.text}</span>
             const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
             return <span key={wi} style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{w.text}</span>
@@ -196,20 +196,20 @@ export default function PrompterView() {
       )
     }
     const ids = line.member_ids || []
-    if (ids.length === 0) return <span style={{ color: '#fff' }}>{line.text}</span>
+    if (ids.length === 0) return <span className={styles.textWhite}>{line.text}</span>
     if (ids.length === 1) return <span style={{ color: memberMap[ids[0]]?.color || '#fff' }}>{line.text}</span>
     const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
     return <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{line.text}</span>
   }
 
   if (!song) return (
-    <div style={{ background: '#000', minHeight: '100vh', padding: '3vw 4vw', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <div className={styles.skeletonWrap}>
       <div className={skStyles.sk} style={{ width: '60%', height: 'clamp(2.5rem, 6vw, 5rem)', borderRadius: 8 }} />
       <div className={skStyles.sk} style={{ width: '35%', height: 'clamp(1.2rem, 3vw, 2rem)', borderRadius: 6 }} />
       <div className={skStyles.sk} style={{ width: '100%', height: 4, borderRadius: 2, margin: '0.5rem 0' }} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem 2rem', marginTop: '0.5rem' }}>
+      <div className={styles.skMemberRow}>
         {[...Array(4)].map((_, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <div key={i} className={styles.skMemberItem}>
             <div className={skStyles.sk} style={{ width: 18, height: 18, borderRadius: 4 }} />
             <div className={skStyles.sk} style={{ width: 80, height: 'clamp(1.2rem, 2.5vw, 1.8rem)', borderRadius: 6 }} />
           </div>
@@ -221,8 +221,8 @@ export default function PrompterView() {
   return (
     <>
       <div className={styles.rotatePrompt}>
-        <div style={{ fontSize: '3rem' }}>↺</div>
-        <p style={{ fontSize: '1.1rem' }}>端末を横向きにしてください</p>
+        <div className={styles.rotateIcon}>↺</div>
+        <p className={styles.rotateText}>端末を横向きにしてください</p>
       </div>
       <div className={styles.container} onClick={isMobile && !isPortrait ? handleTap : undefined}>
         {isPortrait ? (
@@ -261,7 +261,7 @@ export default function PrompterView() {
               </div>
             ))}
             <div className={styles.scrollEnd}>― End ―</div>
-            <div style={{ height: '40vw' }} />
+            <div className={styles.scrollSpacer} />
           </div>
         ) : (
           // 横表示：スライド表示
@@ -313,7 +313,7 @@ export default function PrompterView() {
           {hasTimestamp && (
             <button className={`${styles.btn} ${styles.btnAuto}`} onClick={isPlaying ? handlePause : handlePlay}>
               <span id="auto-progress-bar" className={styles.autoProgress} />
-              <span style={{ position: 'relative', zIndex: 1 }}>{isPlaying ? '⏸' : 'Auto'}</span>
+              <span className={styles.autoLabel}>{isPlaying ? '⏸' : 'Auto'}</span>
             </button>
           )}
           <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>

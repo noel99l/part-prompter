@@ -1,0 +1,7 @@
+.noPointer { pointer-events: none; }
+
+.metaRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}

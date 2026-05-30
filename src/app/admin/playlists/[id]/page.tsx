@@ -189,18 +189,17 @@ export default function PlaylistEditPage() {
         <Link href={`/prompter/playlist/${id}`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
       </div>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+      <div className={styles.nameRow}>
         {editingName ? (
           <>
             <input
               ref={nameInputRef}
-              className={styles.metaInput}
+              className={`${styles.metaInput} ${styles.flex1}`}
               value={name}
               onChange={e => setName(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') setEditingName(false) }}
               placeholder="セットリスト名"
               autoFocus
-              style={{ flex: 1 }}
             />
             <button className={styles.saveBtn} onClick={saveName} disabled={saving}>{saving ? '保存中...' : '✓ 保存'}</button>
             <button className={styles.cancelBtn} onClick={() => setEditingName(false)}>✕</button>
@@ -216,7 +215,7 @@ export default function PlaylistEditPage() {
         )}
       </div>
 
-      <div style={{ marginBottom: '24px', maxWidth: '700px' }}>
+      <div className={styles.descriptionWrap}>
         <textarea
           className={styles.descriptionInput}
           value={description}
@@ -225,12 +224,12 @@ export default function PlaylistEditPage() {
           placeholder="概要（200文字まで）"
           rows={2}
         />
-        <div style={{ textAlign: 'right', fontSize: '0.75rem', color: description.length >= 200 ? '#FF4444' : '#555', marginTop: '4px' }}>
+        <div className={`${styles.descriptionCount} ${description.length >= 200 ? styles.descriptionCountMax : styles.descriptionCountOk}`}>
           {description.length}/200
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '24px' }}>
+      <div className={styles.addBtnRow}>
         <button className={styles.createBtn} onClick={() => { setShowAddModal(true); setQuery(''); setSuggestions([]) }}>＋ 曲を追加</button>
       </div>
 
@@ -248,19 +247,19 @@ export default function PlaylistEditPage() {
                 autoFocus
               />
               {searching && (
-                <span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0 }} />
+                <span className={styles.spinner} />
               )}
             </div>
             {suggestions.length > 0 ? (
               <div className={styles.suggestionList}>
                 {suggestions.map(s => (
                   <button key={s.id} className={styles.suggestionItem} onClick={() => addSong(s.id)}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' as const }}>
+                    <div className={styles.modalSearchResult}>
                       <span className={styles.suggestionTrack}>{s.title}</span>
                       {parseInt(s.member_count ?? '0') > 0 && <span className={styles.tagPink}>👥 {s.member_count}</span>}
                     </div>
                     {s.artist && <span className={styles.suggestionMeta}>{s.artist}</span>}
-                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' as const, alignItems: 'center' }}>
+                    <div className={styles.modalSearchMeta}>
                       {s.created_by_name && <span className={styles.suggestionMeta}>✍️ {s.created_by_name}</span>}
                       {s.updated_at && <span className={styles.suggestionMeta}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
                     </div>
@@ -268,9 +267,9 @@ export default function PlaylistEditPage() {
                 ))}
               </div>
             ) : query.trim() && !searching ? (
-              <p style={{ color: '#555', fontSize: '0.85rem', margin: 0 }}>該当する曲が見つかりません</p>
+              <p className={styles.modalEmpty}>該当する曲が見つかりません</p>
             ) : null}
-            <button className={styles.cancelBtn} onClick={() => setShowAddModal(false)} style={{ alignSelf: 'stretch', textAlign: 'center' }}>キャンセル</button>
+            <button className={`${styles.cancelBtn} ${styles.cancelBtnFull}`} onClick={() => setShowAddModal(false)}>キャンセル</button>
           </div>
         </div>
       )}

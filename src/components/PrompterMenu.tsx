@@ -27,7 +27,7 @@ export default function PrompterMenu() {
 
       {open && (
         <div className={styles.drawer}>
-          <Link href="/prompter" className={styles.item} onClick={() => setOpen(false)}>
+          <Link href="/songs" className={styles.item} onClick={() => setOpen(false)}>
             🎵 パート分け一覧
           </Link>
           {session ? (
@@ -35,7 +35,7 @@ export default function PrompterMenu() {
               {session.user?.accountName && (
                 <div className={styles.account}>{session.user.accountName}</div>
               )}
-              <Link href="/admin" className={styles.item} onClick={() => setOpen(false)}>
+              <Link href="/manage/songs" className={styles.item} onClick={() => setOpen(false)}>
                 ⚙️ 管理画面ログイン
               </Link>
             </>

@@ -443,7 +443,7 @@ export default function LyricsEditor() {
           {line.word_members.map((w, wi) => {
             const isSpace = w.text === ' ' || w.text === '　'
             if (isSpace) return <span key={wi}>{w.text}</span>
-            if (w.member_ids.length === 0) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
+            if (w.member_ids.length === 0) return <span key={wi} className={styles.textWhite}>{w.text}</span>
             if (w.member_ids.length === 1) return <span key={wi} style={{ color: memberMap[w.member_ids[0]]?.color || '#fff' }}>{w.text}</span>
             return <GradientText key={wi} text={w.text} memberIds={w.member_ids} />
           })}
@@ -476,14 +476,14 @@ export default function LyricsEditor() {
       setTimeout(() => { setCopied(false); onClose?.() }, 1500)
     }
     if (inMenu) return (
-      <button onClick={handleCopy} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+      <button onClick={handleCopy} className={styles.menuTextBtn}>
         {copied ? '✓ コピー済み' : '📋 共有URLをコピー'}
       </button>
     )
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-        <code style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#aaa', wordBreak: 'break-all', flex: 1 }}>{url}</code>
-        <button className={styles.exportBtn} style={{ background: '#444' }} onClick={handleCopy}>
+      <div className={styles.urlCopyBox}>
+        <code className={styles.urlCode}>{url}</code>
+        <button className={`${styles.exportBtn} ${styles.exportBtnGray}`} onClick={handleCopy}>
           {copied ? '✓ コピー済み' : '📋 URLをコピー'}
         </button>
       </div>
@@ -517,7 +517,7 @@ export default function LyricsEditor() {
       return result.join('\n')
     }
     return (
-      <button onClick={async () => { await navigator.clipboard.writeText(buildText()); setCopied(true); setTimeout(() => { setCopied(false); onClose?.() }, 1500) }} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+      <button onClick={async () => { await navigator.clipboard.writeText(buildText()); setCopied(true); setTimeout(() => { setCopied(false); onClose?.() }, 1500) }} className={styles.menuTextBtn}>
         {copied ? '✓ コピー済み' : '📝 パート分けテキストをコピー'}
       </button>
     )
@@ -579,23 +579,23 @@ export default function LyricsEditor() {
 
     return (
       <>
-        <button onClick={openModal} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+        <button onClick={openModal} className={styles.menuTextBtn}>
           👥 共同編集を管理
         </button>
         {showModal && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => setShowModal(false)}>
-            <div style={{ background: '#111', border: '1px solid #333', borderRadius: 12, padding: '1.5rem', width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '0.6rem' }} onClick={e => e.stopPropagation()}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>👥 共同編集管理</h2>
-                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+          <div className={styles.collabOverlay} onClick={() => setShowModal(false)}>
+            <div className={styles.collabModal} onClick={e => e.stopPropagation()}>
+              <div className={styles.collabModalHeader}>
+                <h2 className={styles.collabModalTitle}>👥 共同編集管理</h2>
+                <button onClick={() => setShowModal(false)} className={styles.collabModalClose}>✕</button>
               </div>
-              <div style={{ color: '#555', fontSize: '0.75rem' }}>招待リンクを発行</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
+              <div className={styles.collabSectionLabel}>招待リンクを発行</div>
+              <div className={styles.collabRow}>
+                <div className={styles.collabRowInfo}>
                   <select
                     value={expireMinutes}
                     onChange={e => setExpireMinutes(Number(e.target.value))}
-                    style={{ background: '#111', border: '1px solid #333', borderRadius: 6, color: '#fff', padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: '100%' }}
+                    className={styles.collabSelect}
                   >
                     <option value={30}>30分有効</option>
                     <option value={60}>1時間有効</option>
@@ -613,34 +613,34 @@ export default function LyricsEditor() {
                 </button>
               </div>
               {links.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ color: '#555', fontSize: '0.75rem' }}>発行済みリンク</div>
+                <div className={styles.collabSectionList}>
+                  <div className={styles.collabSectionLabel}>発行済みリンク</div>
                   {links.map((c: any) => (
-                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
+                    <div key={c.id} className={styles.collabRow}>
                       <div style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: c.expired ? '#FF4444' : '#888' }}>
                         {c.expired ? '期限切れ' : `${new Date(c.expires_at).toLocaleDateString('ja-JP')}まで有効`}
                       </div>
                       {!c.expired && (
-                        <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/invite/${c.token}`); setCopyToast(true); setTimeout(() => setCopyToast(false), 2000) }} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0 }}>📋</button>
+                        <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/invite/${c.token}`); setCopyToast(true); setTimeout(() => setCopyToast(false), 2000) }} className={styles.collabCopyBtn}>📋</button>
                       )}
-                      <button onClick={() => remove(c.id)} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0, transition: 'color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.color = '#FF4444')} onMouseLeave={e => (e.currentTarget.style.color = '#888')}>削除</button>
+                      <button onClick={() => remove(c.id)} className={styles.collabIconBtn}>削除</button>
                     </div>
                   ))}
                 </div>
               )}
               {members.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                  <div style={{ color: '#555', fontSize: '0.75rem' }}>共同編集者</div>
+                <div className={styles.collabSectionList}>
+                  <div className={styles.collabSectionLabel}>共同編集者</div>
                   {members.map((m: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
-                      <span style={{ fontSize: '0.9rem', color: '#7CFC00', flex: 1 }}>✓ {m.user_name || '不明'}</span>
-                      <button onClick={() => removeMember(m.id)} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0, transition: 'color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.color = '#FF4444')} onMouseLeave={e => (e.currentTarget.style.color = '#888')}>削除</button>
+                    <div key={i} className={styles.collabRow}>
+                      <span className={styles.collabMemberName}>✓ {m.user_name || '不明'}</span>
+                      <button onClick={() => removeMember(m.id)} className={styles.collabIconBtn}>削除</button>
                     </div>
                   ))}
                 </div>
               )}
               {copyToast && (
-                <div style={{ background: '#222', border: '1px solid #444', color: '#fff', padding: '0.5rem 1rem', borderRadius: 8, fontSize: '0.85rem', textAlign: 'center' }}>✓ リンクをコピーしました</div>
+                <div className={styles.collabToast}>✓ リンクをコピーしました</div>
               )}
             </div>
           </div>
@@ -661,7 +661,7 @@ export default function LyricsEditor() {
           <div key={i} className={skStyles.sk} style={{ width: 90, height: 36, borderRadius: '6px 6px 0 0' }} />
         ))}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 600 }}>
+      <div className={styles.skeletonList}>
         <div className={skStyles.sk} style={{ width: '60%', height: 36, borderRadius: 8 }} />
         <div className={skStyles.sk} style={{ width: '40%', height: 24, borderRadius: 8 }} />
         <div className={skStyles.sk} style={{ width: '100%', height: 1, borderRadius: 0 }} />
@@ -675,25 +675,25 @@ export default function LyricsEditor() {
   return (
     <div className={styles.container}>
       {toast && (
-        <div style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', background: '#222', border: '1px solid #444', color: '#fff', padding: '10px 20px', borderRadius: 8, fontSize: '0.9rem', zIndex: 9999, display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.5)', whiteSpace: 'nowrap' }}>
-          <span style={{ color: '#7CFC00' }}>✓</span> {toast}
+        <div className={styles.toastBar}>
+          <span className={styles.toastIcon}>✓</span> {toast}
         </div>
       )}
       <div className={styles.header}>
         <h1 className={styles.title}>🎨 パート分け</h1>
         <div className={styles.headerActions}>
           <Link href={`/prompter/${songId}`} className={styles.previewLink} target="_blank">▶ プロンプター表示 ↗</Link>
-          <div style={{ position: 'relative' }} ref={exportMenuRef}>
-            <button className={styles.tab} style={{ borderRadius: 6 }} onClick={() => setExportMenuOpen(v => !v)}>⋯</button>
+          <div className={styles.exportMenuWrapper} ref={exportMenuRef}>
+            <button className={`${styles.tab} ${styles.tabRound}`} onClick={() => setExportMenuOpen(v => !v)}>⋯</button>
             {exportMenuOpen && (
-              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#111', border: '1px solid #333', borderRadius: 10, padding: '0.5rem', minWidth: 220, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <div className={styles.exportDropdown}>
                 {isPublic && (
                   <CopyUrlButton songId={songId} inMenu onClose={() => setExportMenuOpen(false)} />
                 )}
-                <a href={`/api/songs/${songId}/export/pptx`} download style={{ color: '#ccc', textDecoration: 'none', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem' }} onClick={() => setExportMenuOpen(false)}>📥 PPTX出力</a>
-                <a href={`/admin/${songId}/print`} target="_blank" style={{ color: '#ccc', textDecoration: 'none', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem' }} onClick={() => setExportMenuOpen(false)}>🖨️ PDF出力</a>
+                <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX出力</a>
+                <a href={`/admin/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF出力</a>
                 <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
-                <div style={{ height: 1, background: '#222', margin: '0.25rem 0' }} />
+                <div className={styles.exportDropdownDivider} />
                 <CollaboratorMenuItem songId={songId} />
               </div>
             )}
@@ -729,9 +729,9 @@ export default function LyricsEditor() {
                 placeholder="アーティスト名"
               />
             </div>
-            <div className={styles.infoFormRow} style={{ alignItems: 'flex-start' }}>
-              <label className={styles.infoFormLabel} style={{ paddingTop: '0.5rem' }}>概要</label>
-              <div style={{ flex: 1 }}>
+            <div className={`${styles.infoFormRow} ${styles.infoFormRowTop}`}>
+              <label className={`${styles.infoFormLabel} ${styles.infoFormLabelTop}`}>概要</label>
+              <div className={styles.flex1}>
                 <textarea
                   className={styles.descriptionInput}
                   value={editDescription}
@@ -739,14 +739,14 @@ export default function LyricsEditor() {
                   placeholder="概要（200文字まで）"
                   rows={3}
                 />
-                <div style={{ textAlign: 'right', fontSize: '0.75rem', color: editDescription.length >= 200 ? '#FF4444' : '#555', marginTop: '4px' }}>
+                <div className={`${styles.descriptionCountWrap} ${editDescription.length >= 200 ? styles.descriptionCountMax : styles.descriptionCountOk}`}>
                   {editDescription.length}/200
                 </div>
               </div>
             </div>
             <div className={styles.infoFormRow}>
               <label className={styles.infoFormLabel}>公開</label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
+              <label className={styles.toggleLabel}>
                 <button
                   type="button"
                   onClick={() => setIsPublic(v => !v)}
@@ -762,7 +762,7 @@ export default function LyricsEditor() {
                     transition: 'left 0.2s', display: 'block',
                   }} />
                 </button>
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>
+                <span className={styles.toggleHint}>
                   {isPublic ? '一覧に公開' : '一覧に表示しない'}
                 </span>
               </label>
@@ -797,9 +797,9 @@ export default function LyricsEditor() {
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
           </div>
           <hr className={styles.divider} />
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <div className={styles.saveBtnRow}>
             <button className={styles.saveBtn} onClick={saveAll} disabled={savingMeta}>
-              {savingMeta ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 保存'}
+              {savingMeta ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
             </button>
           </div>
         </div>
@@ -809,9 +809,9 @@ export default function LyricsEditor() {
         <div className={styles.lyricsPanel}>
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
-            <input ref={fileRef} type="file" accept=".lrc,.txt" style={{ display: 'none' }} onChange={handleLrcImport} />
+            <input ref={fileRef} type="file" accept=".lrc,.txt" className={styles.fileInputHidden} onChange={handleLrcImport} />
             <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>
-              {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 保存'}
+              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
             </button>
           </div>
           <p className={styles.hint}>LRC形式またはプレーンテキスト（空行でブロック区切り）を貼り付けて保存してください。</p>
@@ -829,7 +829,7 @@ export default function LyricsEditor() {
         <div className={styles.lyricsPanel}>
           <div className={styles.lyricsToolbar}>
             <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>
-              {saving ? <><span style={{ display: 'inline-block', width: 12, height: 12, border: '2px solid #fff', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />保存中</> : '💾 パート分けを保存'}
+              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 パート分けを保存'}
             </button>
           </div>
           <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。行を長押しで単語ごとのパート分けができます。</p>
@@ -859,7 +859,7 @@ export default function LyricsEditor() {
                       ? checkedMemberIds.map(id => (
                           <span key={id} className={styles.selectedDot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
                         ))
-                      : <span style={{ color: '#555', fontSize: '0.75rem' }}>なし</span>
+                      : <span className={styles.collabSectionLabel}>なし</span>
                     }
                   </div>
                 <button className={styles.clearBtn} onClick={() => setCheckedMemberIds([])}>選択解除</button>
@@ -872,7 +872,7 @@ export default function LyricsEditor() {
                   onClick={() => setDrawerOpen(v => !v)}
                 >
                   {checkedMemberIds.length > 0 && (
-                    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 6 }}>
+                    <span className={styles.colorDotCol}>
                       {checkedMemberIds.map(id => (
                         <span key={id} style={{ width: 10, height: 10, borderRadius: '50%', background: memberMap[id]?.color, display: 'block', flexShrink: 0, border: '1.5px solid rgba(255,255,255,0.7)' }} />
                       ))}

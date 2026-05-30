@@ -1,0 +1,247 @@
+/* ページ全体の中央配置 */
+.pageCenter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+  font-family: 'Hiragino Sans', sans-serif;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* ダークカード */
+.card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.cardSm {
+  max-width: 380px;
+}
+
+/* カード内タイトル */
+.cardTitle {
+  font-size: 1.3rem;
+  margin: 0;
+  color: #fff;
+}
+
+/* カード内サブテキスト */
+.cardSub {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* フォームラベル */
+.formLabel {
+  color: #666;
+  font-size: 0.8rem;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+/* フォームエラー */
+.formError {
+  color: #FF4444;
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* 情報ボックス（楽曲情報など） */
+.infoBox {
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.infoBoxTitle {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.infoBoxSub {
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.infoBoxMeta {
+  color: #666;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+}
+
+/* 有効期限・メタ情報 */
+.metaText {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+/* プライマリボタン */
+.btnPrimary {
+  background: #FF69B4;
+  border: none;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-align: center;
+  text-decoration: none;
+  transition: opacity 0.2s;
+  display: block;
+  width: 100%;
+}
+
+.btnPrimary:hover { opacity: 0.85; }
+.btnPrimary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* セカンダリリンク */
+.linkSub {
+  color: #555;
+  font-size: 0.8rem;
+  text-align: center;
+  text-decoration: none;
+}
+
+.linkSub:hover { color: #aaa; }
+
+/* 退会確認ボックス */
+.dangerBox {
+  background: #1a0a0a;
+  border: 1px solid #FF4444;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.dangerText {
+  color: #FF4444;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.dangerMuted {
+  color: #555;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* チェックボックスラベル */
+.checkLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+
+.checkText {
+  color: #aaa;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.checkText a {
+  color: #FF69B4;
+  text-decoration: none;
+}
+
+/* ステータスメッセージ */
+.statusOk {
+  color: #7CFC00;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.statusError {
+  color: #FF4444;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* 区切り線 */
+.divider {
+  border: none;
+  border-top: 1px solid #222;
+  margin: 2rem 0;
+}
+
+/* メールアドレス表示 */
+.emailDisplay {
+  color: #fff;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 6px;
+}
+
+/* 退会ボタン */
+.btnDanger {
+  background: #FF4444;
+  border: none;
+  color: #fff;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+}
+
+.btnDanger:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.btnOutline {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.btnOutline:hover { color: #fff; border-color: #666; }
+
+.btnOutlineDanger {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  padding: 0.5rem 1.2rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.btnOutlineDanger:hover { color: #FF4444; border-color: #FF4444; }
+
+/* フレックスユーティリティ */
+.row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.textDanger  { color: #FF4444; }
+.textSuccess { color: #7CFC00; }
+.textPink    { color: #FF69B4; }

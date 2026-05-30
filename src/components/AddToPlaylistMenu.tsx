@@ -76,9 +76,9 @@ export default function AddToPlaylistMenu({
           )}
           <div className={styles.label}>セットリストに追加</div>
           {loading ? (
-            <div className={styles.item} style={{ color: '#555' }}>読み込み中...</div>
+            <div className={`${styles.item} ${styles.itemMuted}`}>読み込み中...</div>
           ) : playlists.length === 0 ? (
-            <div className={styles.item} style={{ color: '#555' }}>セットリストがありません</div>
+            <div className={`${styles.item} ${styles.itemMuted}`}>セットリストがありません</div>
           ) : (
             playlists.map(p => (
               <button key={p.id} className={styles.item} onClick={e => handleAdd(e, p.id)}>

@@ -43,7 +43,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   `, [id])
 
   return NextResponse.json({
-    links: links.rows.map(l => ({
+    links: links.rows.map((l: any) => ({
       ...l,
       expired: new Date(l.expires_at) < new Date(),
     })),

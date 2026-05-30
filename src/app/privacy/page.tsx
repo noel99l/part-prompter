@@ -6,7 +6,7 @@ export default function PrivacyPage() {
   return (
     <div style={{ background: '#0a0a0a', minHeight: '100vh', color: '#ccc', fontFamily: "'Hiragino Sans', sans-serif", padding: '2rem 1.5rem', boxSizing: 'border-box' }}>
       <div style={{ maxWidth: 680, margin: '0 auto' }}>
-        <Link href="/prompter" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>← 一覧に戻る</Link>
+        <Link href="/songs" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>← 一覧に戻る</Link>
 
         <h1 style={{ color: '#fff', fontSize: '1.6rem', margin: '1.5rem 0 0.5rem' }}>プライバシーポリシー</h1>
         <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2025年6月</p>
