@@ -6,9 +6,9 @@ import { useSession, signOut } from 'next-auth/react'
 import styles from './AdminMenu.module.css'
 
 const ADMIN_NAV = [
-  { href: '/admin/songs', label: '🎤 パート分け管理' },
-  { href: '/admin/playlists', label: '📋 セットリスト管理' },
-  { href: '/admin/settings', label: '⚙️ アカウント設定' },
+  { href: '/manage/songs', label: '🎤 パート分け管理' },
+  { href: '/manage/playlists', label: '📋 セットリスト管理' },
+  { href: '/manage/settings', label: '⚙️ アカウント設定' },
 ]
 
 export default function AppMenu({ accountName }: { accountName?: string }) {
@@ -44,7 +44,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
           {name && <div className={styles.drawerAccount}>{name}</div>}
 
           <nav className={styles.nav}>
-            <Link href="/prompter" className={`${styles.navItem} ${pathname === '/prompter' ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
+            <Link href="/songs" className={`${styles.navItem} ${pathname === '/songs' ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
               🎵 パート分け一覧
             </Link>
 
@@ -71,7 +71,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
           </nav>
 
           {isLoggedIn && (
-            <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/prompter' })}>
+            <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/songs' })}>
               ログアウト
             </button>
           )}

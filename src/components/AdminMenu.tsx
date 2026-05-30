@@ -6,10 +6,10 @@ import { signOut } from 'next-auth/react'
 import styles from './AdminMenu.module.css'
 
 const NAV = [
-  { href: '/admin', label: '🎛️ 管理トップ' },
-  { href: '/admin/songs', label: '🎤 パート分け管理' },
-  { href: '/admin/playlists', label: '📋 セットリスト管理' },
-  { href: '/admin/settings', label: '⚙️ アカウント設定' },
+  { href: '/manage/songs', label: '🎛️ 管理トップ' },
+  { href: '/manage/songs', label: '🎤 パート分け管理' },
+  { href: '/manage/playlists', label: '📋 セットリスト管理' },
+  { href: '/manage/settings', label: '⚙️ アカウント設定' },
 ]
 
 export default function AdminMenu({ accountName }: { accountName: string }) {

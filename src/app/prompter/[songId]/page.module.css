@@ -266,3 +266,38 @@
   padding: 2rem 0 1rem;
   font-style: italic;
 }
+
+.skeletonWrap {
+  background: #000;
+  min-height: 100vh;
+  padding: 3vw 4vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skMemberRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  margin-top: 0.5rem;
+}
+
+.skMemberItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.rotateIcon { font-size: 3rem; }
+.rotateText { font-size: 1.1rem; }
+
+.scrollSpacer { height: 40vw; }
+
+.autoLabel {
+  position: relative;
+  z-index: 1;
+}
+
+.textWhite { color: #fff; }
+.textTransparent { color: transparent; }

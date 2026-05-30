@@ -5,9 +5,9 @@ import { useSession, signOut } from 'next-auth/react'
 import styles from './SideNav.module.css'
 
 const ADMIN_NAV = [
-  { href: '/admin/songs', label: '🎤 パート分け管理' },
-  { href: '/admin/playlists', label: '📋 セットリスト管理' },
-  { href: '/admin/settings', label: '⚙️ アカウント設定' },
+  { href: '/manage/songs', label: '🎤 パート分け管理' },
+  { href: '/manage/playlists', label: '📋 セットリスト管理' },
+  { href: '/manage/settings', label: '⚙️ アカウント設定' },
 ]
 
 export default function SideNav({ accountName }: { accountName?: string }) {
@@ -18,7 +18,7 @@ export default function SideNav({ accountName }: { accountName?: string }) {
 
   return (
     <nav className={styles.nav}>
-      <Link href="/prompter" className={`${styles.item} ${pathname === '/prompter' ? styles.itemActive : ''}`}>
+      <Link href="/songs" className={`${styles.item} ${pathname === '/songs' ? styles.itemActive : ''}`}>
         🎵 パート分け一覧
       </Link>
 
@@ -37,7 +37,7 @@ export default function SideNav({ accountName }: { accountName?: string }) {
             </Link>
           ))}
           <div className={styles.divider} />
-          <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/prompter' })}>
+          <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/songs' })}>
             ログアウト
           </button>
         </>

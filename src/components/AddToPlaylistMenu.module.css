@@ -63,3 +63,5 @@
 
 .itemDanger { color: #FF4444 !important; }
 .itemDanger:hover { background: #1a0a0a !important; }
+
+.itemMuted { color: #555 !important; cursor: default; }

@@ -71,7 +71,7 @@ export default function SongDetailPage() {
       return (
         <span>
           {line.word_members.map((w, wi) => {
-            if (!w.member_ids?.length) return <span key={wi} style={{ color: '#fff' }}>{w.text}</span>
+            if (!w.member_ids?.length) return <span key={wi} className={styles.textWhite}>{w.text}</span>
             return <span key={wi} style={gradientStyle(w.member_ids)}>{w.text}</span>
           })}
         </span>
@@ -156,7 +156,7 @@ export default function SongDetailPage() {
       </div>
       <div className={styles.infoSection}>
         <div className={skStyles.sk} style={{ width: '40%', height: 14, borderRadius: 4 }} />
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+        <div className={styles.skTagRow}>
           {[...Array(3)].map((_, i) => <div key={i} className={skStyles.sk} style={{ width: 56, height: 24, borderRadius: 20 }} />)}
         </div>
       </div>

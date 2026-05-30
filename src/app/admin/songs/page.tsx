@@ -234,8 +234,8 @@ export default function AdminSongsPage() {
             {step === 'search' ? (
               <>
                 <h2 className={styles.modalTitle}>曲を追加</h2>
-                <p style={{ fontSize: '0.8rem', color: '#666', margin: 0 }}>
-                  <a href="https://lrclib.net" target="_blank" rel="noreferrer" style={{ color: '#888', textDecoration: 'underline' }}>LRCLIB</a> で曲名を検索して歌詞を取得できます
+                <p className={styles.modalHint}>
+                  <a href="https://lrclib.net" target="_blank" rel="noreferrer" className={styles.modalHintLink}>LRCLIB</a> で曲名を検索して歌詞を取得できます
                 </p>
                 <div className={styles.modalSearchRow}>
                   <input
@@ -259,7 +259,7 @@ export default function AdminSongsPage() {
                   </button>
                 </div>
                 {searched && !searching && suggestions.length === 0 && (
-                  <p style={{ color: '#555', fontSize: '0.85rem', margin: 0 }}>見つかりません</p>
+                  <p className={styles.modalEmpty}>見つかりません</p>
                 )}
                 {suggestions.length > 0 && (
                   <div className={styles.suggestionList}>
@@ -277,7 +277,7 @@ export default function AdminSongsPage() {
                 <button className={styles.manualBtn} onClick={goManualInput}>
                   手動で曲名・アーティストを入力する
                 </button>
-                <button className={styles.cancelBtn} onClick={closeModal} style={{ alignSelf: 'stretch', fontSize: '0.9rem', textAlign: 'center' }}>キャンセル</button>
+                <button className={`${styles.cancelBtn} ${styles.cancelBtnFull}`} onClick={closeModal}>キャンセル</button>
               </>
             ) : (
               <>

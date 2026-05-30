@@ -1010,3 +1010,300 @@
     min-height: 50vh;
   }
 }
+
+/* エクスポートメニュードロップダウン */
+.exportMenuWrapper {
+  position: relative;
+}
+
+.exportDropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 0.5rem;
+  min-width: 220px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.exportDropdownLink {
+  color: #ccc;
+  text-decoration: none;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: background 0.15s;
+  display: block;
+}
+
+.exportDropdownLink:hover { background: #1a1a1a; color: #fff; }
+
+.exportDropdownDivider {
+  height: 1px;
+  background: #222;
+  margin: 0.25rem 0;
+}
+
+/* 共同編集モーダル */
+.collabOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.collabModal {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.collabModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.collabModalTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.collabModalClose {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.collabModalClose:hover { color: #fff; }
+
+.collabSectionLabel {
+  color: #555;
+  font-size: 0.75rem;
+}
+
+.collabRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.collabRowInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.collabRowText {
+  font-size: 0.8rem;
+}
+
+.collabRowTextExpired { color: #FF4444; }
+.collabRowTextActive  { color: #888; }
+
+.collabMemberName {
+  font-size: 0.9rem;
+  color: #7CFC00;
+  flex: 1;
+}
+
+.collabIconBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.collabIconBtn:hover { color: #FF4444; border-color: #FF4444; }
+
+.collabCopyBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.8rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.collabCopyBtn:hover { color: #fff; }
+
+.collabToast {
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.collabSelect {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+/* URLコピーボックス */
+.urlCopyBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.urlCode {
+  background: #0d0d0d;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.85rem;
+  color: #aaa;
+  word-break: break-all;
+  flex: 1;
+}
+
+/* メニューボタン（テキスト） */
+.menuTextBtn {
+  background: none;
+  border: none;
+  color: #ccc;
+  padding: 0.6rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s;
+}
+
+.menuTextBtn:hover { background: #1a1a1a; color: #fff; }
+
+/* トースト通知 */
+.toastIcon { color: #7CFC00; }
+
+/* infoFormRow flex:1 */
+.flex1 { flex: 1; }
+
+.collabSectionList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.toastBar {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  white-space: nowrap;
+}
+
+.tabRound {
+  border-radius: 6px;
+}
+
+.exportBtnGray { background: #444 !important; }
+
+.skeletonList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 600px;
+}
+
+.descriptionCountWrap {
+  text-align: right;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+.descriptionCountOk  { color: #555; }
+.descriptionCountMax { color: #FF4444; }
+
+.toggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.toggleHint {
+  color: #888;
+  font-size: 0.85rem;
+}
+
+.saveBtnRow {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.spinnerSm {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.fileInputHidden { display: none; }
+
+.colorDotCol {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 6px;
+}
+
+.infoFormLabelTop { padding-top: 0.5rem; }
+
+.textWhite { color: #fff; }
+.infoFormRowTop { align-items: flex-start; }

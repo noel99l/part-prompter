@@ -1,0 +1,78 @@
+.root {
+  min-height: 100vh;
+  background: #0a0a0a;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 2px solid #FF69B4;
+  background: #0d0a0d;
+  position: sticky;
+  top: 0;
+  z-index: 200;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.logo {
+  color: #fff;
+  font-size: 1rem;
+  font-family: 'Hiragino Sans', sans-serif;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.badge {
+  background: #FF69B4;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: bold;
+  padding: 0.15rem 0.5rem;
+  border-radius: 99px;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+}
+
+.sidebar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    display: block;
+    width: 220px;
+    flex-shrink: 0;
+    border-right: 1px solid #1a1a1a;
+    padding: 1.5rem 0;
+    position: sticky;
+    top: 49px;
+    height: calc(100vh - 49px);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .header {
+    padding: 0.6rem 1rem;
+  }
+}
