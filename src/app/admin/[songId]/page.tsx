@@ -129,7 +129,7 @@ export default function LyricsEditor() {
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'export'>('info')
+  const [tab, setTab] = useState<'info' | 'lrc' | 'parts'>('info')
   const [editTitle, setEditTitle] = useState('')
   const [editArtist, setEditArtist] = useState('')
   const [savingMeta, setSavingMeta] = useState(false)
@@ -141,6 +141,16 @@ export default function LyricsEditor() {
   const [memberSaving, setMemberSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const exportMenuRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) setExportMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
   const [expandedLine, setExpandedLine] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -457,74 +467,48 @@ export default function LyricsEditor() {
     return b
   }
 
-  function CopyUrlButton({ songId }: { songId: string }) {
+  function CopyUrlButton({ songId, inMenu, onClose }: { songId: string; inMenu?: boolean; onClose?: () => void }) {
     const [copied, setCopied] = React.useState(false)
     const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/prompter/${songId}/detail`
+    const handleCopy = async () => {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => { setCopied(false); onClose?.() }, 1500)
+    }
+    if (inMenu) return (
+      <button onClick={handleCopy} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+        {copied ? '✓ コピー済み' : '📋 共有URLをコピー'}
+      </button>
+    )
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
         <code style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '6px', padding: '0.4rem 0.75rem', fontSize: '0.85rem', color: '#aaa', wordBreak: 'break-all', flex: 1 }}>{url}</code>
-        <button className={styles.exportBtn} style={{ background: '#444' }} onClick={async () => {
-          await navigator.clipboard.writeText(url)
-          setCopied(true)
-          setTimeout(() => setCopied(false), 2000)
-        }}>
+        <button className={styles.exportBtn} style={{ background: '#444' }} onClick={handleCopy}>
           {copied ? '✓ コピー済み' : '📋 URLをコピー'}
         </button>
       </div>
     )
   }
 
-  function LyricsTextExport({ lines, breaks, members }: { lines: FlatLine[]; breaks: Set<number>; members: Member[] }) {
+  function LyricsTextExportMenuItem({ lines, breaks, members, onClose }: { lines: FlatLine[]; breaks: Set<number>; members: Member[]; onClose?: () => void }) {
+    const [copied, setCopied] = React.useState(false)
     const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
-
-    // メンバーIDをアルファベット記号に変換（A, B, C...）
-    const getSymbol = (id: number): string => {
-      const idx = members.findIndex(m => m.id === id)
-      return idx >= 0 ? String.fromCharCode(65 + idx) : '?'
-    }
-
-    const getLabel = (memberIds: number[]): string => {
-      if (!memberIds || memberIds.length === 0) return '全員'
-      if (memberIds.length === members.length && members.length > 0) return '全員'
-      return memberIds.map(id => getSymbol(id)).join('')
-    }
-
-    const buildText = (): string => {
-      // ヘッダー：曲名・アーティスト
+    const getSymbol = (id: number) => { const idx = members.findIndex(m => m.id === id); return idx >= 0 ? String.fromCharCode(65 + idx) : '?' }
+    const getLabel = (ids: number[]) => { if (!ids?.length || (ids.length === members.length && members.length > 0)) return '全員'; return ids.map(id => getSymbol(id)).join('') }
+    const buildText = () => {
       const header: string[] = []
       if (song?.title) header.push(song.title)
       if (song?.artist) header.push(song.artist)
-      // メンバー一覧：A:名前 B:名前 ...（名前がないメンバーは除外）
-      const memberLine = members
-        .map((m, i) => m.name ? `${String.fromCharCode(65 + i)}:${m.name}` : null)
-        .filter(Boolean)
-        .join(' ')
-
+      const memberLine = members.map((m, i) => m.name ? `${String.fromCharCode(65 + i)}:${m.name}` : null).filter(Boolean).join(' ')
       const result: string[] = [...header, memberLine, '']
       let prevLabel = ''
       lines.forEach((line, i) => {
         if (i > 0 && breaks.has(i)) result.push('')
-
-        // word_membersがある場合は単語ごとに(記号)テキストを構築
         if (line.word_members.length > 0) {
-          let text = ''
-          let curLabel = ''
-          line.word_members.forEach(w => {
-            const isSpace = w.text === ' ' || w.text === '\u3000'
-            if (!isSpace) {
-              const label = getLabel(w.member_ids)
-              if (label !== curLabel) {
-                text += `(${label})`
-                curLabel = label
-              }
-            }
-            text += w.text
-          })
-          result.push(text)
-          prevLabel = ''
-          return
+          let text = ''; let curLabel = ''
+          line.word_members.forEach(w => { const isSpace = w.text === ' ' || w.text === '　'; if (!isSpace) { const label = getLabel(w.member_ids); if (label !== curLabel) { text += `(${label})`; curLabel = label } }; text += w.text })
+          result.push(text); prevLabel = ''; return
         }
-
         const label = getLabel(line.member_ids)
         const prefix = label !== prevLabel ? `(${label})` : ''
         result.push(prefix ? `${prefix}${line.text}` : line.text)
@@ -532,26 +516,139 @@ export default function LyricsEditor() {
       })
       return result.join('\n')
     }
-
-    const [copied, setCopied] = React.useState(false)
-
-    const handleCopy = async () => {
-      await navigator.clipboard.writeText(buildText())
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-
-    const text = buildText()
-
     return (
-      <div>
-        <button className={styles.exportBtn} style={{ background: '#444', marginBottom: '1rem' }} onClick={handleCopy}>
-          {copied ? '✓ コピーしました' : '📋 テキストをコピー'}
-        </button>
-        <pre style={{ background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '1rem', color: '#ccc', fontSize: '0.85rem', lineHeight: '1.8', whiteSpace: 'pre-wrap', maxWidth: '600px', maxHeight: '60vh', overflowY: 'auto' }}>{text}</pre>
-      </div>
+      <button onClick={async () => { await navigator.clipboard.writeText(buildText()); setCopied(true); setTimeout(() => { setCopied(false); onClose?.() }, 1500) }} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+        {copied ? '✓ コピー済み' : '📝 パート分けテキストをコピー'}
+      </button>
     )
   }
+
+  function CollaboratorMenuItem({ songId }: { songId: string }) {
+    const [generating, setGenerating] = React.useState(false)
+    const [copyToast, setCopyToast] = React.useState(false)
+    const [showModal, setShowModal] = React.useState(false)
+    const [links, setLinks] = React.useState<any[]>([])
+    const [members, setMembers] = React.useState<any[]>([])
+    const [expireMinutes, setExpireMinutes] = React.useState(10080)
+
+    const loadCollabs = () => {
+      fetch(`/api/songs/${songId}/collaborators`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.links) setLinks(data.links)
+          if (data.members) setMembers(data.members)
+        })
+    }
+
+    const generate = async () => {
+      setGenerating(true)
+      const res = await fetch(`/api/songs/${songId}/collaborators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expireMinutes }),
+      })
+      const data = await res.json()
+      if (data.token) {
+        await navigator.clipboard.writeText(`${window.location.origin}/invite/${data.token}`)
+        setCopyToast(true)
+        setTimeout(() => setCopyToast(false), 2000)
+        setLinks(prev => [{ ...data, expired: false }, ...prev])
+      }
+      setGenerating(false)
+    }
+
+    const remove = async (id: number) => {
+      await fetch(`/api/songs/${songId}/collaborators`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      setLinks(prev => prev.filter(c => c.id !== id))
+    }
+
+    const removeMember = async (memberId: number) => {
+      await fetch(`/api/songs/${songId}/collaborators`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ memberId }),
+      })
+      setMembers(prev => prev.filter(m => m.id !== memberId))
+    }
+
+    const openModal = () => { loadCollabs(); setShowModal(true) }
+
+    return (
+      <>
+        <button onClick={openModal} style={{ background: 'none', border: 'none', color: '#ccc', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem', cursor: 'pointer', textAlign: 'left', width: '100%' }}>
+          👥 共同編集を管理
+        </button>
+        {showModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }} onClick={() => setShowModal(false)}>
+            <div style={{ background: '#111', border: '1px solid #333', borderRadius: 12, padding: '1.5rem', width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: '0.6rem' }} onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', color: '#fff' }}>👥 共同編集管理</h2>
+                <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer', fontSize: '1.2rem' }}>✕</button>
+              </div>
+              <div style={{ color: '#555', fontSize: '0.75rem' }}>招待リンクを発行</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <select
+                    value={expireMinutes}
+                    onChange={e => setExpireMinutes(Number(e.target.value))}
+                    style={{ background: '#111', border: '1px solid #333', borderRadius: 6, color: '#fff', padding: '0.4rem 0.6rem', fontSize: '0.85rem', width: '100%' }}
+                  >
+                    <option value={30}>30分有効</option>
+                    <option value={60}>1時間有効</option>
+                    <option value={360}>6時間有効</option>
+                    <option value={720}>12時間有効</option>
+                    <option value={1440}>1日有効</option>
+                    <option value={4320}>3日有効</option>
+                    <option value={10080}>7日有効</option>
+                    <option value={20160}>14日有効</option>
+                    <option value={43200}>30日有効</option>
+                  </select>
+                </div>
+                <button onClick={generate} disabled={generating} style={{ background: '#444', border: 'none', color: '#fff', padding: '0.4rem 0.9rem', borderRadius: 6, cursor: generating ? 'not-allowed' : 'pointer', fontSize: '0.85rem', opacity: generating ? 0.6 : 1, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {generating ? '生成中...' : '🔗 発行'}
+                </button>
+              </div>
+              {links.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ color: '#555', fontSize: '0.75rem' }}>発行済みリンク</div>
+                  {links.map((c: any) => (
+                    <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
+                      <div style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: c.expired ? '#FF4444' : '#888' }}>
+                        {c.expired ? '期限切れ' : `${new Date(c.expires_at).toLocaleDateString('ja-JP')}まで有効`}
+                      </div>
+                      {!c.expired && (
+                        <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/invite/${c.token}`); setCopyToast(true); setTimeout(() => setCopyToast(false), 2000) }} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0 }}>📋</button>
+                      )}
+                      <button onClick={() => remove(c.id)} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0, transition: 'color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.color = '#FF4444')} onMouseLeave={e => (e.currentTarget.style.color = '#888')}>削除</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {members.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ color: '#555', fontSize: '0.75rem' }}>共同編集者</div>
+                  {members.map((m: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', background: '#1a1a1a', borderRadius: 8, padding: '0.6rem 0.75rem' }}>
+                      <span style={{ fontSize: '0.9rem', color: '#7CFC00', flex: 1 }}>✓ {m.user_name || '不明'}</span>
+                      <button onClick={() => removeMember(m.id)} style={{ background: 'none', border: '1px solid #444', color: '#888', cursor: 'pointer', fontSize: '0.8rem', padding: '0.25rem 0.6rem', borderRadius: 4, flexShrink: 0, transition: 'color 0.15s' }} onMouseEnter={e => (e.currentTarget.style.color = '#FF4444')} onMouseLeave={e => (e.currentTarget.style.color = '#888')}>削除</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {copyToast && (
+                <div style={{ background: '#222', border: '1px solid #444', color: '#fff', padding: '0.5rem 1rem', borderRadius: 8, fontSize: '0.85rem', textAlign: 'center' }}>✓ リンクをコピーしました</div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
+
 
   if (!song) return (
     <div className={styles.container}>
@@ -586,6 +683,21 @@ export default function LyricsEditor() {
         <h1 className={styles.title}>🎨 パート分け</h1>
         <div className={styles.headerActions}>
           <Link href={`/prompter/${songId}`} className={styles.previewLink} target="_blank">▶ プロンプター表示 ↗</Link>
+          <div style={{ position: 'relative' }} ref={exportMenuRef}>
+            <button className={styles.tab} style={{ borderRadius: 6 }} onClick={() => setExportMenuOpen(v => !v)}>⋯</button>
+            {exportMenuOpen && (
+              <div style={{ position: 'absolute', top: 'calc(100% + 4px)', right: 0, background: '#111', border: '1px solid #333', borderRadius: 10, padding: '0.5rem', minWidth: 220, boxShadow: '0 8px 32px rgba(0,0,0,0.6)', zIndex: 500, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                {isPublic && (
+                  <CopyUrlButton songId={songId} inMenu onClose={() => setExportMenuOpen(false)} />
+                )}
+                <a href={`/api/songs/${songId}/export/pptx`} download style={{ color: '#ccc', textDecoration: 'none', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem' }} onClick={() => setExportMenuOpen(false)}>📥 PPTX出力</a>
+                <a href={`/admin/${songId}/print`} target="_blank" style={{ color: '#ccc', textDecoration: 'none', padding: '0.6rem 0.75rem', borderRadius: 6, fontSize: '0.95rem' }} onClick={() => setExportMenuOpen(false)}>🖨️ PDF出力</a>
+                <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
+                <div style={{ height: 1, background: '#222', margin: '0.25rem 0' }} />
+                <CollaboratorMenuItem songId={songId} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -593,7 +705,6 @@ export default function LyricsEditor() {
         <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>📝 楽曲情報</button>
         <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>🎵 歌詞編集</button>
         <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>🎨 パート分け</button>
-        <button className={`${styles.tab} ${tab === 'export' ? styles.tabActive : ''}`} onClick={() => setTab('export')}>📤 出力</button>
       </div>
 
       {tab === 'info' && (
@@ -874,32 +985,6 @@ export default function LyricsEditor() {
         </div>
       )}
 
-      {tab === 'export' && (
-        <div className={styles.membersPanel}>
-          {isPublic && (
-            <div className={styles.exportCard}>
-              <p className={styles.exportCardLabel}>🔗 共有URL</p>
-              <p className={styles.hint}>パート分けページのURLをコピーできます。</p>
-              <CopyUrlButton songId={songId} />
-            </div>
-          )}
-          <div className={styles.exportCard}>
-            <p className={styles.exportCardLabel}>📥 PPTX出力</p>
-            <p className={styles.hint}>パート分けをPowerPointファイルとして出力します。</p>
-            <a href={`/api/songs/${songId}/export/pptx`} className={styles.exportBtn} download>📥 PPTX出力</a>
-          </div>
-          <div className={styles.exportCard}>
-            <p className={styles.exportCardLabel}>🖨️ PDF出力</p>
-            <p className={styles.hint}>パート分けをPDFとして出力します。</p>
-            <a href={`/admin/${songId}/print`} target="_blank" className={styles.exportBtn}>🖨️ PDF出力</a>
-          </div>
-          <div className={styles.exportCard}>
-            <p className={styles.exportCardLabel}>📝 テキストコピー</p>
-            <p className={styles.hint}>パート分けをテキスト形式でコピーできます。</p>
-            <LyricsTextExport lines={lines} breaks={breaks} members={members} />
-          </div>
-        </div>
-      )}
     </div>
   )
 }

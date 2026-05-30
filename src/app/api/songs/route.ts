@@ -10,13 +10,16 @@ export async function GET(req: NextRequest) {
 
   const result = email
     ? await query(`
-        SELECT s.*, u.account_name as created_by_name,
+        SELECT DISTINCT s.*, u.account_name as created_by_name,
           (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,
           (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
           (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
         FROM prompter_songs s
         LEFT JOIN users u ON u.id = s.created_by
-        WHERE u.email = $1
+        LEFT JOIN song_collaborators sc ON sc.song_id = s.id
+        LEFT JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
+        LEFT JOIN users cu ON cu.id = scm.user_id
+        WHERE u.email = $1 OR cu.email = $1
         ORDER BY s.created_at DESC
       `, [email])
     : await query(`
