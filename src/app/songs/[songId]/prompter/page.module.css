@@ -301,3 +301,11 @@
 
 .textWhite { color: #fff; }
 .textTransparent { color: transparent; }
+
+.coverText {
+  font-size: clamp(0.9rem, 2vw, 1.4rem);
+  color: #ccc;
+  white-space: pre-wrap;
+  line-height: 1.7;
+  margin-top: 0.5rem;
+}

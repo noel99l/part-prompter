@@ -129,9 +129,11 @@ export default function LyricsEditor() {
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
   const [saving, setSaving] = useState(false)
-  const [tab, setTab] = useState<'info' | 'lrc' | 'parts'>('info')
+  const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'prompter'>('info')
   const [editTitle, setEditTitle] = useState('')
   const [editArtist, setEditArtist] = useState('')
+  const [coverText, setCoverText] = useState('')
+  const [bgColor, setBgColor] = useState('#000000')
   const [savingMeta, setSavingMeta] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingArtist, setEditingArtist] = useState(false)
@@ -163,7 +165,7 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setMembers(m)
       if (Array.isArray(l) && l.length > 0) {
         const { lines: fl, breaks: br } = fromDbFormat(l)
         setLines(fl); setBreaks(br)
@@ -240,7 +242,7 @@ export default function LyricsEditor() {
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }),
+      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor }),
     })
     setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
     await saveMembersApi(members)
@@ -491,7 +493,6 @@ export default function LyricsEditor() {
   }
 
   function LyricsTextExportMenuItem({ lines, breaks, members, onClose }: { lines: FlatLine[]; breaks: Set<number>; members: Member[]; onClose?: () => void }) {
-    const [copied, setCopied] = React.useState(false)
     const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
     const getSymbol = (id: number) => { const idx = members.findIndex(m => m.id === id); return idx >= 0 ? String.fromCharCode(65 + idx) : '?' }
     const getLabel = (ids: number[]) => { if (!ids?.length || (ids.length === members.length && members.length > 0)) return '全員'; return ids.map(id => getSymbol(id)).join('') }
@@ -517,8 +518,18 @@ export default function LyricsEditor() {
       return result.join('\n')
     }
     return (
-      <button onClick={async () => { await navigator.clipboard.writeText(buildText()); setCopied(true); setTimeout(() => { setCopied(false); onClose?.() }, 1500) }} className={styles.menuTextBtn}>
-        {copied ? '✓ コピー済み' : '📝 パート分けテキストをコピー'}
+      <button onClick={() => {
+        const text = buildText()
+        const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `${song?.title || 'parts'}.txt`
+        a.click()
+        URL.revokeObjectURL(url)
+        onClose?.()
+      }} className={styles.menuTextBtn}>
+        📝 パート分けテキスト
       </button>
     )
   }
@@ -674,8 +685,10 @@ export default function LyricsEditor() {
                 {isPublic && (
                   <CopyUrlButton songId={songId} inMenu onClose={() => setExportMenuOpen(false)} />
                 )}
-                <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX出力</a>
-                <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF出力</a>
+                <div className={styles.exportDropdownDivider} />
+                <div className={styles.collabSectionLabel} style={{ padding: '0.2rem 0.75rem' }}>ダウンロード</div>
+                <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
+                <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF</a>
                 <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
                 <div className={styles.exportDropdownDivider} />
                 <CollaboratorMenuItem songId={songId} />
@@ -686,9 +699,18 @@ export default function LyricsEditor() {
       </div>
 
       <div className={styles.tabs}>
-        <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>📝 楽曲情報</button>
-        <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>🎵 歌詞編集</button>
-        <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>🎨 パート分け</button>
+        <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>
+          <span className={styles.tabIcon}>📝</span><span className={styles.tabLabel}> 楽曲情報</span>
+        </button>
+        <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>
+          <span className={styles.tabIcon}>🎵</span><span className={styles.tabLabel}> 歌詞編集</span>
+        </button>
+        <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>
+          <span className={styles.tabIcon}>🎨</span><span className={styles.tabLabel}> パート分け</span>
+        </button>
+        <button className={`${styles.tab} ${tab === 'prompter' ? styles.tabActive : ''}`} onClick={() => setTab('prompter')}>
+          <span className={styles.tabIcon}>▶</span><span className={styles.tabLabel}> プロンプター設定</span>
+        </button>
       </div>
 
       {tab === 'info' && (
@@ -794,9 +816,6 @@ export default function LyricsEditor() {
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
             <input ref={fileRef} type="file" accept=".lrc,.txt" className={styles.fileInputHidden} onChange={handleLrcImport} />
-            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>
-              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
-            </button>
           </div>
           <p className={styles.hint}>LRC形式またはプレーンテキスト（空行でブロック区切り）を貼り付けて保存してください。</p>
           <textarea
@@ -806,14 +825,19 @@ export default function LyricsEditor() {
             placeholder="LRC形式またはテキスト形式の歌詞を貼り付け..."
             spellCheck={false}
           />
+          <div className={styles.saveBtnRow}>
+            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>
+              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
+            </button>
+          </div>
         </div>
       )}
 
       {tab === 'parts' && (
         <div className={styles.lyricsPanel}>
-          <div className={styles.lyricsToolbar}>
+          <div className={styles.saveBtnRow}>
             <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>
-              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 パート分けを保存'}
+              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
             </button>
           </div>
           <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。行を長押しで単語ごとのパート分けができます。</p>
@@ -966,6 +990,54 @@ export default function LyricsEditor() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'prompter' && (
+        <div className={styles.membersPanel}>
+          <div className={styles.infoForm}>
+            <div className={styles.infoFormRow} style={{ alignItems: 'flex-start' }}>
+              <label className={`${styles.infoFormLabel} ${styles.infoFormLabelTop}`}>表紙テキスト</label>
+              <div style={{ flex: 1 }}>
+                <textarea
+                  className={styles.descriptionInput}
+                  value={coverText}
+                  onChange={e => setCoverText(e.target.value.slice(0, 300))}
+                  placeholder="スライド表紙に表示するテキスト（300文字まで）"
+                  rows={4}
+                />
+                <div className={`${styles.descriptionCountWrap} ${coverText.length >= 300 ? styles.descriptionCountMax : styles.descriptionCountOk}`}>
+                  {coverText.length}/300
+                </div>
+              </div>
+            </div>
+            <div className={styles.infoFormRow}>
+              <label className={styles.infoFormLabel}>背景カラー</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <input
+                  type="color"
+                  value={bgColor}
+                  onChange={e => setBgColor(e.target.value)}
+                  className={styles.colorPicker}
+                  style={{ width: 40, height: 40 }}
+                />
+                <span style={{ color: '#888', fontSize: '0.85rem' }}>{bgColor}</span>
+                <button
+                  className={styles.addBtn}
+                  onClick={() => setBgColor('#000000')}
+                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem' }}
+                >
+                  リセット
+                </button>
+              </div>
+            </div>
+          </div>
+          <hr className={styles.divider} />
+          <div className={styles.saveBtnRow}>
+            <button className={styles.saveBtn} onClick={saveAll} disabled={savingMeta}>
+              {savingMeta ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
+            </button>
+          </div>
         </div>
       )}
 
