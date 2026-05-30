@@ -612,22 +612,6 @@ export default function LyricsEditor() {
                   {generating ? '生成中...' : '🔗 発行'}
                 </button>
               </div>
-              {links.length > 0 && (
-                <div className={styles.collabSectionList}>
-                  <div className={styles.collabSectionLabel}>発行済みリンク</div>
-                  {links.map((c: any) => (
-                    <div key={c.id} className={styles.collabRow}>
-                      <div style={{ flex: 1, minWidth: 0, fontSize: '0.8rem', color: c.expired ? '#FF4444' : '#888' }}>
-                        {c.expired ? '期限切れ' : `${new Date(c.expires_at).toLocaleDateString('ja-JP')}まで有効`}
-                      </div>
-                      {!c.expired && (
-                        <button onClick={async () => { await navigator.clipboard.writeText(`${window.location.origin}/invite/${c.token}`); setCopyToast(true); setTimeout(() => setCopyToast(false), 2000) }} className={styles.collabCopyBtn}>📋</button>
-                      )}
-                      <button onClick={() => remove(c.id)} className={styles.collabIconBtn}>削除</button>
-                    </div>
-                  ))}
-                </div>
-              )}
               {members.length > 0 && (
                 <div className={styles.collabSectionList}>
                   <div className={styles.collabSectionLabel}>共同編集者</div>

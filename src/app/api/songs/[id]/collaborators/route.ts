@@ -64,6 +64,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const expireMinutes = Math.min(Math.max(Number(body.expireMinutes) || 10080, 30), 43200)
   const expiresAt = new Date(Date.now() + expireMinutes * 60 * 1000)
 
+  // 期限切れのリンクを自動削除
+  await query(`DELETE FROM song_collaborators WHERE song_id = $1 AND expires_at < NOW()`, [id])
+
   const result = await query(`
     INSERT INTO song_collaborators (song_id, invited_by, token, expires_at)
     VALUES ($1, $2, $3, $4) RETURNING *
