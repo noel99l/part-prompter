@@ -51,6 +51,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-decoration: none;
+  display: block;
 }
 
 .item:hover { background: #1a1a1a; color: #fff; }

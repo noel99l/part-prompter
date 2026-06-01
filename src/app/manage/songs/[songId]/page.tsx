@@ -1,6 +1,6 @@
 'use client'
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
@@ -107,6 +107,7 @@ function toLrcText(lines: FlatLine[], breaks: Set<number>): string {
 
 export default function LyricsEditor() {
   const { songId } = useParams<{ songId: string }>()
+  const router = useRouter()
 
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -487,7 +488,7 @@ export default function LyricsEditor() {
       setTimeout(() => { setCopied(false); onClose?.() }, 1500)
     }
     if (inMenu) return (
-      <button onClick={handleCopy} className={styles.menuTextBtn}>
+      <button onClick={handleCopy} className={styles.exportDropdownLink}>
         {copied ? '✓ コピー済み' : '📋 共有URLをコピー'}
       </button>
     )
@@ -537,9 +538,104 @@ export default function LyricsEditor() {
         a.click()
         URL.revokeObjectURL(url)
         onClose?.()
-      }} className={styles.menuTextBtn}>
+      }} className={styles.exportDropdownLink}>
         📝 パート分けテキスト
       </button>
+    )
+  }
+
+  function PlaylistAddMenuItem({ songId, songTitle, onClose }: { songId: string; songTitle?: string; onClose: () => void }) {
+    const [showModal, setShowModal] = React.useState(false)
+    const [playlists, setPlaylists] = React.useState<any[]>([])
+    const [loading, setLoading] = React.useState(false)
+    const [added, setAdded] = React.useState<number | null>(null)
+
+    const openModal = async () => {
+      setShowModal(true)
+      setLoading(true)
+      const res = await fetch('/api/playlists')
+      setPlaylists(await res.json())
+      setLoading(false)
+    }
+
+    const addToPlaylist = async (playlistId: number) => {
+      await fetch(`/api/playlists/${playlistId}/songs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ songId: Number(songId) }),
+      })
+      setAdded(playlistId)
+      setTimeout(() => setAdded(null), 1500)
+    }
+
+    return (
+      <>
+        <button onClick={openModal} className={styles.exportDropdownLink}>📋 セットリストに追加</button>
+        {showModal && (
+          <div className={styles.collabOverlay} onClick={() => setShowModal(false)}>
+            <div className={styles.collabModal} onClick={e => e.stopPropagation()}>
+              <div className={styles.collabModalHeader}>
+                <h2 className={styles.collabModalTitle}>📋 セットリストに追加</h2>
+                <button onClick={() => setShowModal(false)} className={styles.collabModalClose}>✕</button>
+              </div>
+              {songTitle && <p style={{ color: '#aaa', fontSize: '0.85rem', margin: '0 0 0.5rem', padding: '0 0.1rem' }}>{songTitle}</p>}
+              {loading ? (
+                <p className={styles.collabSectionLabel}>読み込み中...</p>
+              ) : playlists.length === 0 ? (
+                <p className={styles.collabSectionLabel}>セットリストがありません</p>
+              ) : (
+                <div className={styles.collabSectionList}>
+                  {playlists.map((p: any) => (
+                    <div key={p.id} className={styles.collabRow}>
+                      <span className={styles.collabRowInfo} style={{ fontSize: '0.9rem', color: '#fff' }}>{p.name}</span>
+                      <button
+                        onClick={() => addToPlaylist(p.id)}
+                        className={styles.collabCopyBtn}
+                        style={{ color: added === p.id ? '#7CFC00' : '#ccc' }}
+                      >{added === p.id ? '✓ 追加済み' : '追加'}</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
+
+  function DeleteSongMenuItem({ songId, onClose, onDeleted }: { songId: string; onClose: () => void; onDeleted: () => void }) {
+    const [confirm, setConfirm] = React.useState(false)
+    const [deleting, setDeleting] = React.useState(false)
+
+    const handleDelete = async () => {
+      setDeleting(true)
+      await fetch(`/api/songs/${songId}`, { method: 'DELETE' })
+      onDeleted()
+    }
+
+    return (
+      <>
+        {!confirm ? (
+          <button onClick={() => setConfirm(true)} className={`${styles.exportDropdownLink} ${styles.exportDropdownLinkDanger}`}>🗑️ 楽曲を削除</button>
+        ) : (
+          <div className={styles.collabOverlay} onClick={() => setConfirm(false)}>
+            <div className={styles.collabModal} onClick={e => e.stopPropagation()}>
+              <div className={styles.collabModalHeader}>
+                <h2 className={styles.collabModalTitle} style={{ color: '#FF4444' }}>🗑️ 楽曲を削除</h2>
+                <button onClick={() => setConfirm(false)} className={styles.collabModalClose}>✕</button>
+              </div>
+              <p className={styles.collabSectionLabel}>この曲を削除しますか？歌詞・メンバーも全て削除されます。</p>
+              <div className={styles.collabRow}>
+                <button onClick={handleDelete} disabled={deleting} className={styles.collabIconBtn} style={{ color: '#FF4444', borderColor: '#FF4444', flex: 1 }}>
+                  {deleting ? '削除中...' : '削除する'}
+                </button>
+                <button onClick={() => setConfirm(false)} className={styles.collabIconBtn} style={{ flex: 1 }}>キャンセル</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     )
   }
 
@@ -599,7 +695,7 @@ export default function LyricsEditor() {
 
     return (
       <>
-        <button onClick={openModal} className={styles.menuTextBtn}>
+        <button onClick={openModal} className={styles.exportDropdownLink}>
           👥 共同編集を管理
         </button>
         {showModal && (
@@ -695,12 +791,15 @@ export default function LyricsEditor() {
                   <CopyUrlButton songId={songId} inMenu onClose={() => setExportMenuOpen(false)} />
                 )}
                 <div className={styles.exportDropdownDivider} />
-                <div className={styles.collabSectionLabel} style={{ padding: '0.2rem 0.75rem' }}>ダウンロード</div>
+                <div className={styles.exportDropdownLabel}>ダウンロード</div>
                 <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
                 <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF</a>
                 <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
                 <div className={styles.exportDropdownDivider} />
                 <CollaboratorMenuItem songId={songId} />
+                <PlaylistAddMenuItem songId={songId} songTitle={song?.title} onClose={() => setExportMenuOpen(false)} />
+                <div className={styles.exportDropdownDivider} />
+                <DeleteSongMenuItem songId={songId} onClose={() => setExportMenuOpen(false)} onDeleted={() => router.push('/manage/songs')} />
               </div>
             )}
           </div>
