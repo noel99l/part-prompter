@@ -679,98 +679,19 @@
 .clearLineBtn:hover { color: #FF4444; }
 
 /* 単語分割モード */
-.lyricLineExpanded {
-  background: #1a1a2a !important;
-  border-bottom: none;
-  touch-action: auto;
-}
 
-.wordModeIndicator {
-  font-size: 0.8rem;
-  color: #FF69B4;
-  flex-shrink: 0;
-  margin-right: 0.25rem;
-}
 
-.wordPanel {
-  background: #12121e;
-  border-bottom: 1px solid #1a1a1a;
-  padding: 0.6rem 0.75rem 0.75rem;
-  touch-action: auto;
-  -webkit-user-select: auto;
-  user-select: auto;
-}
 
-.wordPanelHint {
-  font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
 
-.wordPanelActions {
-  display: flex;
-  gap: 0.4rem;
-  align-items: center;
-}
 
-.wordPanelClose {
-  background: none;
-  border: 1px solid #444;
-  color: #aaa;
-  font-size: 0.7rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
 
-.wordPanelClose:hover { color: #fff; border-color: #888; }
 
-.wordPanelClear {
-  background: none;
-  border: 1px solid #444;
-  color: #888;
-  font-size: 0.7rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s;
-}
 
-.wordPanelClear:hover { color: #FF4444; border-color: #FF4444; }
 
-.wordTokens {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-}
 
-.wordToken {
-  background: none;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #aaa;
-  font-size: 1rem;
-  padding: 0.2rem 0.5rem;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  font-family: 'Hiragino Sans', sans-serif;
-}
 
-.wordToken:hover { background: #1e1e2e; }
 
-.wordTokenAssigned {
-  background: rgba(255,255,255,0.05);
-}
 
-.wordSpace {
-  display: inline-block;
-  width: 0.5rem;
-}
 
 /* ブロック区切りUI */
 .addBreakRow {
@@ -1315,3 +1236,41 @@
 
 .textWhite { color: #fff; }
 .infoFormRowTop { align-items: flex-start; }
+
+/* ハモりトグル */
+.harmonyToggle {
+  display: flex;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.harmonyBtn {
+  flex: 1;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: #666;
+  padding: 0.25rem 0;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: all 0.15s;
+}
+
+.harmonyBtn:hover { color: #fff; border-color: #666; }
+.harmonyBtnMain { border-color: #FF69B4; color: #FF69B4; }
+.harmonyBtnActive { border-color: #7CFC00; color: #7CFC00; }
+
+/* ハモり文字ボタン */
+.harmonyCharBtn {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: inherit;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+  line-height: inherit;
+  display: inline;
+}
+
+.harmonyCharBtn:hover { background: rgba(255,255,255,0.1); border-radius: 2px; }
