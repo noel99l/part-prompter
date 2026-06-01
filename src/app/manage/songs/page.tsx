@@ -217,9 +217,13 @@ export default function AdminSongsPage() {
                   ...(parseInt(s.lyric_count) === 0 ? [{ label: '歌詞なし', type: 'gray' as const }] : []),
                 ]}
                 meta={s.updated_at ? [`🕒 ${new Date(s.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`] : []}
-                actions={<AddToPlaylistMenu songId={s.id} onDelete={() => deleteSong(s.id)} menuItems={[
+                actions={<AddToPlaylistMenu songId={s.id} songTitle={s.title} onDelete={() => deleteSong(s.id)} menuItems={[
                   { label: '✏️ 編集', href: `/manage/songs/${s.id}` },
                   { label: '▶ プロンプター', href: `/songs/${s.id}/prompter`, target: '_blank' },
+                  ...(s.is_public ? [{ label: '📋 共有URLをコピー', action: () => navigator.clipboard.writeText(`${window.location.origin}/songs/${s.id}`) }] : []),
+                  { divider: true, label: 'ダウンロード' },
+                  { label: '📥 PPTX', href: `/api/songs/${s.id}/export/pptx`, download: true },
+                  { label: '🖨️ PDF', href: `/manage/songs/${s.id}/print`, target: '_blank' },
                 ]} />}
               />
             ))}

@@ -68,7 +68,7 @@ export default function PrompterList() {
                   ...(s.created_by_name ? [`✍️ ${s.created_by_name}`] : []),
                   ...(s.updated_at ? [`🕒 ${new Date(s.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`] : []),
                 ]}
-                actions={<AddToPlaylistMenu songId={s.id} menuItems={[
+                actions={<AddToPlaylistMenu songId={s.id} songTitle={s.title} menuItems={[
                   { label: '▶ プロンプター', href: `/songs/${s.id}/prompter`, target: '_blank' },
                 ]} />}
               />
