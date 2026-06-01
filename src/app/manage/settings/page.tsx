@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
-import styles from '@/app/admin/page.module.css'
+import styles from '@/app/manage/page.module.css'
 import s from '@/app/common.module.css'
 
 export default function SettingsPage() {

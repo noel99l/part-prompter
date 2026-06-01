@@ -7,7 +7,7 @@ import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
-import styles from '@/app/admin/page.module.css'
+import styles from '@/app/manage/page.module.css'
 
 interface LrcResult {
   id: number
@@ -216,7 +216,7 @@ export default function AdminSongsPage() {
                   ...(parseInt(s.timestamp_count) > 0 ? [{ label: 'タイムスタンプ', type: 'green' as const }] : []),
                   ...(parseInt(s.lyric_count) === 0 ? [{ label: '歌詞なし', type: 'gray' as const }] : []),
                 ]}
-                meta={s.updated_at ? [`🕒 ${new Date(s.updated_at).toLocaleString('ja-JP')}`] : []}
+                meta={s.updated_at ? [`🕒 ${new Date(s.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}`] : []}
                 actions={<AddToPlaylistMenu songId={s.id} onDelete={() => deleteSong(s.id)} menuItems={[
                   { label: '✏️ 編集', href: `/manage/songs/${s.id}` },
                   { label: '▶ プロンプター', href: `/songs/${s.id}/prompter`, target: '_blank' },

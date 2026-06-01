@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
 
-export default function AdminDashboard() {
-  redirect('/manage/songs')
+export default function AdminRedirect() {
+  redirect('/songs')
 }

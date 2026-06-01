@@ -862,8 +862,8 @@ export default function LyricsEditor() {
                     className={`${styles.harmonyBtn} ${harmonyMode === 'up' ? styles.harmonyBtnActive : ''}`}
                     onClick={() => {
                       const next = harmonyMode === 'up' ? 'main' : 'up'
-                      if (harmonyMode === 'main') setCheckedMemberIds([])
-                                      setHarmonyMode(next)
+                      setCheckedMemberIds([])
+                      setHarmonyMode(next)
                     }}
                   >上ハモ</button>
                   <button
@@ -874,8 +874,8 @@ export default function LyricsEditor() {
                     className={`${styles.harmonyBtn} ${harmonyMode === 'down' ? styles.harmonyBtnActive : ''}`}
                     onClick={() => {
                       const next = harmonyMode === 'down' ? 'main' : 'down'
-                      if (harmonyMode === 'main') setCheckedMemberIds([])
-                                      setHarmonyMode(next)
+                      setCheckedMemberIds([])
+                      setHarmonyMode(next)
                     }}
                   >下ハモ</button>
                 </div>
