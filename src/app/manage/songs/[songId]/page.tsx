@@ -12,7 +12,7 @@ const PALETTE = [
 
 interface Member { id: number; name: string; color: string; sort_order: number }
 
-interface WordMember { text: string; member_ids: number[] }
+interface WordMember { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }
 
 interface FlatLine {
   text: string
@@ -91,21 +91,6 @@ function fromDbFormat(dbLines: LyricLine[]): { lines: FlatLine[]; breaks: Set<nu
   return { lines, breaks }
 }
 
-// テキストをトークン（文字列＋スペース）に分割
-function tokenize(text: string): string[] {
-  const tokens: string[] = []
-  let cur = ''
-  for (const ch of text) {
-    if (ch === ' ' || ch === '　') {
-      if (cur) { tokens.push(cur); cur = '' }
-      tokens.push(ch)
-    } else {
-      cur += ch
-    }
-  }
-  if (cur) tokens.push(cur)
-  return tokens
-}
 
 // FlatLine[] + breaks → LRCテキストに変換
 function toLrcText(lines: FlatLine[], breaks: Set<number>): string {
@@ -128,6 +113,8 @@ export default function LyricsEditor() {
   const [lines, setLines] = useState<FlatLine[]>([])
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
+  const [harmonyMode, setHarmonyMode] = useState<'main' | 'up' | 'down'>('main')
+  const harmonyDragRef = useRef<{ lineIdx: number; memberId: number; mode: 'up' | 'down' } | null>(null)
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'prompter'>('info')
   const [editTitle, setEditTitle] = useState('')
@@ -135,12 +122,8 @@ export default function LyricsEditor() {
   const [coverText, setCoverText] = useState('')
   const [bgColor, setBgColor] = useState('#000000')
   const [savingMeta, setSavingMeta] = useState(false)
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [editingArtist, setEditingArtist] = useState(false)
   const [editDescription, setEditDescription] = useState('')
-  const [savingDescription, setSavingDescription] = useState(false)
   const [isPublic, setIsPublic] = useState(true)
-  const [memberSaving, setMemberSaving] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
@@ -154,9 +137,7 @@ export default function LyricsEditor() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
-  const [expandedLine, setExpandedLine] = useState<number | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
-  const isDraggingRef = useRef(false)
 
 
   useEffect(() => {
@@ -182,13 +163,17 @@ export default function LyricsEditor() {
     setLines(prev => prev.map(l => ({
       ...l,
       member_ids: l.member_ids.filter(id => validIds.has(id)),
-      word_members: l.word_members.map(w => ({ ...w, member_ids: w.member_ids.filter(id => validIds.has(id)) })),
+      word_members: l.word_members.map(w => ({
+        ...w,
+        member_ids: w.member_ids.filter(id => validIds.has(id)),
+        harmony_up_id: w.harmony_up_id && validIds.has(w.harmony_up_id) ? w.harmony_up_id : undefined,
+        harmony_down_id: w.harmony_down_id && validIds.has(w.harmony_down_id) ? w.harmony_down_id : undefined,
+      })),
     })))
   }, [members])
 
   // ---- メンバー操作 ----
   const saveMembersApi = async (newMembers: Member[]) => {
-    setMemberSaving(true)
     const res = await fetch(`/api/songs/${songId}/members`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -212,7 +197,6 @@ export default function LyricsEditor() {
 
     setLines(remappedLines)
     setMembers(saved)
-    setMemberSaving(false)
 
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
@@ -234,8 +218,6 @@ export default function LyricsEditor() {
 
   const removeMember = (idx: number) =>
     setMembers(prev => prev.filter((_, i) => i !== idx))
-
-  const saveMembers = async () => saveMembersApi(members)
 
   const saveAll = async () => {
     setSavingMeta(true)
@@ -302,54 +284,42 @@ export default function LyricsEditor() {
   }
 
   // ---- 行ドラッグでメンバー割り当て ----
+  const assignHarmonyChar = useCallback((lineIdx: number, ci: number, memberId: number, mode: 'up' | 'down') => {
+    setLines(prev => prev.map((l, li) => {
+      if (li !== lineIdx) return l
+      const lChars = l.text.split('')
+      let newWm: WordMember[] = l.word_members.length === lChars.length
+        ? [...l.word_members]
+        : lChars.map((c, idx) => ({ text: c, member_ids: [], harmony_up_id: l.word_members[idx]?.harmony_up_id, harmony_down_id: l.word_members[idx]?.harmony_down_id }))
+      newWm = newWm.map((ww, wi) => wi !== ci ? ww : mode === 'up' ? { ...ww, harmony_up_id: memberId } : { ...ww, harmony_down_id: memberId })
+      return { ...l, word_members: newWm }
+    }))
+  }, [])
+
+  const assignMainChar = useCallback((lineIdx: number, ci: number, memberIds: number[]) => {
+    setLines(prev => prev.map((l, li) => {
+      if (li !== lineIdx) return l
+      const lChars = l.text.split('')
+      let newWm: WordMember[] = l.word_members.length === lChars.length
+        ? [...l.word_members]
+        : lChars.map((c, idx) => ({ text: c, member_ids: l.word_members[idx]?.member_ids || [], harmony_up_id: l.word_members[idx]?.harmony_up_id, harmony_down_id: l.word_members[idx]?.harmony_down_id }))
+      newWm = newWm.map((ww, wi) => wi !== ci ? ww : { ...ww, member_ids: memberIds })
+      return { ...l, word_members: newWm }
+    }))
+  }, [])
+
+  const mainDragRef = useRef<{ lineIdx: number; memberIds: number[] } | null>(null)
+
   const assignMembers = useCallback((i: number) => {
     if (checkedMemberIds.length === 0) return
     const sorted = [...checkedMemberIds].sort((a, b) => a - b)
     setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: sorted } : l))
   }, [checkedMemberIds])
 
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-  const pointerStartPos = useRef<{ x: number; y: number } | null>(null)
-  const SCROLL_THRESHOLD = 8
 
-  const handleLineLongPressStart = (e: React.PointerEvent, i: number) => {
-    pointerStartPos.current = { x: e.clientX, y: e.clientY }
-    if (expandedLine === i) return
-    longPressTimer.current = setTimeout(() => {
-      longPressTimer.current = null
-      toggleExpand(i)
-    }, 500)
-    if (checkedMemberIds.length > 0) {
-      isDraggingRef.current = true; assignMembers(i)
-    }
-  }
 
-  const handleLineLongPressEnd = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
-    }
-    pointerStartPos.current = null
-  }
 
-  const handleLinePointerMove = (e: React.PointerEvent, i: number) => {
-    if (pointerStartPos.current) {
-      const dx = Math.abs(e.clientX - pointerStartPos.current.x)
-      const dy = Math.abs(e.clientY - pointerStartPos.current.y)
-      if (dy > SCROLL_THRESHOLD || dx > SCROLL_THRESHOLD) {
-        // スクロール判定：ドラッグ割り当てとタイマーをキャンセル
-        if (longPressTimer.current) {
-          clearTimeout(longPressTimer.current)
-          longPressTimer.current = null
-        }
-        isDraggingRef.current = false
-        pointerStartPos.current = null
-      }
-    }
-    if (!isDraggingRef.current || expandedLine === i) return
-    assignMembers(i)
-  }
-  const handlePointerUp = useCallback(() => { isDraggingRef.current = false }, [])
+  const handlePointerUp = useCallback(() => { harmonyDragRef.current = null; mainDragRef.current = null }, [])
 
   useEffect(() => {
     document.addEventListener('pointerup', handlePointerUp)
@@ -357,50 +327,8 @@ export default function LyricsEditor() {
   }, [handlePointerUp])
 
   // ---- 単語分割モード ----
-  const wordMembersSnapshot = useRef<WordMember[]>([])
 
-  const toggleExpand = (i: number) => {
-    if (expandedLine === i) {
-      // 閉じる時、全て未割り当てならスナップショットに戻す
-      setLines(prev => prev.map((l, idx) => {
-        if (idx !== i) return l
-        const allEmpty = l.word_members.every(w => w.member_ids.length === 0)
-        return allEmpty ? { ...l, word_members: wordMembersSnapshot.current } : l
-      }))
-      setExpandedLine(null)
-      return
-    }
-    // 展開時に現在のword_membersをスナップショットとして保持
-    const currentLine = lines[i]
-    wordMembersSnapshot.current = currentLine.word_members
-    // word_membersが空なら初期化（既存の場合はそのまま）
-    setLines(prev => prev.map((l, idx) => {
-      if (idx !== i) return l
-      if (l.word_members.length > 0) return l
-      const tokens = tokenize(l.text)
-      return { ...l, word_members: tokens.map(t => ({ text: t, member_ids: [] })) }
-    }))
-    setExpandedLine(i)
-  }
 
-  const assignWordMember = (lineIdx: number, wordIdx: number) => {
-    if (checkedMemberIds.length === 0) return
-    const sorted = [...checkedMemberIds].sort((a, b) => a - b)
-    setLines(prev => prev.map((l, i) => {
-      if (i !== lineIdx) return l
-      const wm = l.word_members.map((w, wi) =>
-        wi === wordIdx ? { ...w, member_ids: sorted } : w
-      )
-      return { ...l, word_members: wm }
-    }))
-  }
-
-  const clearWordMembers = (lineIdx: number) => {
-    setLines(prev => prev.map((l, i) =>
-      i === lineIdx ? { ...l, word_members: [] } : l
-    ))
-    setExpandedLine(null)
-  }
 
   const showToast = (msg: string) => {
     setToast(msg)
@@ -439,29 +367,110 @@ export default function LyricsEditor() {
   }
 
   function renderLineText(line: FlatLine, lineIdx: number) {
-    if (line.word_members.length > 0) {
+    // ハモリモード時：1文字ずつクリック可能なボタンとして表示
+    if (harmonyMode !== 'main') {
+      const chars = line.text.split('')
+      const currentChecked = checkedMemberIds
+      const currentMode = harmonyMode
+      const currentLine = lines[lineIdx]
       return (
         <span className={styles.lyricText}>
-          {line.word_members.map((w, wi) => {
-            const isSpace = w.text === ' ' || w.text === '　'
-            if (isSpace) return <span key={wi}>{w.text}</span>
-            if (w.member_ids.length === 0) return <span key={wi} className={styles.textWhite}>{w.text}</span>
-            if (w.member_ids.length === 1) return <span key={wi} style={{ color: memberMap[w.member_ids[0]]?.color || '#fff' }}>{w.text}</span>
-            return <GradientText key={wi} text={w.text} memberIds={w.member_ids} />
+          {chars.map((ch, ci) => {
+            const w = currentLine?.word_members.length === chars.length ? currentLine.word_members[ci] : undefined
+            const decos: string[] = []
+            if (w?.harmony_up_id) decos.push(`overline 2px ${memberMap[w.harmony_up_id]?.color || '#888'}`)
+            if (w?.harmony_down_id) decos.push(`underline 2px ${memberMap[w.harmony_down_id]?.color || '#888'}`)
+            const mainColor = w?.member_ids?.length === 1 ? memberMap[w.member_ids[0]]?.color : undefined
+            return (
+              <button
+                key={ci}
+                className={styles.harmonyCharBtn}
+                style={{
+                  color: mainColor || '#fff',
+                  ...(decos.length > 0 ? { textDecoration: decos.join(', '), textDecorationSkipInk: 'none' } as React.CSSProperties : {})
+                }}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => {
+                  e.stopPropagation()
+                  if (currentChecked.length === 0) return
+                  const memberId = currentChecked[0]
+                  setLines(prev => prev.map((l, li) => {
+                    if (li !== lineIdx) return l
+                    const lChars = l.text.split('')
+                    let newWm: WordMember[] = l.word_members.length === lChars.length
+                      ? [...l.word_members]
+                      : lChars.map((c, idx) => ({
+                          text: c,
+                          member_ids: l.word_members[idx]?.member_ids || [],
+                          harmony_up_id: l.word_members[idx]?.harmony_up_id,
+                          harmony_down_id: l.word_members[idx]?.harmony_down_id,
+                        }))
+                    newWm = newWm.map((ww, wi) => {
+                      if (wi !== ci) return ww
+                      return currentMode === 'up'
+                        ? { ...ww, harmony_up_id: memberId }
+                        : { ...ww, harmony_down_id: memberId }
+                    })
+                    return { ...l, word_members: newWm }
+                  }))
+                }}
+              >
+                {ch}
+              </button>
+            )
           })}
         </span>
       )
     }
-    if (line.member_ids.length > 1) {
-      return <span className={styles.lyricText}><GradientText text={line.text} memberIds={line.member_ids} /></span>
-    }
-    return <span className={styles.lyricText} style={lineGradient(line.member_ids)}>{line.text}</span>
+    // メインモード：常に1文字ずつボタンとして表示
+    const chars = line.text.split('')
+    return (
+      <span className={styles.lyricText}>
+        {chars.map((ch, ci) => {
+          const w = line.word_members.length === chars.length ? line.word_members[ci] : undefined
+          const mainIds = w?.member_ids?.length ? w.member_ids : (line.member_ids.length ? line.member_ids : [])
+          const upColor = w?.harmony_up_id ? memberMap[w.harmony_up_id]?.color : null
+          const downColor = w?.harmony_down_id ? memberMap[w.harmony_down_id]?.color : null
+          let charContent: React.ReactNode
+          if (mainIds.length === 0) charContent = <span style={{ color: '#fff' }}>{ch}</span>
+          else if (mainIds.length === 1) charContent = <span style={{ color: memberMap[mainIds[0]]?.color || '#fff' }}>{ch}</span>
+          else { const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', '); charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{ch}</span> }
+          if (downColor) charContent = <span style={{ textDecoration: `underline 2px ${downColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
+          if (upColor) charContent = <span style={{ textDecoration: `overline 2px ${upColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
+          return (
+            <button
+              key={ci}
+              data-main-ci={ci}
+              data-main-line={lineIdx}
+              className={styles.harmonyCharBtn}
+              onPointerDown={e => {
+                e.stopPropagation()
+                if (checkedMemberIds.length === 0 || harmonyMode !== 'main') return
+                mainDragRef.current = { lineIdx, memberIds: [...checkedMemberIds].sort((a, b) => a - b) }
+                assignMainChar(lineIdx, ci, [...checkedMemberIds].sort((a, b) => a - b))
+              }}
+              onPointerEnter={() => {
+                if (!mainDragRef.current || mainDragRef.current.lineIdx !== lineIdx) return
+                assignMainChar(lineIdx, ci, mainDragRef.current.memberIds)
+              }}
+              onPointerUp={e => { e.stopPropagation(); mainDragRef.current = null }}
+            >{charContent}</button>
+          )
+        })}
+      </span>
+    )
   }
 
   const hasTimestamp = useMemo(() => lines.some(l => l.timestamp_ms != null), [lines])
 
-  const toggleMemberCheck = (id: number) =>
-    setCheckedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  const toggleMemberCheck = (id: number) => {
+    if (harmonyMode !== 'main') {
+      // ハモリモード時は単一選択
+      setCheckedMemberIds(prev => prev[0] === id ? [] : [id])
+    } else {
+      setCheckedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+    }
+  }
 
   const blockOf = (i: number) => {
     let b = 0
@@ -840,7 +849,7 @@ export default function LyricsEditor() {
               {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
             </button>
           </div>
-          <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。行を長押しで単語ごとのパート分けができます。</p>
+          <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。ダブルタップで行全体、長押しなぞりで文字単位に割り当てできます。</p>
 
           {lines.length === 0 ? (
             <p className={styles.hint}>LRCファイルをインポートして歌詞を読み込んでください。</p>
@@ -848,6 +857,28 @@ export default function LyricsEditor() {
             <div className={styles.editorLayout}>
             <div className={`${styles.memberSelector} ${drawerOpen ? styles.memberSelectorOpen : ''}`}>
                 <p className={styles.selectorTitle}>歌唱者を選択してから歌詞をなぞってください</p>
+                <div className={styles.harmonyToggle}>
+                  <button
+                    className={`${styles.harmonyBtn} ${harmonyMode === 'up' ? styles.harmonyBtnActive : ''}`}
+                    onClick={() => {
+                      const next = harmonyMode === 'up' ? 'main' : 'up'
+                      if (harmonyMode === 'main') setCheckedMemberIds([])
+                                      setHarmonyMode(next)
+                    }}
+                  >上ハモ</button>
+                  <button
+                    className={`${styles.harmonyBtn} ${harmonyMode === 'main' ? styles.harmonyBtnMain : ''}`}
+                    onClick={() => setHarmonyMode('main')}
+                  >メイン</button>
+                  <button
+                    className={`${styles.harmonyBtn} ${harmonyMode === 'down' ? styles.harmonyBtnActive : ''}`}
+                    onClick={() => {
+                      const next = harmonyMode === 'down' ? 'main' : 'down'
+                      if (harmonyMode === 'main') setCheckedMemberIds([])
+                                      setHarmonyMode(next)
+                    }}
+                  >下ハモ</button>
+                </div>
                 {members.length === 0 ? (
                   <p className={styles.hint}>先にメンバーを登録してください</p>
                 ) : (
@@ -907,12 +938,72 @@ export default function LyricsEditor() {
 
                     {/* 通常行 */}
                     <div
-                      className={`${styles.lyricLine} ${expandedLine === i ? styles.lyricLineExpanded : ''}`}
-                      style={expandedLine === i ? { touchAction: 'auto' } : undefined}
-                      onPointerDown={e => expandedLine === i ? undefined : handleLineLongPressStart(e, i)}
-                      onPointerMove={e => expandedLine === i ? undefined : handleLinePointerMove(e, i)}
-                      onPointerUp={expandedLine === i ? undefined : handleLineLongPressEnd}
-                      onPointerCancel={expandedLine === i ? undefined : handleLineLongPressEnd}
+                      className={styles.lyricLine}
+                      onPointerDown={e => {
+                        // ハモリモードの長押しドラッグは文字ボタン側で処理するためここでは何もしない
+                      }}
+                      onPointerMove={e => {
+                        if (harmonyDragRef.current) {
+                          const els = document.elementsFromPoint(e.clientX, e.clientY)
+                          for (const el of els) {
+                            const ciStr = (el as HTMLElement).dataset?.harmonyCi
+                            const liStr = (el as HTMLElement).dataset?.harmonyLine
+                            if (ciStr !== undefined && liStr !== undefined) {
+                              const { memberId, mode } = harmonyDragRef.current
+                              assignHarmonyChar(Number(liStr), Number(ciStr), memberId, mode)
+                              break
+                            }
+                          }
+                          return
+                        }
+                        if (mainDragRef.current && mainDragRef.current.lineIdx === i) {
+                          const els = document.elementsFromPoint(e.clientX, e.clientY)
+                          for (const el of els) {
+                            const ciStr = (el as HTMLElement).dataset?.mainCi
+                            const liStr = (el as HTMLElement).dataset?.mainLine
+                            if (ciStr !== undefined && liStr !== undefined) {
+                              assignMainChar(Number(liStr), Number(ciStr), mainDragRef.current.memberIds)
+                              break
+                            }
+                          }
+                        }
+                      }}
+                      onPointerUp={e => {
+                        mainDragRef.current = null
+                        harmonyDragRef.current = null
+                      }}
+                      onDoubleClick={e => {
+                        e.stopPropagation()
+                        if (checkedMemberIds.length === 0) return
+                        if (harmonyMode === 'main') {
+                          const sorted = [...checkedMemberIds].sort((a, b) => a - b)
+                          setLines(prev => prev.map((l, idx) => idx !== i ? l : {
+                            ...l,
+                            member_ids: sorted,
+                            word_members: l.word_members.map(w => ({ ...w, member_ids: sorted }))
+                          }))
+                        } else {
+                          const memberId = checkedMemberIds[0]
+                          const mode = harmonyMode
+                          setLines(prev => prev.map((l, idx) => {
+                            if (idx !== i) return l
+                            const lChars = l.text.split('')
+                            const newWm: WordMember[] = l.word_members.length === lChars.length
+                              ? l.word_members.map(w => mode === 'up' ? { ...w, harmony_up_id: memberId } : { ...w, harmony_down_id: memberId })
+                              : lChars.map((c, ci) => ({
+                                  text: c,
+                                  member_ids: l.word_members[ci]?.member_ids || [],
+                                  harmony_up_id: mode === 'up' ? memberId : l.word_members[ci]?.harmony_up_id,
+                                  harmony_down_id: mode === 'down' ? memberId : l.word_members[ci]?.harmony_down_id,
+                                }))
+                            return { ...l, word_members: newWm }
+                          }))
+                        }
+                      }}
+                      onPointerCancel={() => {
+                        mainDragRef.current = null
+                        harmonyDragRef.current = null
+                      }}
                     >
                       {hasTimestamp && (
                         <span className={styles.timestamp}>
@@ -921,10 +1012,50 @@ export default function LyricsEditor() {
                             : '--:--'}
                         </span>
                       )}
-                      {renderLineText(line, i)}
-                      {line.word_members.length > 0 && (
-                        <span className={styles.wordModeIndicator} title="単語分割設定あり">✂</span>
-                      )}
+                      {harmonyMode !== 'main' ? (
+                        <span className={styles.lyricText}>
+                          {line.text.split('').map((ch, ci) => {
+                            const w = line.word_members[ci]
+                            const upColor = w?.harmony_up_id ? memberMap[w.harmony_up_id]?.color : null
+                            const downColor = w?.harmony_down_id ? memberMap[w.harmony_down_id]?.color : null
+                            // メインパートの色分け：word_membersがあればそちら、なければ行全体の member_ids
+                            const mainIds = (w?.member_ids?.length ? w.member_ids : line.member_ids) || []
+                            let charContent: React.ReactNode
+                            if (mainIds.length === 0) {
+                              charContent = <span style={{ color: '#fff' }}>{ch}</span>
+                            } else if (mainIds.length === 1) {
+                              charContent = <span style={{ color: memberMap[mainIds[0]]?.color || '#fff' }}>{ch}</span>
+                            } else {
+                              const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', ')
+                              charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{ch}</span>
+                            }
+                            let content: React.ReactNode = charContent
+                            if (downColor) content = <span style={{ textDecoration: `underline 2px ${downColor}`, textDecorationSkipInk: 'none' }}>{content}</span>
+                            if (upColor) content = <span style={{ textDecoration: `overline 2px ${upColor}`, textDecorationSkipInk: 'none' }}>{content}</span>
+                            return (
+                              <button
+                                key={ci}
+                                data-harmony-ci={ci}
+                                data-harmony-line={i}
+                                className={styles.harmonyCharBtn}
+                                style={{ }}
+                                onPointerDown={e => {
+                                  e.stopPropagation()
+                                  if (checkedMemberIds.length === 0) return
+                                  harmonyDragRef.current = { lineIdx: i, memberId: checkedMemberIds[0], mode: harmonyMode as 'up' | 'down' }
+                                  assignHarmonyChar(i, ci, checkedMemberIds[0], harmonyMode as 'up' | 'down')
+                                }}
+                                onPointerEnter={e => {
+                                  if (!harmonyDragRef.current || harmonyDragRef.current.lineIdx !== i) return
+                                  const { memberId, mode } = harmonyDragRef.current
+                                  assignHarmonyChar(i, ci, memberId, mode)
+                                }}
+                                onPointerUp={e => { e.stopPropagation(); harmonyDragRef.current = null }}
+                              >{content}</button>
+                            )
+                          })}
+                        </span>
+                      ) : renderLineText(line, i)}
                       {line.member_ids.length > 0 && line.word_members.length === 0 && (
                         <span className={styles.memberBadges}>
                           {line.member_ids.map(id => (
@@ -937,54 +1068,18 @@ export default function LyricsEditor() {
                         onPointerDown={e => e.stopPropagation()}
                         onClick={e => {
                           e.stopPropagation()
-                          setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: [], word_members: [] } : l))
-                          if (expandedLine === i) setExpandedLine(null)
+                          if (harmonyMode === 'main') {
+                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: [], word_members: l.word_members.map(w => ({ ...w, member_ids: [] })) } : l))
+                          } else if (harmonyMode === 'up') {
+                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_up_id: undefined })) } : l))
+                          } else {
+                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_down_id: undefined })) } : l))
+                          }
                         }}
                         title="割り当て解除"
                       >✕</button>
                     </div>
 
-                    {/* 単語分割モード展開パネル */}
-                    {expandedLine === i && (
-                      <div className={styles.wordPanel}>
-                        <div className={styles.wordPanelHint}>
-                          <span>メンバーを選択して単語をクリックで割り当て</span>
-                          <div className={styles.wordPanelActions}>
-                            <button className={styles.wordPanelClose} onClick={() => toggleExpand(i)}>✕</button>
-                            <button className={styles.wordPanelClear} onClick={() => clearWordMembers(i)}>解除</button>
-                          </div>
-                        </div>
-                        <div className={styles.wordTokens}>
-                          {line.word_members.map((w, wi) => {
-                            const isSpace = w.text === ' ' || w.text === '　'
-                            if (isSpace) return <span key={wi} className={styles.wordSpace}>{w.text}</span>
-                            const hasAssign = w.member_ids.length > 0
-                            const colors = w.member_ids.map(id => memberMap[id]?.color || '#888')
-                            const borderColor = colors.length > 0 ? colors[0] : '#444'
-                            const textStyle: React.CSSProperties = colors.length > 1
-                              ? { backgroundImage: `linear-gradient(to bottom, ${colors.map((c, ci) => `${c} ${ci / colors.length * 100}%, ${c} ${(ci + 1) / colors.length * 100}%`).join(', ')})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
-                              : { color: hasAssign ? colors[0] : '#aaa' }
-                            return (
-                              <button
-                                key={wi}
-                                className={`${styles.wordToken} ${hasAssign ? styles.wordTokenAssigned : ''}`}
-                                style={{ borderColor, ...textStyle }}
-                                onClick={e => { e.stopPropagation(); assignWordMember(i, wi) }}
-                                onContextMenu={e => {
-                                  e.preventDefault(); e.stopPropagation()
-                                  setLines(prev => prev.map((l, li) =>
-                                    li !== i ? l : { ...l, word_members: l.word_members.map((ww, wii) => wii === wi ? { ...ww, member_ids: [] } : ww) }
-                                  ))
-                                }}
-                                title={hasAssign ? `${w.member_ids.map(id => memberMap[id]?.name).join('+')}（右クリックで解除）` : 'クリックで割り当て'}
-                              >
-                                {w.text}
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
