@@ -247,7 +247,7 @@ export default function SongDetailPage() {
 
       {/* フッター */}
       <div className={styles.footer}>
-        {song.created_by_name && <span>✗️ {song.created_by_name}</span>}
+        {song.created_by_name && <span>✒️ {song.created_by_name}</span>}
         {song.updated_at && <span>🕒 {new Date(song.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>}
       </div>
     </div>

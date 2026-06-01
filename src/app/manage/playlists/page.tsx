@@ -6,7 +6,7 @@ import SongCardSkeleton from '@/components/SongCardSkeleton'
 import ItemMenu from '@/components/ItemMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
-import styles from '@/app/admin/page.module.css'
+import styles from '@/app/manage/page.module.css'
 
 interface Playlist { id: number; name: string; created_at: string; created_by_name?: string; description?: string }
 

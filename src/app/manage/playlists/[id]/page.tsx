@@ -17,7 +17,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import styles from '@/app/admin/page.module.css'
+import styles from '@/app/manage/page.module.css'
 import skStyles from '@/components/skeleton.module.css'
 
 interface Song { id: number; title: string; artist: string; sort_order: number }
@@ -261,7 +261,7 @@ export default function PlaylistEditPage() {
                     {s.artist && <span className={styles.suggestionMeta}>{s.artist}</span>}
                     <div className={styles.modalSearchMeta}>
                       {s.created_by_name && <span className={styles.suggestionMeta}>✍️ {s.created_by_name}</span>}
-                      {s.updated_at && <span className={styles.suggestionMeta}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP')}</span>}
+                      {s.updated_at && <span className={styles.suggestionMeta}>🕒 {new Date(s.updated_at).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</span>}
                     </div>
                   </button>
                 ))}
