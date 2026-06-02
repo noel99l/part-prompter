@@ -207,7 +207,15 @@ export default function SongDetailPage() {
             {song.description && (
               <p className={styles.description}>{song.description}</p>
             )}
-
+            {members.length > 0 && (
+              <div className={styles.memberList}>
+                {members.map((m, i) => (
+                  <span key={m.id} className={styles.memberBadge} style={{ borderColor: m.color, color: m.color }}>
+                    {m.name || String.fromCharCode(65 + i)}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -224,7 +232,13 @@ export default function SongDetailPage() {
                     : ''}
                 </span>
                 {renderLineText(line)}
-
+                {line.member_ids?.length > 0 && line.word_members?.length === 0 && (
+                  <span className={styles.lineBadges}>
+                    {line.member_ids.map(id => (
+                      <span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />
+                    ))}
+                  </span>
+                )}
               </div>
             ))}
           </div>

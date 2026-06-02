@@ -1155,7 +1155,13 @@ export default function LyricsEditor() {
                           })}
                         </span>
                       ) : renderLineText(line, i)}
-
+                      {line.member_ids.length > 0 && line.word_members.length === 0 && (
+                        <span className={styles.memberBadges}>
+                          {line.member_ids.map(id => (
+                            <span key={id} className={styles.memberBadge} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
+                          ))}
+                        </span>
+                      )}
                       <button
                         className={styles.clearLineBtn}
                         onPointerDown={e => e.stopPropagation()}
