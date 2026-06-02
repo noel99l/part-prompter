@@ -649,19 +649,6 @@
 }
 
 
-.memberBadges {
-  display: flex;
-  gap: 0.25rem;
-  flex-shrink: 0;
-}
-
-.memberBadge {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
 .clearLineBtn {
   background: none;
   border: none;

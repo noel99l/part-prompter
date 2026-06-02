@@ -167,19 +167,6 @@
   line-height: 1.6;
 }
 
-.memberList {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-top: 0.4rem;
-}
-
-.memberBadge {
-  border: 1px solid;
-  border-radius: 20px;
-  padding: 0.15rem 0.65rem;
-  font-size: 0.8rem;
-}
 
 .tagRow {
   display: flex;
@@ -232,19 +219,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.lineBadges {
-  display: flex;
-  gap: 3px;
-  margin-left: auto;
-  flex-shrink: 0;
-}
-
-.dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  display: inline-block;
-}
 
 .footer {
   max-width: 700px;
