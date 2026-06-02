@@ -14,7 +14,7 @@ interface LyricLine {
   text: string
   member_ids: number[]
   timestamp_ms: number | null
-  word_members?: { text: string; member_ids: number[] }[]
+  word_members?: { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
 }
 
 export default function SongDetailPage() {

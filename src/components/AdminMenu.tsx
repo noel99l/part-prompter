@@ -6,7 +6,6 @@ import { signOut } from 'next-auth/react'
 import styles from './AdminMenu.module.css'
 
 const NAV = [
-  { href: '/manage/songs', label: '🎛️ 管理トップ' },
   { href: '/manage/songs', label: '🎤 パート分け管理' },
   { href: '/manage/playlists', label: '📋 セットリスト管理' },
   { href: '/manage/settings', label: '⚙️ アカウント設定' },
@@ -39,11 +38,11 @@ export default function AdminMenu({ accountName }: { accountName: string }) {
         <div className={styles.drawer}>
           <div className={styles.drawerAccount}>{accountName}</div>
           <nav className={styles.nav}>
-            {NAV.map(item => (
+            {NAV.map((item, i) => (
               <Link
-                key={item.href}
+                key={i}
                 href={item.href}
-                className={`${styles.navItem} ${pathname === item.href ? styles.navItemActive : ''}`}
+                className={`${styles.navItem} ${pathname === item.href || pathname.startsWith(item.href + '/') ? styles.navItemActive : ''}`}
               >
                 {item.label}
               </Link>

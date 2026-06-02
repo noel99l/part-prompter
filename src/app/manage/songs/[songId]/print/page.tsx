@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, CSSProperties } from 'react'
 import { useParams } from 'next/navigation'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -9,7 +9,7 @@ interface LyricLine {
   text: string
   member_ids: number[]
   timestamp_ms: number | null
-  word_members?: { text: string; member_ids: number[] }[]
+  word_members?: { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
 }
 
 export default function PrintPage() {
@@ -63,12 +63,18 @@ export default function PrintPage() {
     return getPrintColor(memberMap[ids[0]]?.color || '#000')
   }
 
-  const renderWord = (text: string, ids: number[], key: number) => {
-    if (!ids?.length) return <span key={key}>{text}</span>
-    if (ids.length === 1) return <span key={key} style={{ color: getPrintColor(memberMap[ids[0]]?.color || '#000') }}>{text}</span>
-    // 複数パートは1文字ずつ交互に色分け
+  const renderWord = (text: string, ids: number[], key: number, harmonyUpId?: number, harmonyDownId?: number) => {
+    const upColor = harmonyUpId ? getPrintColor(memberMap[harmonyUpId]?.color || '#000') : null
+    const downColor = harmonyDownId ? getPrintColor(memberMap[harmonyDownId]?.color || '#000') : null
+    const decoStyle: CSSProperties = {
+      ...(upColor ? { borderTop: `2px solid ${upColor}`, paddingTop: '1px' } : {}),
+      ...(downColor ? { textDecoration: `underline`, textDecorationColor: downColor, textDecorationThickness: '2px' } : {}),
+      display: 'inline',
+    }
+    if (!ids?.length) return <span key={key} style={decoStyle}>{text}</span>
+    if (ids.length === 1) return <span key={key} style={{ color: getPrintColor(memberMap[ids[0]]?.color || '#000'), ...decoStyle }}>{text}</span>
     return (
-      <span key={key}>
+      <span key={key} style={decoStyle}>
         {text.split('').map((char, ci) => (
           <span key={ci} style={{ color: getPrintColor(memberMap[ids[ci % ids.length]]?.color || '#000') }}>{char}</span>
         ))}
@@ -78,7 +84,7 @@ export default function PrintPage() {
 
   const renderLine = (line: LyricLine) => {
     if (line.word_members?.length) {
-      return <>{line.word_members.map((w, wi) => renderWord(w.text, w.member_ids, wi))}</>
+      return <>{line.word_members.map((w, wi) => renderWord(w.text, w.member_ids, wi, w.harmony_up_id, w.harmony_down_id))}</>
     }
     if (!line.member_ids?.length) return <span>{line.text}</span>
     if (line.member_ids.length === 1) return <span style={{ color: getColor(line.member_ids) }}>{line.text}</span>

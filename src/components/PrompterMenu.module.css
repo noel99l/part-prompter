@@ -62,3 +62,4 @@
 }
 
 .item:hover { background: #1a1a1a; color: #fff; }
+.itemActive { background: #1a1a1a; color: #FF69B4 !important; font-weight: bold; }
