@@ -44,7 +44,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
           {name && <div className={styles.drawerAccount}>{name}</div>}
 
           <nav className={styles.nav}>
-            <Link href="/songs" className={`${styles.navItem} ${pathname === '/songs' ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
+            <Link href="/songs" className={`${styles.navItem} ${pathname === '/songs' || pathname.startsWith('/songs/') ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
               🎵 パート分け一覧
             </Link>
 
@@ -52,11 +52,11 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
               <>
                 <div className={styles.navDivider} />
                 <div className={styles.navSectionHeader}>⚙️ 管理メニュー</div>
-                {ADMIN_NAV.map(item => (
+                {ADMIN_NAV.map((item, i) => (
                   <Link
-                    key={item.href}
+                    key={i}
                     href={item.href}
-                    className={`${styles.navItem} ${pathname === item.href ? styles.navItemActive : ''}`}
+                    className={`${styles.navItem} ${pathname === item.href || pathname.startsWith(item.href + '/') ? styles.navItemActive : ''}`}
                     onClick={() => setOpen(false)}
                   >
                     {item.label}

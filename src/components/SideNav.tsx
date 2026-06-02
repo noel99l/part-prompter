@@ -18,7 +18,7 @@ export default function SideNav({ accountName }: { accountName?: string }) {
 
   return (
     <nav className={styles.nav}>
-      <Link href="/songs" className={`${styles.item} ${pathname === '/songs' ? styles.itemActive : ''}`}>
+      <Link href="/songs" className={`${styles.item} ${pathname === '/songs' || pathname.startsWith('/songs/') ? styles.itemActive : ''}`}>
         🎵 パート分け一覧
       </Link>
 
@@ -31,7 +31,7 @@ export default function SideNav({ accountName }: { accountName?: string }) {
             <Link
               key={item.href}
               href={item.href}
-              className={`${styles.item} ${pathname === item.href ? styles.itemActive : ''}`}
+              className={`${styles.item} ${pathname === item.href || pathname.startsWith(item.href + '/') ? styles.itemActive : ''}`}
             >
               {item.label}
             </Link>

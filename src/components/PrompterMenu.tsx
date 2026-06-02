@@ -2,11 +2,13 @@
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
+import { usePathname } from 'next/navigation'
 import styles from './PrompterMenu.module.css'
 
 export default function PrompterMenu() {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
+  const pathname = usePathname()
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function PrompterMenu() {
 
       {open && (
         <div className={styles.drawer}>
-          <Link href="/songs" className={styles.item} onClick={() => setOpen(false)}>
+          <Link href="/songs" className={`${styles.item} ${pathname === '/songs' || pathname.startsWith('/songs/') ? styles.itemActive : ''}`} onClick={() => setOpen(false)}>
             🎵 パート分け一覧
           </Link>
           {session ? (
