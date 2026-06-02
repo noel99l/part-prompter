@@ -232,13 +232,7 @@ export default function SongDetailPage() {
                     : ''}
                 </span>
                 {renderLineText(line)}
-                {line.member_ids?.length > 0 && line.word_members?.length === 0 && (
-                  <span className={styles.lineBadges}>
-                    {line.member_ids.map(id => (
-                      <span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />
-                    ))}
-                  </span>
-                )}
+{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...(w.harmony_up_id ? [w.harmony_up_id] : []), ...(w.harmony_down_id ? [w.harmony_down_id] : [])]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
               </div>
             ))}
           </div>

@@ -382,10 +382,12 @@ export default function LyricsEditor() {
             if (w?.harmony_up_id) decos.push(`overline 2px ${memberMap[w.harmony_up_id]?.color || '#888'}`)
             if (w?.harmony_down_id) decos.push(`underline 2px ${memberMap[w.harmony_down_id]?.color || '#888'}`)
             const mainColor = w?.member_ids?.length === 1 ? memberMap[w.member_ids[0]]?.color : undefined
+            const isSpace = ch === ' ' || ch === '　'
             return (
               <button
                 key={ci}
                 className={styles.harmonyCharBtn}
+                disabled={isSpace}
                 style={{
                   color: mainColor || '#fff',
                   ...(decos.length > 0 ? { textDecoration: decos.join(', '), textDecorationSkipInk: 'none' } as React.CSSProperties : {})
@@ -393,7 +395,7 @@ export default function LyricsEditor() {
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => {
                   e.stopPropagation()
-                  if (currentChecked.length === 0) return
+                  if (isSpace || currentChecked.length === 0) return
                   const memberId = currentChecked[0]
                   setLines(prev => prev.map((l, li) => {
                     if (li !== lineIdx) return l
@@ -416,7 +418,7 @@ export default function LyricsEditor() {
                   }))
                 }}
               >
-                {ch}
+                {ch === ' ' || ch === '　' ? ' ' : ch}
               </button>
             )
           })}
@@ -433,25 +435,28 @@ export default function LyricsEditor() {
           const upColor = w?.harmony_up_id ? memberMap[w.harmony_up_id]?.color : null
           const downColor = w?.harmony_down_id ? memberMap[w.harmony_down_id]?.color : null
           let charContent: React.ReactNode
-          if (mainIds.length === 0) charContent = <span style={{ color: '#fff' }}>{ch}</span>
-          else if (mainIds.length === 1) charContent = <span style={{ color: memberMap[mainIds[0]]?.color || '#fff' }}>{ch}</span>
-          else { const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', '); charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{ch}</span> }
+          const displayCh = ch === ' ' || ch === '　' ? ' ' : ch
+          if (mainIds.length === 0) charContent = <span style={{ color: '#fff' }}>{displayCh}</span>
+          else if (mainIds.length === 1) charContent = <span style={{ color: memberMap[mainIds[0]]?.color || '#fff' }}>{displayCh}</span>
+          else { const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', '); charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{displayCh}</span> }
           if (downColor) charContent = <span style={{ textDecoration: `underline 2px ${downColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
           if (upColor) charContent = <span style={{ textDecoration: `overline 2px ${upColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
+          const isSpace = ch === ' ' || ch === '　'
           return (
             <button
               key={ci}
               data-main-ci={ci}
               data-main-line={lineIdx}
               className={styles.harmonyCharBtn}
+              disabled={isSpace}
               onPointerDown={e => {
                 e.stopPropagation()
-                if (checkedMemberIds.length === 0 || harmonyMode !== 'main') return
+                if (isSpace || checkedMemberIds.length === 0 || harmonyMode !== 'main') return
                 mainDragRef.current = { lineIdx, memberIds: [...checkedMemberIds].sort((a, b) => a - b) }
                 assignMainChar(lineIdx, ci, [...checkedMemberIds].sort((a, b) => a - b))
               }}
               onPointerEnter={() => {
-                if (!mainDragRef.current || mainDragRef.current.lineIdx !== lineIdx) return
+                if (isSpace || !mainDragRef.current || mainDragRef.current.lineIdx !== lineIdx) return
                 assignMainChar(lineIdx, ci, mainDragRef.current.memberIds)
               }}
               onPointerUp={e => { e.stopPropagation(); mainDragRef.current = null }}
@@ -960,9 +965,8 @@ export default function LyricsEditor() {
                   <button
                     className={`${styles.harmonyBtn} ${harmonyMode === 'up' ? styles.harmonyBtnActive : ''}`}
                     onClick={() => {
-                      const next = harmonyMode === 'up' ? 'main' : 'up'
-                      setCheckedMemberIds([])
-                      setHarmonyMode(next)
+                      if (checkedMemberIds.length !== 1) setCheckedMemberIds([])
+                      setHarmonyMode('up')
                     }}
                   >上ハモ</button>
                   <button
@@ -972,9 +976,8 @@ export default function LyricsEditor() {
                   <button
                     className={`${styles.harmonyBtn} ${harmonyMode === 'down' ? styles.harmonyBtnActive : ''}`}
                     onClick={() => {
-                      const next = harmonyMode === 'down' ? 'main' : 'down'
-                      setCheckedMemberIds([])
-                      setHarmonyMode(next)
+                      if (checkedMemberIds.length !== 1) setCheckedMemberIds([])
+                      setHarmonyMode('down')
                     }}
                   >下ハモ</button>
                 </div>
@@ -1155,13 +1158,7 @@ export default function LyricsEditor() {
                           })}
                         </span>
                       ) : renderLineText(line, i)}
-                      {line.member_ids.length > 0 && line.word_members.length === 0 && (
-                        <span className={styles.memberBadges}>
-                          {line.member_ids.map(id => (
-                            <span key={id} className={styles.memberBadge} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />
-                          ))}
-                        </span>
-                      )}
+                      {(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...(w.harmony_up_id ? [w.harmony_up_id] : []), ...(w.harmony_down_id ? [w.harmony_down_id] : [])]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.memberBadges}>{ids.map(id => (<span key={id} className={styles.memberBadge} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />))}</span>) : null })()} 
                       <button
                         className={styles.clearLineBtn}
                         onPointerDown={e => e.stopPropagation()}
