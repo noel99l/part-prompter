@@ -1229,6 +1229,10 @@
   margin-right: 6px;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .fileInputHidden { display: none; }
 
 .colorDotCol {
