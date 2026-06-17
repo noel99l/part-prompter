@@ -90,6 +90,9 @@ export default function PlaylistEditPage() {
       .then(data => { setName(data.name); setDescription(data.description || ''); setSongs(data.songs || []); setLoading(false) })
   }, [id])
 
+  const songsRef = useRef(songs)
+  useEffect(() => { songsRef.current = songs }, [songs])
+
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value)
     if (searchTimer.current) clearTimeout(searchTimer.current)
@@ -99,7 +102,7 @@ export default function PlaylistEditPage() {
       try {
         const res = await fetch(`/api/songs/search?q=${encodeURIComponent(value)}`)
         const data: SearchResult[] = await res.json()
-        const addedIds = new Set(songs.map(s => s.id))
+        const addedIds = new Set(songsRef.current.map(s => s.id))
         setSuggestions(data.filter(s => !addedIds.has(s.id)))
       } catch {
         setSuggestions([])
@@ -107,7 +110,7 @@ export default function PlaylistEditPage() {
         setSearching(false)
       }
     }, 300)
-  }, [songs])
+  }, [])
 
   const addSong = async (songId: number) => {
     await fetch(`/api/playlists/${id}/songs`, {
