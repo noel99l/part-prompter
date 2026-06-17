@@ -136,7 +136,7 @@ export default function SongDetailPage() {
     setDuplicating(true)
     const res = await fetch(`/api/songs/${songId}/duplicate`, { method: 'POST' })
     const data = await res.json()
-    if (data.id) router.push(`/admin/${data.id}`)
+    if (data.id) router.push(`/manage/songs/${data.id}`)
     else setDuplicating(false)
   }
 
