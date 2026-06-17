@@ -270,29 +270,20 @@ export default function LyricsEditor() {
   const saveLrcAndApply = async () => {
     setSaving(true)
     const strippedText = lrcText.split('\n').filter(l => l.trim() !== '').join('\n')
-    const { lines: fl, breaks: br } = parseLrc(strippedText)
+    const { lines: fl } = parseLrc(strippedText)
 
-    const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
-    lines.forEach(l => { if (!existingMap.has(l.text)) existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members }) })
-    const merged = fl.map(l => { const e = existingMap.get(l.text); return e ? { ...l, ...e } : l })
+    // 既存行とタイムスタンプで対応させてmember_ids/word_membersを引き継ぐ
+    const merged = fl.map((l, i) => {
+      const existing = lines[i]
+      return existing ? { ...l, member_ids: existing.member_ids, word_members: existing.word_members } : l
+    })
 
-    // 既存breaksをテキスト一致で引き継ぐ。既存がない初回のみLRC空行由来 or 4行自動
-    let mergedBreaks: Set<number>
-    if (breaks.size === 0) {
-      mergedBreaks = br
-      if (mergedBreaks.size === 0 && merged.length > 0) for (let i = 4; i < merged.length; i += 4) mergedBreaks.add(i)
-    } else {
-      const oldTextAtBreak = new Set<string>()
-      breaks.forEach(i => { if (lines[i]) oldTextAtBreak.add(lines[i].text) })
-      mergedBreaks = new Set<number>()
-      merged.forEach((l, i) => { if (i > 0 && oldTextAtBreak.has(l.text)) mergedBreaks.add(i) })
-    }
-
-    setLines(merged); setBreaks(mergedBreaks)
+    // breaksはインデックスが変わらないのでそのまま引き継ぎ
+    setLines(merged); setBreaks(breaks)
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(merged, mergedBreaks)),
+      body: JSON.stringify(toDbFormat(merged, breaks)),
     })
     setSaving(false)
   }
