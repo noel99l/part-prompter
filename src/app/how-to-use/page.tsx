@@ -148,7 +148,7 @@ const GROUPS = [
       {
         id: 'settings',
         label: 'アカウント設定',
-        path: '/admin/settings',
+        path: '/manage/settings',
         sections: [
           { title: 'アカウント名の変更', body: 'アカウント名を変更できます。変更した名前は楽曲の作者として一覧に表示されます。' },
         ],

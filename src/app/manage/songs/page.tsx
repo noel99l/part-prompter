@@ -157,7 +157,7 @@ export default function AdminSongsPage() {
     setNewTitle('')
     setNewArtist('')
     setSelectedLyrics(null)
-    router.push(`/admin/${song.id}`)
+    router.push(`/manage/songs/${song.id}`)
   }
 
   const closeModal = () => {
