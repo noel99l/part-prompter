@@ -269,21 +269,26 @@ export default function LyricsEditor() {
   // LRCテキストを直接編集して保存＆反映
   const saveLrcAndApply = async () => {
     setSaving(true)
-    const { lines: fl, breaks: br } = parseLrc(lrcText)
-    if (br.size === 0 && fl.length > 0) for (let i = 4; i < fl.length; i += 4) br.add(i)
+    const strippedText = lrcText.split('\n').filter(l => l.trim() !== '').join('\n')
+    const { lines: fl, breaks: br } = parseLrc(strippedText)
 
     const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
     lines.forEach(l => { if (!existingMap.has(l.text)) existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members }) })
     const merged = fl.map(l => { const e = existingMap.get(l.text); return e ? { ...l, ...e } : l })
 
-    // 既存のbreaksをテキスト一致で新しいインデックスに引き継ぐ
-    // LRCから新たに検出されたbreakはそのまま維持し、既存のbreak位置もテキストマッピングで復元
-    const oldTextAtBreak = new Set<string>()
-    breaks.forEach(i => { if (lines[i]) oldTextAtBreak.add(lines[i].text) })
-    const mergedBreaks = new Set(br)
-    merged.forEach((l, i) => { if (i > 0 && oldTextAtBreak.has(l.text)) mergedBreaks.add(i) })
+    // 既存breaksをテキスト一致で引き継ぐ。既存がない初回のみLRC空行由来 or 4行自動
+    let mergedBreaks: Set<number>
+    if (breaks.size === 0) {
+      mergedBreaks = br
+      if (mergedBreaks.size === 0 && merged.length > 0) for (let i = 4; i < merged.length; i += 4) mergedBreaks.add(i)
+    } else {
+      const oldTextAtBreak = new Set<string>()
+      breaks.forEach(i => { if (lines[i]) oldTextAtBreak.add(lines[i].text) })
+      mergedBreaks = new Set<number>()
+      merged.forEach((l, i) => { if (i > 0 && oldTextAtBreak.has(l.text)) mergedBreaks.add(i) })
+    }
 
-    setLines(merged); setBreaks(mergedBreaks); setLrcText(toLrcText(merged, mergedBreaks))
+    setLines(merged); setBreaks(mergedBreaks)
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
