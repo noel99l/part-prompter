@@ -174,7 +174,7 @@ export default function LyricsEditor() {
   }, [members])
 
   // ---- メンバー操作 ----
-  const saveMembersApi = async (newMembers: Member[]) => {
+  const saveMembersApi = async (newMembers: Member[], saveLyricsAfter = true) => {
     const res = await fetch(`/api/songs/${songId}/members`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -199,11 +199,15 @@ export default function LyricsEditor() {
     setLines(remappedLines)
     setMembers(saved)
 
-    await fetch(`/api/songs/${songId}/lyrics`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(remappedLines, breaks)),
-    })
+    if (saveLyricsAfter) {
+      await fetch(`/api/songs/${songId}/lyrics`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toDbFormat(remappedLines, breaks)),
+      })
+    }
+
+    return remappedLines
   }
 
   const addMember = () => {
@@ -267,14 +271,23 @@ export default function LyricsEditor() {
     setSaving(true)
     const { lines: fl, breaks: br } = parseLrc(lrcText)
     if (br.size === 0 && fl.length > 0) for (let i = 4; i < fl.length; i += 4) br.add(i)
+
     const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
     lines.forEach(l => { if (!existingMap.has(l.text)) existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members }) })
     const merged = fl.map(l => { const e = existingMap.get(l.text); return e ? { ...l, ...e } : l })
-    setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
+
+    // 既存のbreaksをテキスト一致で新しいインデックスに引き継ぐ
+    // LRCから新たに検出されたbreakはそのまま維持し、既存のbreak位置もテキストマッピングで復元
+    const oldTextAtBreak = new Set<string>()
+    breaks.forEach(i => { if (lines[i]) oldTextAtBreak.add(lines[i].text) })
+    const mergedBreaks = new Set(br)
+    merged.forEach((l, i) => { if (i > 0 && oldTextAtBreak.has(l.text)) mergedBreaks.add(i) })
+
+    setLines(merged); setBreaks(mergedBreaks); setLrcText(toLrcText(merged, mergedBreaks))
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(merged, br)),
+      body: JSON.stringify(toDbFormat(merged, mergedBreaks)),
     })
     setSaving(false)
   }
@@ -339,10 +352,11 @@ export default function LyricsEditor() {
   // ---- 歌詞保存 ----
   const saveLyrics = async () => {
     setSaving(true)
+    const remappedLines = await saveMembersApi(members, false)
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(lines, breaks)),
+      body: JSON.stringify(toDbFormat(remappedLines, breaks)),
     })
     setSaving(false); showToast('パート分けを保存しました')
   }

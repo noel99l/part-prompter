@@ -25,7 +25,7 @@ export default function AddToPlaylistMenu({
   const [showModal, setShowModal] = useState(false)
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(false)
-  const [added, setAdded] = useState<number | null>(null)
+  const [added, setAdded] = useState<Set<number>>(new Set())
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -40,6 +40,7 @@ export default function AddToPlaylistMenu({
     e.preventDefault()
     e.stopPropagation()
     setOpen(false)
+    setAdded(new Set())
     setLoading(true)
     setShowModal(true)
     const res = await fetch('/api/playlists')
@@ -53,8 +54,7 @@ export default function AddToPlaylistMenu({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ songId }),
     })
-    setAdded(playlistId)
-    setTimeout(() => setAdded(null), 1500)
+    setAdded(prev => new Set(prev).add(playlistId))
   }
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -117,9 +117,9 @@ export default function AddToPlaylistMenu({
                     <button
                       className={modalStyles.addBtn}
                       onClick={() => handleAdd(p.id)}
-                      style={{ color: added === p.id ? '#7CFC00' : undefined }}
+                      style={{ color: added.has(p.id) ? '#7CFC00' : undefined }}
                     >
-                      {added === p.id ? '✓ 追加済み' : '追加'}
+                      {added.has(p.id) ? '✓ 追加済み' : '追加'}
                     </button>
                   </div>
                 ))}

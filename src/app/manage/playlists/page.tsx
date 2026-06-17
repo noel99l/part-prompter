@@ -103,14 +103,14 @@ export default function PlaylistsPage() {
       )}
 
       {showModal && (
-        <div className={styles.overlay}>
-          <div className={styles.modal}>
+        <div className={styles.overlay} onClick={closeModal}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <h2 className={styles.modalTitle}>セットリストを追加</h2>
             <input
               className={styles.input}
               value={name}
               onChange={e => setName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && create()}
+              onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
               placeholder="セットリスト名（必須）"
               autoFocus
             />
