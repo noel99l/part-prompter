@@ -90,20 +90,33 @@ export default function PrompterView() {
 
   const startLoop = (fromBlock: number, resumeElapsed?: number) => {
     stopLoop()
-    const startFrom = Math.max(0, fromBlock)
+    const startFrom = fromBlock // 表紙(-1)のまま保持
     const bl = stateRef.current.blocks
     const ts = resumeElapsed != null ? resumeElapsed
       : fromBlock < 0 ? 0
-      : (bl[startFrom]?.[0]?.timestamp_ms ?? 0)
+      : (bl[Math.max(0, fromBlock)]?.[0]?.timestamp_ms ?? 0)
     startTimeRef.current = Date.now() - ts
     stateRef.current.isPlaying = true
     stateRef.current.startTime = startTimeRef.current
     stateRef.current.currentBlock = startFrom
-    setCurrentBlock(startFrom)
+    if (startFrom >= 0) setCurrentBlock(startFrom) // 表紙時は更新しない
     const tick = () => {
       if (!stateRef.current.isPlaying) return
       const elapsed = Date.now() - (stateRef.current.startTime ?? 0)
       const bl2 = stateRef.current.blocks
+      // elapsedが最初のblockのtimestamp未満なら表紙のまま
+      const firstTs = bl2[0]?.[0]?.timestamp_ms ?? 0
+      if (elapsed < firstTs) {
+        // 表紙表示中：シークバーを表紙から最初のblockまでの進捗で表示
+        const el = document.getElementById('auto-progress-bar')
+        if (firstTs > 0) {
+          const progress = Math.max(0, Math.min(1, elapsed / firstTs))
+          progressRef.current = progress
+          if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }
+        }
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
       let next = 0
       for (let i = 0; i < bl2.length; i++) {
         const t = bl2[i]?.[0]?.timestamp_ms
@@ -112,12 +125,8 @@ export default function PrompterView() {
       stateRef.current.currentBlock = next
       setCurrentBlock(next)
       // シークバー進捗計算・DOM直接更新
-      const curTs = next === 0 && elapsed < (bl2[0]?.[0]?.timestamp_ms ?? 0)
-        ? 0
-        : (bl2[next]?.[0]?.timestamp_ms ?? 0)
-      const nextTs = next === 0 && elapsed < (bl2[0]?.[0]?.timestamp_ms ?? 0)
-        ? (bl2[0]?.[0]?.timestamp_ms ?? null)
-        : bl2[next + 1]?.[0]?.timestamp_ms
+      const curTs = bl2[next]?.[0]?.timestamp_ms ?? 0
+      const nextTs = bl2[next + 1]?.[0]?.timestamp_ms
       const el = document.getElementById('auto-progress-bar')
       if (nextTs != null && nextTs > curTs) {
         const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs - curTs)))
@@ -275,20 +284,29 @@ export default function PrompterView() {
         ) : (
           // 横表示：スライド表示
           currentBlock === -1 ? (
-            <div className={styles.cover}>
-              <div className={styles.coverTitle}>{song.title}</div>
-              {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
-              {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
-              <div className={styles.coverSeparator} />
-              <div className={styles.coverMembers}>
-                {members.map((m, i) => (
-                  <div key={m.id} className={styles.coverMember}>
-                    <span className={styles.coverMemberDot} style={{ background: m.color }} />
-                    <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
-                  </div>
-                ))}
+            <>
+              <div className={styles.cover}>
+                <div className={styles.coverTitle}>{song.title}</div>
+                {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
+                {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
+                <div className={styles.coverSeparator} />
+                <div className={styles.coverMembers}>
+                  {members.map((m, i) => (
+                    <div key={m.id} className={styles.coverMember}>
+                      <span className={styles.coverMemberDot} style={{ background: m.color }} />
+                      <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+              {blocks[0] && (
+                <div className={styles.nextBlock}>
+                  {blocks[0].slice(0, 2).map(line => (
+                    <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
+                  ))}
+                </div>
+              )}
+            </>
           ) : (
             <>
               <div className={styles.currentBlock}>
@@ -296,7 +314,6 @@ export default function PrompterView() {
                   <div key={line.id} className={styles.line}>{renderLine(line)}</div>
                 ))}
               </div>
-              <div className={styles.separator} />
               {currentBlock === blocks.length - 1 ? (
                 <div className={styles.nextBlock} style={{ opacity: 0.4, fontStyle: 'italic' }}>
                   <div className={styles.nextLine}>― End ―</div>
@@ -316,7 +333,16 @@ export default function PrompterView() {
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={() => {
               const prev = playlistSongs[playlistIndex - 1]
-              if (prev) router.push(`/songs/${prev.id}/prompter?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
+              if (prev) {
+                stopLoop()
+                stateRef.current.isPlaying = false
+                setIsPlaying(false)
+                progressRef.current = 0
+                pausedElapsedRef.current = null
+                const el = document.getElementById('auto-progress-bar')
+                if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+                router.push(`/songs/${prev.id}/prompter?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
+              }
             }} title="前の曲">⏮</button>
           )}
           <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
@@ -330,7 +356,16 @@ export default function PrompterView() {
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={() => {
               const next = playlistSongs[playlistIndex + 1]
-              if (next) router.push(`/songs/${next.id}/prompter?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
+              if (next) {
+                stopLoop()
+                stateRef.current.isPlaying = false
+                setIsPlaying(false)
+                progressRef.current = 0
+                pausedElapsedRef.current = null
+                const el = document.getElementById('auto-progress-bar')
+                if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+                router.push(`/songs/${next.id}/prompter?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
+              }
             }} title="次の曲">⏭</button>
           )}
           {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}>⛶</button>}
