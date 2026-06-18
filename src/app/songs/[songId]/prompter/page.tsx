@@ -152,12 +152,14 @@ export default function PrompterView() {
     stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
   }
   const handlePrev = () => {
-    stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
     const next = Math.max(-1, stateRef.current.currentBlock - 1)
     stateRef.current.currentBlock = next; setCurrentBlock(next)
-    pausedElapsedRef.current = null
-    const el = document.getElementById('auto-progress-bar')
-    if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+    if (stateRef.current.isPlaying) startLoop(next)
+    else {
+      pausedElapsedRef.current = null
+      const el = document.getElementById('auto-progress-bar')
+      if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+    }
   }
   const handleNext = () => {
     const next = Math.min(stateRef.current.blocks.length - 1, stateRef.current.currentBlock + 1)
