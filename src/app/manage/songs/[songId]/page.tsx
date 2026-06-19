@@ -122,6 +122,8 @@ export default function LyricsEditor() {
   const [editArtist, setEditArtist] = useState('')
   const [coverText, setCoverText] = useState('')
   const [bgColor, setBgColor] = useState('#000000')
+  const [originalBpm, setOriginalBpm] = useState<number | ''>('')
+  const [playbackBpm, setPlaybackBpm] = useState<number | ''>('')
   const [savingMeta, setSavingMeta] = useState(false)
   const [editDescription, setEditDescription] = useState('')
   const [isPublic, setIsPublic] = useState(true)
@@ -147,7 +149,7 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setMembers(m)
       if (Array.isArray(l) && l.length > 0) {
         const { lines: fl, breaks: br } = fromDbFormat(l)
         setLines(fl); setBreaks(br)
@@ -229,7 +231,7 @@ export default function LyricsEditor() {
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor }),
+      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null }),
     })
     setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
     await saveMembersApi(members)
@@ -1232,6 +1234,42 @@ export default function LyricsEditor() {
                 </button>
               </div>
             </div>
+            {hasTimestamp && (
+              <>
+                <div className={styles.infoFormRow}>
+                  <label className={styles.infoFormLabel}>元BPM</label>
+                  <input
+                    type="number"
+                    className={styles.metaInput}
+                    value={originalBpm}
+                    onChange={e => setOriginalBpm(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="例: 100"
+                    min={1}
+                    style={{ width: 100 }}
+                  />
+                </div>
+                <div className={styles.infoFormRow}>
+                  <label className={styles.infoFormLabel}>変更後BPM</label>
+                  <input
+                    type="number"
+                    className={styles.metaInput}
+                    value={playbackBpm}
+                    onChange={e => setPlaybackBpm(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="例: 120"
+                    min={1}
+                    style={{ width: 100 }}
+                  />
+                </div>
+                {originalBpm && playbackBpm && (
+                  <div className={styles.infoFormRow}>
+                    <label className={styles.infoFormLabel} />
+                    <span style={{ color: '#aaa', fontSize: '0.85rem' }}>
+                      テンポ倍率: {(Number(playbackBpm) / Number(originalBpm)).toFixed(3)}x
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
           <hr className={styles.divider} />
           <div className={styles.saveBtnRow}>

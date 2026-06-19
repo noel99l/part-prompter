@@ -74,10 +74,18 @@ export default function PrompterView() {
 
   const hasTimestamp = useMemo(() => lyrics.some(l => l.timestamp_ms != null), [lyrics])
 
-  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null })
+  const bpmRate = useMemo(() => {
+    const orig = song?.original_bpm
+    const play = song?.playback_bpm
+    if (orig && play && orig > 0) return orig / play
+    return 1
+  }, [song])
+
+  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null, bpmRate: 1 })
 
   useEffect(() => { stateRef.current.blocks = blocks }, [blocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
+  useEffect(() => { stateRef.current.bpmRate = bpmRate }, [bpmRate])
 
   useEffect(() => {
     if (!isPortrait || currentBlock < 0) return
@@ -90,24 +98,25 @@ export default function PrompterView() {
 
   const startLoop = (fromBlock: number, resumeElapsed?: number) => {
     stopLoop()
-    const startFrom = fromBlock // 表紙(-1)のまま保持
+    const startFrom = fromBlock
     const bl = stateRef.current.blocks
+    const rate = stateRef.current.bpmRate
+    const rawTs = bl[Math.max(0, fromBlock)]?.[0]?.timestamp_ms ?? 0
     const ts = resumeElapsed != null ? resumeElapsed
       : fromBlock < 0 ? 0
-      : (bl[Math.max(0, fromBlock)]?.[0]?.timestamp_ms ?? 0)
+      : rawTs * rate
     startTimeRef.current = Date.now() - ts
     stateRef.current.isPlaying = true
     stateRef.current.startTime = startTimeRef.current
     stateRef.current.currentBlock = startFrom
-    if (startFrom >= 0) setCurrentBlock(startFrom) // 表紙時は更新しない
+    if (startFrom >= 0) setCurrentBlock(startFrom)
     const tick = () => {
       if (!stateRef.current.isPlaying) return
       const elapsed = Date.now() - (stateRef.current.startTime ?? 0)
       const bl2 = stateRef.current.blocks
-      // elapsedが最初のblockのtimestamp未満なら表紙のまま
-      const firstTs = bl2[0]?.[0]?.timestamp_ms ?? 0
+      const r = stateRef.current.bpmRate
+      const firstTs = (bl2[0]?.[0]?.timestamp_ms ?? 0) * r
       if (elapsed < firstTs) {
-        // 表紙表示中：シークバーを表紙から最初のblockまでの進捗で表示
         const el = document.getElementById('auto-progress-bar')
         if (firstTs > 0) {
           const progress = Math.max(0, Math.min(1, elapsed / firstTs))
@@ -120,16 +129,15 @@ export default function PrompterView() {
       let next = 0
       for (let i = 0; i < bl2.length; i++) {
         const t = bl2[i]?.[0]?.timestamp_ms
-        if (t != null && elapsed >= t) next = i
+        if (t != null && elapsed >= t * r) next = i
       }
       stateRef.current.currentBlock = next
       setCurrentBlock(next)
-      // シークバー進捗計算・DOM直接更新
-      const curTs = bl2[next]?.[0]?.timestamp_ms ?? 0
+      const curTs = (bl2[next]?.[0]?.timestamp_ms ?? 0) * r
       const nextTs = bl2[next + 1]?.[0]?.timestamp_ms
       const el = document.getElementById('auto-progress-bar')
-      if (nextTs != null && nextTs > curTs) {
-        const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs - curTs)))
+      if (nextTs != null && nextTs * r > curTs) {
+        const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs * r - curTs)))
         progressRef.current = progress
         if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }
       } else {
