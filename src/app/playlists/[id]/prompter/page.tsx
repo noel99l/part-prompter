@@ -13,14 +13,20 @@ export default function PlaylistPrompterPage() {
   const [name, setName] = useState('')
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
-  const [current, setCurrent] = useState(0)
 
   useEffect(() => {
-    fetch(`/api/playlists/${id}`)
+    fetch(`/api/playlists/${id}?full=1`)
       .then(r => r.json())
       .then(data => {
         setName(data.name)
         setSongs(data.songs || [])
+        // 全曲データをsessionStorageにキャッシュ
+        const cacheKey = `playlist_cache_${id}`
+        const cache: Record<string, any> = {}
+        for (const s of data.songs || []) {
+          cache[s.id] = { song: s, members: s.members, lyrics: s.lyrics }
+        }
+        sessionStorage.setItem(cacheKey, JSON.stringify(cache))
         setLoading(false)
       })
   }, [id])
@@ -41,7 +47,7 @@ export default function PlaylistPrompterPage() {
       </div>
       <div className={styles.list}>
         {songs.map((s, i) => (
-        <Link key={s.id} href={`/songs/${s.id}/prompter?playlist=${id}&index=${i}&total=${songs.length}`} className={styles.card}>
+          <Link key={s.id} href={`/songs/${s.id}/prompter?playlist=${id}&index=${i}&total=${songs.length}`} className={styles.card}>
             <span style={{ color: '#666', flexShrink: 0, minWidth: '1.5rem', textAlign: 'right' }}>{i + 1}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div className={styles.songTitle}>{s.title}</div>
