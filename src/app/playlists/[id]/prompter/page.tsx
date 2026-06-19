@@ -37,7 +37,6 @@ export default function PlaylistPrompterPage() {
   return (
     <div className={styles.container}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-        <Link href="/songs" className={styles.backLink}>← 一覧</Link>
         <h1 className={styles.title} style={{ margin: 0 }}>📋 {name}</h1>
       </div>
       <div className={styles.list}>
