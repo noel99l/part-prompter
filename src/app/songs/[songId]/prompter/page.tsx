@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useRef, useMemo } from 'react'
+import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
@@ -34,8 +34,36 @@ export default function PrompterView() {
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
+  const [flashBtn, setFlashBtn] = useState<'prev' | 'next' | null>(null)
+  const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flash = (btn: 'prev' | 'next') => {
+    setFlashBtn(btn)
+    if (flashTimerRef.current) clearTimeout(flashTimerRef.current)
+    flashTimerRef.current = setTimeout(() => setFlashBtn(null), 300)
+  }
+  const [controlsVisible, setControlsVisible] = useState(true)
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number | null>(null)
+
+  const showControls = useCallback(() => {
+    setControlsVisible(true)
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    hideTimerRef.current = setTimeout(() => setControlsVisible(false), 3000)
+  }, [])
+
+  useEffect(() => {
+    showControls()
+    window.addEventListener('mousemove', showControls)
+    window.addEventListener('touchstart', showControls)
+    window.addEventListener('keydown', showControls)
+    return () => {
+      window.removeEventListener('mousemove', showControls)
+      window.removeEventListener('touchstart', showControls)
+      window.removeEventListener('keydown', showControls)
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current)
+    }
+  }, [showControls])
 
   useEffect(() => {
     setIsMobile(/iphone|ipad|ipod|android/i.test(navigator.userAgent))
@@ -46,17 +74,30 @@ export default function PrompterView() {
   }, [])
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/songs/${songId}`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/members`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
-    ]).then(([s, m, l]) => { setSong(s); setMembers(m); setLyrics(l) })
-  }, [songId])
+    const cached = playlistId
+      ? (() => { try { return JSON.parse(sessionStorage.getItem(`playlist_cache_${playlistId}`) || 'null') } catch { return null } })()
+      : null
+    const cachedSong = cached?.[songId]
 
-  useEffect(() => {
-    if (!playlistId) return
-    fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistSongs(data.songs || []))
-  }, [playlistId])
+    if (cachedSong) {
+      setSong(cachedSong.song)
+      setMembers(cachedSong.members || [])
+      setLyrics(cachedSong.lyrics || [])
+      // playlistSongsもキャッシュから復元
+      const allSongs = Object.values(cached).map((v: any) => v.song)
+      allSongs.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      setPlaylistSongs(allSongs)
+    } else {
+      Promise.all([
+        fetch(`/api/songs/${songId}`).then(r => r.json()),
+        fetch(`/api/songs/${songId}/members`).then(r => r.json()),
+        fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
+      ]).then(([s, m, l]) => { setSong(s); setMembers(m); setLyrics(l) })
+      if (playlistId) {
+        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistSongs(data.songs || []))
+      }
+    }
+  }, [songId, playlistId])
 
   const blocks = useMemo(() => {
     const map: LyricLine[][] = []
@@ -81,8 +122,12 @@ export default function PrompterView() {
     return 1
   }, [song])
 
-  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null, bpmRate: 1 })
+  const playlistRef = useRef({ playlistSongs: [] as {id:number;title:string}[], playlistIndex: -1, playlistTotal: 0, playlistId: null as string|null })
+  useEffect(() => {
+    playlistRef.current = { playlistSongs, playlistIndex, playlistTotal, playlistId }
+  }, [playlistSongs, playlistIndex, playlistTotal, playlistId])
 
+  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null, bpmRate: 1 })
   useEffect(() => { stateRef.current.blocks = blocks }, [blocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
   useEffect(() => { stateRef.current.bpmRate = bpmRate }, [bpmRate])
@@ -183,13 +228,53 @@ export default function PrompterView() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); handleNext() }
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); handlePrev() }
-      else if (e.key === ' ') { e.preventDefault(); stateRef.current.isPlaying ? handlePause() : handlePlay() }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault()
+        if (e.shiftKey && playlistId) handleNextSong()
+        else { handleNext(); flash('next') }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        if (e.shiftKey && playlistId) handlePrevSong()
+        else { handlePrev(); flash('prev') }
+      } else if (e.key === ' ') { e.preventDefault(); stateRef.current.isPlaying ? handlePause() : handlePlay() }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  const handlePrevSong = () => {
+    const { playlistSongs: ps, playlistId: pid, playlistTotal: pt } = playlistRef.current
+    if (!pid || ps.length === 0) return
+    const currentIdx = ps.findIndex((s: any) => String(s.id) === String(songId))
+    if (currentIdx <= 0) return
+    const prev = ps[currentIdx - 1]
+    if (!prev) return
+    stopLoop()
+    stateRef.current.isPlaying = false
+    setIsPlaying(false)
+    progressRef.current = 0
+    pausedElapsedRef.current = null
+    const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+    if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
+    router.push(`/songs/${prev.id}/prompter?playlist=${pid}&index=${currentIdx - 1}&total=${pt}`)
+  }
+
+  const handleNextSong = () => {
+    const { playlistSongs: ps, playlistId: pid, playlistTotal: pt } = playlistRef.current
+    if (!pid || ps.length === 0) return
+    const currentIdx = ps.findIndex((s: any) => String(s.id) === String(songId))
+    if (currentIdx < 0 || currentIdx >= ps.length - 1) return
+    const next = ps[currentIdx + 1]
+    if (!next) return
+    stopLoop()
+    stateRef.current.isPlaying = false
+    setIsPlaying(false)
+    progressRef.current = 0
+    pausedElapsedRef.current = null
+    const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+    if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
+    router.push(`/songs/${next.id}/prompter?playlist=${pid}&index=${currentIdx + 1}&total=${pt}`)
+  }
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const x = e.clientX
@@ -340,44 +425,20 @@ export default function PrompterView() {
           )
         )}
 
-        <div className={styles.controls} onClick={e => e.stopPropagation()}>
+        <div className={`${styles.controls} ${controlsVisible ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={() => {
-              const prev = playlistSongs[playlistIndex - 1]
-              if (prev) {
-                stopLoop()
-                stateRef.current.isPlaying = false
-                setIsPlaying(false)
-                progressRef.current = 0
-                pausedElapsedRef.current = null
-                const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
-                if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
-                router.push(`/songs/${prev.id}/prompter?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
-              }
-            }} title="前の曲">⏮</button>
+            <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={handlePrevSong} title="前の曲 (Shift+←)">⏮</button>
           )}
-          <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
+          <button className={`${styles.btn} ${flashBtn === 'prev' ? styles.btnFlash : ''}`} onClick={() => { handlePrev(); flash('prev') }} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
           {hasTimestamp && (
             <button className={`${styles.btn} ${styles.btnAuto}`} onClick={isPlaying ? handlePause : handlePlay}>
               <span id="auto-progress-bar" className={styles.autoProgress} />
               <span className={styles.autoLabel}>{isPlaying ? '⏸' : 'Auto'}</span>
             </button>
           )}
-          <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
+          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={() => {
-              const next = playlistSongs[playlistIndex + 1]
-              if (next) {
-                stopLoop()
-                stateRef.current.isPlaying = false
-                setIsPlaying(false)
-                progressRef.current = 0
-                pausedElapsedRef.current = null
-                const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
-                if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
-                router.push(`/songs/${next.id}/prompter?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
-              }
-            }} title="次の曲">⏭</button>
+            <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)">⏭</button>
           )}
           {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}>⛶</button>}
         </div>
