@@ -308,6 +308,19 @@
 .textWhite { color: #fff; }
 .textTransparent { color: transparent; }
 
+.globalProgress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 0%;
+  height: 3px;
+  background: #e00;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 100;
+  transition: none;
+}
+
 .coverText {
   font-size: clamp(0.9rem, 2vw, 1.4rem);
   color: #ccc;
