@@ -1244,6 +1244,41 @@
 
 .infoFormLabelTop { padding-top: 0.5rem; }
 
+.sectionIndent {
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sectionIndent .infoFormLabel {
+  min-width: 80px;
+}
+
+.bpmStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.bpmRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bpmLabel {
+  color: #aaa;
+  font-size: 0.8rem;
+  min-width: 80px;
+}
+
+.bpmRate {
+  color: #555;
+  font-size: 0.8rem;
+  padding-left: 4px;
+}
+
 .textWhite { color: #fff; }
 .infoFormRowTop { align-items: flex-start; }
 

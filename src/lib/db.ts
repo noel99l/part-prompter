@@ -89,6 +89,7 @@ export async function initDb() {
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS original_bpm INTEGER`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS playback_bpm INTEGER`)
+    await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS show_progress_bar BOOLEAN DEFAULT true`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description TEXT`)
     await query(`

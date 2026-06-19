@@ -117,11 +117,11 @@ export default function PrompterView() {
       const r = stateRef.current.bpmRate
       const firstTs = (bl2[0]?.[0]?.timestamp_ms ?? 0) * r
       if (elapsed < firstTs) {
-        const el = document.getElementById('auto-progress-bar')
+        const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
         if (firstTs > 0) {
           const progress = Math.max(0, Math.min(1, elapsed / firstTs))
           progressRef.current = progress
-          if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }
+          if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }; if (gel) { gel.style.width = `${progress * 100}%`; gel.style.opacity = '1' }
         }
         rafRef.current = requestAnimationFrame(tick)
         return
@@ -135,14 +135,14 @@ export default function PrompterView() {
       setCurrentBlock(next)
       const curTs = (bl2[next]?.[0]?.timestamp_ms ?? 0) * r
       const nextTs = bl2[next + 1]?.[0]?.timestamp_ms
-      const el = document.getElementById('auto-progress-bar')
+      const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
       if (nextTs != null && nextTs * r > curTs) {
         const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs * r - curTs)))
         progressRef.current = progress
-        if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }
+        if (el) { el.style.width = `${progress * 100}%`; el.style.opacity = '1' }; if (gel) { gel.style.width = `${progress * 100}%`; gel.style.opacity = '1' }
       } else {
         progressRef.current = 0
-        if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+        if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
       }
       rafRef.current = requestAnimationFrame(tick)
     }
@@ -165,8 +165,8 @@ export default function PrompterView() {
     if (stateRef.current.isPlaying) startLoop(next)
     else {
       pausedElapsedRef.current = null
-      const el = document.getElementById('auto-progress-bar')
-      if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+      const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+      if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
     }
   }
   const handleNext = () => {
@@ -176,8 +176,8 @@ export default function PrompterView() {
     if (stateRef.current.isPlaying) startLoop(next)
     else {
       pausedElapsedRef.current = null
-      const el = document.getElementById('auto-progress-bar')
-      if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+      const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+      if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
     }
   }
 
@@ -247,6 +247,7 @@ export default function PrompterView() {
 
   return (
     <>
+      <span id="global-progress-bar" className={styles.globalProgress} style={{ display: song?.show_progress_bar === false ? 'none' : 'block' }} />
       <div className={styles.rotatePrompt}>
         <div className={styles.rotateIcon}>↺</div>
         <p className={styles.rotateText}>端末を横向きにしてください</p>
@@ -349,8 +350,8 @@ export default function PrompterView() {
                 setIsPlaying(false)
                 progressRef.current = 0
                 pausedElapsedRef.current = null
-                const el = document.getElementById('auto-progress-bar')
-                if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+                const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+                if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
                 router.push(`/songs/${prev.id}/prompter?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
               }
             }} title="前の曲">⏮</button>
@@ -372,8 +373,8 @@ export default function PrompterView() {
                 setIsPlaying(false)
                 progressRef.current = 0
                 pausedElapsedRef.current = null
-                const el = document.getElementById('auto-progress-bar')
-                if (el) { el.style.width = '0%'; el.style.opacity = '0' }
+                const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
+                if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
                 router.push(`/songs/${next.id}/prompter?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
               }
             }} title="次の曲">⏭</button>

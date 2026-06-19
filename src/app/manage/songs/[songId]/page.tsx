@@ -124,6 +124,7 @@ export default function LyricsEditor() {
   const [bgColor, setBgColor] = useState('#000000')
   const [originalBpm, setOriginalBpm] = useState<number | ''>('')
   const [playbackBpm, setPlaybackBpm] = useState<number | ''>('')
+  const [showProgressBar, setShowProgressBar] = useState(true)
   const [savingMeta, setSavingMeta] = useState(false)
   const [editDescription, setEditDescription] = useState('')
   const [isPublic, setIsPublic] = useState(true)
@@ -149,7 +150,7 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setShowProgressBar(s.show_progress_bar !== false); setMembers(m)
       if (Array.isArray(l) && l.length > 0) {
         const { lines: fl, breaks: br } = fromDbFormat(l)
         setLines(fl); setBreaks(br)
@@ -231,7 +232,7 @@ export default function LyricsEditor() {
     await fetch(`/api/songs/${songId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null }),
+      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null, show_progress_bar: showProgressBar }),
     })
     setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
     await saveMembersApi(members)
@@ -1199,71 +1200,91 @@ export default function LyricsEditor() {
       {tab === 'prompter' && (
         <div className={styles.membersPanel}>
           <div className={styles.infoForm}>
-            <div className={styles.infoFormRow} style={{ alignItems: 'flex-start' }}>
-              <label className={`${styles.infoFormLabel} ${styles.infoFormLabelTop}`}>表紙テキスト</label>
-              <div style={{ flex: 1 }}>
-                <textarea
-                  className={styles.descriptionInput}
-                  value={coverText}
-                  onChange={e => setCoverText(e.target.value.slice(0, 300))}
-                  placeholder="スライド表紙に表示するテキスト（300文字まで）"
-                  rows={4}
-                />
-                <div className={`${styles.descriptionCountWrap} ${coverText.length >= 300 ? styles.descriptionCountMax : styles.descriptionCountOk}`}>
-                  {coverText.length}/300
+            <hr className={styles.divider} style={{ marginTop: 0 }} />
+            <p className={styles.hint}>表紙設定</p>
+            <div className={styles.sectionIndent}>
+              <div className={styles.infoFormRow} style={{ alignItems: 'flex-start' }}>
+                <label className={`${styles.infoFormLabel} ${styles.infoFormLabelTop}`}>表紙テキスト</label>
+                <div style={{ flex: 1 }}>
+                  <textarea
+                    className={styles.descriptionInput}
+                    value={coverText}
+                    onChange={e => setCoverText(e.target.value.slice(0, 300))}
+                    placeholder="スライド表紙に表示するテキスト（300文字まで）"
+                    rows={4}
+                  />
+                  <div className={`${styles.descriptionCountWrap} ${coverText.length >= 300 ? styles.descriptionCountMax : styles.descriptionCountOk}`}>
+                    {coverText.length}/300
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className={styles.infoFormRow}>
-              <label className={styles.infoFormLabel}>背景カラー</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <input
-                  type="color"
-                  value={bgColor}
-                  onChange={e => setBgColor(e.target.value)}
-                  className={styles.colorPicker}
-                  style={{ width: 40, height: 40 }}
-                />
-                <span style={{ color: '#888', fontSize: '0.85rem' }}>{bgColor}</span>
-                <button
-                  className={styles.addBtn}
-                  onClick={() => setBgColor('#000000')}
-                  style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem' }}
-                >
-                  リセット
-                </button>
+              <div className={styles.infoFormRow}>
+                <label className={styles.infoFormLabel}>背景カラー</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input
+                    type="color"
+                    value={bgColor}
+                    onChange={e => setBgColor(e.target.value)}
+                    className={styles.colorPicker}
+                    style={{ width: 40, height: 40 }}
+                  />
+                  <span style={{ color: '#888', fontSize: '0.85rem' }}>{bgColor}</span>
+                  <button
+                    className={styles.addBtn}
+                    onClick={() => setBgColor('#000000')}
+                    style={{ fontSize: '0.8rem', padding: '0.3rem 0.75rem' }}
+                  >
+                    リセット
+                  </button>
+                </div>
               </div>
             </div>
             {hasTimestamp && (
               <>
                 <hr className={styles.divider} />
                 <p className={styles.hint}>Autoモード設定</p>
-                <div className={styles.infoFormRow}>
-                  <label className={styles.infoFormLabel}>元BPM</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <input
-                      type="number"
-                      className={styles.metaInput}
-                      value={originalBpm}
-                      onChange={e => setOriginalBpm(e.target.value === '' ? '' : Number(e.target.value))}
-                      min={1}
-                      style={{ width: 80 }}
-                    />
-                    <span style={{ color: '#888' }}>→</span>
-                    <label style={{ color: '#aaa', fontSize: '0.85rem' }}>変更後BPM</label>
-                    <input
-                      type="number"
-                      className={styles.metaInput}
-                      value={playbackBpm}
-                      onChange={e => setPlaybackBpm(e.target.value === '' ? '' : Number(e.target.value))}
-                      min={1}
-                      style={{ width: 80 }}
-                    />
-                    {originalBpm && playbackBpm && (
-                      <span style={{ color: '#aaa', fontSize: '0.85rem' }}>
-                        {(Number(playbackBpm) / Number(originalBpm)).toFixed(3)}x
+                <div className={styles.sectionIndent}>
+                  <div className={styles.infoFormRow}>
+                    <label className={styles.infoFormLabel}>シークバー</label>
+                    <label className={styles.toggleLabel}>
+                      <button
+                        type="button"
+                        onClick={() => setShowProgressBar(v => !v)}
+                        style={{
+                          width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
+                          background: showProgressBar ? '#7CFC00' : '#444',
+                          position: 'relative', transition: 'background 0.2s', flexShrink: 0,
+                        }}
+                      >
+                        <span style={{
+                          position: 'absolute', top: 2, left: showProgressBar ? 22 : 2,
+                          width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                          transition: 'left 0.2s', display: 'block',
+                        }} />
+                      </button>
+                      <span className={styles.toggleHint}>
+                        {showProgressBar ? '表示' : '非表示'}
                       </span>
-                    )}
+                    </label>
+                  </div>
+                  <div className={styles.infoFormRow}>
+                    <label className={styles.infoFormLabel}>スライド送りスピード変更</label>
+                  </div>
+                  <div className={styles.sectionIndent}>
+                    <div className={styles.infoFormRow}>
+                      <label className={styles.infoFormLabel}>元BPM</label>
+                      <input type="number" className={styles.metaInput} value={originalBpm} onChange={e => setOriginalBpm(e.target.value === '' ? '' : Number(e.target.value))} min={1} style={{ width: 80 }} />
+                    </div>
+                    <div className={styles.infoFormRow}>
+                      <span className={styles.infoFormLabel} />
+                      <span className={styles.bpmRate}>
+                        {originalBpm && playbackBpm ? `↓ ${(Number(playbackBpm) / Number(originalBpm)).toFixed(3)}x` : '↓'}
+                      </span>
+                    </div>
+                    <div className={styles.infoFormRow}>
+                      <label className={styles.infoFormLabel}>変更後BPM</label>
+                      <input type="number" className={styles.metaInput} value={playbackBpm} onChange={e => setPlaybackBpm(e.target.value === '' ? '' : Number(e.target.value))} min={1} style={{ width: 80 }} />
+                    </div>
                   </div>
                 </div>
               </>
