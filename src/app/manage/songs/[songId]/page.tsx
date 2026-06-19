@@ -1236,38 +1236,36 @@ export default function LyricsEditor() {
             </div>
             {hasTimestamp && (
               <>
+                <hr className={styles.divider} />
+                <p className={styles.hint}>Autoモード設定</p>
                 <div className={styles.infoFormRow}>
                   <label className={styles.infoFormLabel}>元BPM</label>
-                  <input
-                    type="number"
-                    className={styles.metaInput}
-                    value={originalBpm}
-                    onChange={e => setOriginalBpm(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="例: 100"
-                    min={1}
-                    style={{ width: 100 }}
-                  />
-                </div>
-                <div className={styles.infoFormRow}>
-                  <label className={styles.infoFormLabel}>変更後BPM</label>
-                  <input
-                    type="number"
-                    className={styles.metaInput}
-                    value={playbackBpm}
-                    onChange={e => setPlaybackBpm(e.target.value === '' ? '' : Number(e.target.value))}
-                    placeholder="例: 120"
-                    min={1}
-                    style={{ width: 100 }}
-                  />
-                </div>
-                {originalBpm && playbackBpm && (
-                  <div className={styles.infoFormRow}>
-                    <label className={styles.infoFormLabel} />
-                    <span style={{ color: '#aaa', fontSize: '0.85rem' }}>
-                      テンポ倍率: {(Number(playbackBpm) / Number(originalBpm)).toFixed(3)}x
-                    </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <input
+                      type="number"
+                      className={styles.metaInput}
+                      value={originalBpm}
+                      onChange={e => setOriginalBpm(e.target.value === '' ? '' : Number(e.target.value))}
+                      min={1}
+                      style={{ width: 80 }}
+                    />
+                    <span style={{ color: '#888' }}>→</span>
+                    <label style={{ color: '#aaa', fontSize: '0.85rem' }}>変更後BPM</label>
+                    <input
+                      type="number"
+                      className={styles.metaInput}
+                      value={playbackBpm}
+                      onChange={e => setPlaybackBpm(e.target.value === '' ? '' : Number(e.target.value))}
+                      min={1}
+                      style={{ width: 80 }}
+                    />
+                    {originalBpm && playbackBpm && (
+                      <span style={{ color: '#aaa', fontSize: '0.85rem' }}>
+                        {(Number(playbackBpm) / Number(originalBpm)).toFixed(3)}x
+                      </span>
+                    )}
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>
