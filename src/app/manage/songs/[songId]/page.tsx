@@ -942,6 +942,13 @@ export default function LyricsEditor() {
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
             <input ref={fileRef} type="file" accept=".lrc,.txt" className={styles.fileInputHidden} onChange={handleLrcImport} />
+            <button className={styles.importBtn} onClick={() => {
+              setLrcText(prev => prev.split('\n').map(line => {
+                if (line.trim() === '') return line
+                if (/^\[\d+:\d+[.::]\d+\]/.test(line.trim())) return line
+                return `[00:00.00]${line}`
+              }).join('\n'))
+            }}>⏱ タイムスタンプ挿入</button>
           </div>
           <p className={styles.hint}>LRC形式またはプレーンテキスト（空行でブロック区切り）を貼り付けて保存してください。</p>
           <textarea
