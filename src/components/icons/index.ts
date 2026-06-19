@@ -1,0 +1,7 @@
+export { default as IconPrevSong } from './prev-song.svg'
+export { default as IconNextSong } from './next-song.svg'
+export { default as IconPrev } from './prev.svg'
+export { default as IconNext } from './next.svg'
+export { default as IconPlay } from './play.svg'
+export { default as IconPause } from './pause.svg'
+export { default as IconFullscreen } from './fullscreen.svg'
