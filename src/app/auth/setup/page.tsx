@@ -1,12 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import s from '@/app/common.module.css'
 import styles from './page.module.css'
 
 export default function SetupPage() {
-  const { update } = useSession()
   const [accountName, setAccountName] = useState('')
   const [agreed, setAgreed] = useState(false)
   const [saving, setSaving] = useState(false)

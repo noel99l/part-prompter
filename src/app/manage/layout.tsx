@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
 import AdminMenu from '@/components/AppMenu'
@@ -17,10 +18,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <a href="/manage/songs" className={styles.logoWrap}>
+        <Link href="/manage/songs" className={styles.logoWrap}>
           <span className={styles.logo}>PART-PROMPTER</span>
           <span className={styles.badge}>管理</span>
-        </a>
+        </Link>
         <AdminMenu accountName={accountName} />
       </header>
       <div className={styles.body}>

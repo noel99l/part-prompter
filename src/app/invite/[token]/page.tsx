@@ -7,7 +7,7 @@ import s from '@/app/common.module.css'
 
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>()
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const router = useRouter()
   const [invite, setInvite] = useState<any>(null)
   const [loading, setLoading] = useState(true)

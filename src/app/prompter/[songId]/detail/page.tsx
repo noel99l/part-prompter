@@ -3,7 +3,6 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import Loading from '@/components/Loading'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 

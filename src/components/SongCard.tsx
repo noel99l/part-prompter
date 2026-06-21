@@ -18,7 +18,7 @@ interface SongCardProps {
   skeleton?: boolean
 }
 
-export default function SongCard({ title, href, artist, description, tags, meta, actions, skeleton }: SongCardProps) {
+export default function SongCard({ title, href, artist, description, tags, meta, actions }: SongCardProps) {
   const info = (
     <div className={styles.info}>
       <div className={styles.titleRow}>

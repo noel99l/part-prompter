@@ -17,7 +17,6 @@ export default function PlaylistsPage() {
   const [showModal, setShowModal] = useState(false)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [page, setPage] = useState(1)
   const PER_PAGE = 20
 
@@ -52,10 +51,8 @@ export default function PlaylistsPage() {
 
   const remove = async (id: number) => {
     if (!confirm('このセットリストを削除しますか？')) return
-    setDeletingId(id)
     await fetch(`/api/playlists/${id}`, { method: 'DELETE' })
     setPlaylists(prev => prev.filter(p => p.id !== id))
-    setDeletingId(null)
   }
 
   if (loading) return (

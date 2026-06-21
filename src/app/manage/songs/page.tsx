@@ -1,7 +1,6 @@
 'use client'
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import SongCard from '@/components/SongCard'
 import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
@@ -68,14 +67,12 @@ export default function AdminSongsPage() {
   const [newTitle, setNewTitle] = useState('')
   const [newArtist, setNewArtist] = useState('')
   const [creating, setCreating] = useState(false)
-  const [deletingId, setDeletingId] = useState<number | null>(null)
   const [suggestions, setSuggestions] = useState<LrcResult[]>([])
   const [searching, setSearching] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searched, setSearched] = useState(false)
   const [selectedLyrics, setSelectedLyrics] = useState<string | null>(null)
   const [page, setPage] = useState(1)
-  const searchTimer = useRef<NodeJS.Timeout | null>(null)
   const PER_PAGE = 20
 
   useEffect(() => { loadSongs() }, [])
@@ -173,10 +170,8 @@ export default function AdminSongsPage() {
 
   const deleteSong = async (id: number) => {
     if (!confirm('この曲を削除しますか？歌詞・メンバーも全て削除されます。')) return
-    setDeletingId(id)
     await fetch(`/api/songs/${id}`, { method: 'DELETE' })
     setSongs(prev => prev.filter(s => s.id !== id))
-    setDeletingId(null)
   }
 
   if (loading) return (

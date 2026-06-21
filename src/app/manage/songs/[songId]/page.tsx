@@ -293,7 +293,12 @@ export default function LyricsEditor() {
 
   // ---- ブロック区切り ----
   const toggleBreak = (i: number) => {
-    setBreaks(prev => { const next = new Set(prev); next.has(i) ? next.delete(i) : next.add(i); return next })
+    setBreaks(prev => {
+      const next = new Set(prev)
+      if (next.has(i)) next.delete(i)
+      else next.add(i)
+      return next
+    })
   }
 
   // ---- 行ドラッグでメンバー割り当て ----
@@ -322,15 +327,6 @@ export default function LyricsEditor() {
   }, [])
 
   const mainDragRef = useRef<{ lineIdx: number; memberIds: number[] } | null>(null)
-
-  const assignMembers = useCallback((i: number) => {
-    if (checkedMemberIds.length === 0) return
-    const sorted = [...checkedMemberIds].sort((a, b) => a - b)
-    setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: sorted } : l))
-  }, [checkedMemberIds])
-
-
-
 
   const handlePointerUp = useCallback(() => { harmonyDragRef.current = null; mainDragRef.current = null }, [])
 
@@ -361,25 +357,6 @@ export default function LyricsEditor() {
   }
 
   // ---- 表示ヘルパー ----
-  function lineGradient(memberIds: number[]): React.CSSProperties {
-    if (!memberIds || memberIds.length === 0) return { color: '#fff' }
-    if (memberIds.length === 1) return { color: memberMap[memberIds[0]]?.color || '#fff' }
-    const stops = memberIds.map((id, i) => {
-      const pct = 100 / memberIds.length
-      const color = memberMap[id]?.color || '#fff'
-      return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%`
-    }).join(', ')
-    return { backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
-  }
-
-  function GradientText({ text, memberIds }: { text: string; memberIds: number[]; id?: string }) {
-    const colors = memberIds.map(mid => memberMap[mid]?.color || '#fff')
-    const stops = colors.map((c, i) => `${c} ${(i / colors.length) * 100}%, ${c} ${((i + 1) / colors.length) * 100}%`).join(', ')
-    return (
-      <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{text}</span>
-    )
-  }
-
   function renderLineText(line: FlatLine, lineIdx: number) {
     // ハモリモード時：1文字ずつクリック可能なボタンとして表示
     if (harmonyMode !== 'main') {
@@ -521,7 +498,6 @@ export default function LyricsEditor() {
   }
 
   function LyricsTextExportMenuItem({ lines, breaks, members, onClose }: { lines: FlatLine[]; breaks: Set<number>; members: Member[]; onClose?: () => void }) {
-    const memberMap = Object.fromEntries(members.map(m => [m.id, m]))
     const getSymbol = (id: number) => { const idx = members.findIndex(m => m.id === id); return idx >= 0 ? String.fromCharCode(65 + idx) : '?' }
     const getLabel = (ids: number[]) => { if (!ids?.length || (ids.length === members.length && members.length > 0)) return '全員'; return ids.map(id => getSymbol(id)).join('') }
     const buildText = () => {
@@ -562,7 +538,7 @@ export default function LyricsEditor() {
     )
   }
 
-  function PlaylistAddMenuItem({ songId, songTitle, onClose }: { songId: string; songTitle?: string; onClose: () => void }) {
+  function PlaylistAddMenuItem({ songId, songTitle }: { songId: string; songTitle?: string }) {
     const [showModal, setShowModal] = React.useState(false)
     const [playlists, setPlaylists] = React.useState<any[]>([])
     const [loading, setLoading] = React.useState(false)
@@ -622,7 +598,7 @@ export default function LyricsEditor() {
     )
   }
 
-  function DeleteSongMenuItem({ songId, onClose, onDeleted }: { songId: string; onClose: () => void; onDeleted: () => void }) {
+  function DeleteSongMenuItem({ songId, onDeleted }: { songId: string; onDeleted: () => void }) {
     const [confirm, setConfirm] = React.useState(false)
     const [deleting, setDeleting] = React.useState(false)
 
@@ -661,7 +637,6 @@ export default function LyricsEditor() {
     const [generating, setGenerating] = React.useState(false)
     const [copyToast, setCopyToast] = React.useState(false)
     const [showModal, setShowModal] = React.useState(false)
-    const [links, setLinks] = React.useState<any[]>([])
     const [members, setMembers] = React.useState<any[]>([])
     const [expireMinutes, setExpireMinutes] = React.useState(10080)
 
@@ -669,7 +644,6 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/collaborators`)
         .then(r => r.json())
         .then(data => {
-          if (data.links) setLinks(data.links)
           if (data.members) setMembers(data.members)
         })
     }
@@ -686,18 +660,8 @@ export default function LyricsEditor() {
         await navigator.clipboard.writeText(`${window.location.origin}/invite/${data.token}`)
         setCopyToast(true)
         setTimeout(() => setCopyToast(false), 2000)
-        setLinks(prev => [{ ...data, expired: false }, ...prev])
       }
       setGenerating(false)
-    }
-
-    const remove = async (id: number) => {
-      await fetch(`/api/songs/${songId}/collaborators`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      })
-      setLinks(prev => prev.filter(c => c.id !== id))
     }
 
     const removeMember = async (memberId: number) => {
@@ -815,9 +779,9 @@ export default function LyricsEditor() {
                 <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
                 <div className={styles.exportDropdownDivider} />
                 <CollaboratorMenuItem songId={songId} />
-                <PlaylistAddMenuItem songId={songId} songTitle={song?.title} onClose={() => setExportMenuOpen(false)} />
+                <PlaylistAddMenuItem songId={songId} songTitle={song?.title} />
                 <div className={styles.exportDropdownDivider} />
-                <DeleteSongMenuItem songId={songId} onClose={() => setExportMenuOpen(false)} onDeleted={() => router.push('/manage/songs')} />
+                <DeleteSongMenuItem songId={songId} onDeleted={() => router.push('/manage/songs')} />
               </div>
             )}
           </div>
@@ -1061,7 +1025,7 @@ export default function LyricsEditor() {
                     {/* 通常行 */}
                     <div
                       className={styles.lyricLine}
-                      onPointerDown={e => {
+                      onPointerDown={() => {
                         // ハモリモードの長押しドラッグは文字ボタン側で処理するためここでは何もしない
                       }}
                       onPointerMove={e => {
@@ -1090,7 +1054,7 @@ export default function LyricsEditor() {
                           }
                         }
                       }}
-                      onPointerUp={e => {
+                      onPointerUp={() => {
                         mainDragRef.current = null
                         harmonyDragRef.current = null
                       }}
@@ -1167,7 +1131,7 @@ export default function LyricsEditor() {
                                   harmonyDragRef.current = { lineIdx: i, memberId: checkedMemberIds[0], mode: harmonyMode as 'up' | 'down' }
                                   assignHarmonyChar(i, ci, checkedMemberIds[0], harmonyMode as 'up' | 'down')
                                 }}
-                                onPointerEnter={e => {
+                                onPointerEnter={() => {
                                   if (!harmonyDragRef.current || harmonyDragRef.current.lineIdx !== i) return
                                   const { memberId, mode } = harmonyDragRef.current
                                   assignHarmonyChar(i, ci, memberId, mode)
