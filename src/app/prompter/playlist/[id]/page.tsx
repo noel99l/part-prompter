@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import Loading from '@/components/Loading'
 import styles from '../../page.module.css'
@@ -9,11 +9,9 @@ interface Song { id: number; title: string; artist: string }
 
 export default function PlaylistPrompterPage() {
   const { id } = useParams<{ id: string }>()
-  const router = useRouter()
   const [name, setName] = useState('')
   const [songs, setSongs] = useState<Song[]>([])
   const [loading, setLoading] = useState(true)
-  const [current, setCurrent] = useState(0)
 
   useEffect(() => {
     fetch(`/api/playlists/${id}`)

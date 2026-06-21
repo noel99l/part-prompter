@@ -5,7 +5,6 @@ import SongCard from '@/components/SongCard'
 import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
-import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 
 const PER_PAGE = 20

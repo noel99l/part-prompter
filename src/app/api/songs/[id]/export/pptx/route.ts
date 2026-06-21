@@ -3,7 +3,6 @@ import { query } from '@/lib/db'
 import PptxGenJS from 'pptxgenjs'
 
 const SLIDE_W = 13.33
-const SLIDE_H = 7.5
 const FONT_SIZE = 32
 const LINE_H = 1.2
 const X_MARGIN = 0.4

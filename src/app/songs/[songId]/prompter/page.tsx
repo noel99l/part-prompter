@@ -237,7 +237,11 @@ export default function PrompterView() {
         e.preventDefault()
         if (e.shiftKey && playlistId) handlePrevSong()
         else { handlePrev(); flash('prev') }
-      } else if (e.key === ' ') { e.preventDefault(); stateRef.current.isPlaying ? handlePause() : handlePlay() }
+      } else if (e.key === ' ') {
+        e.preventDefault()
+        if (stateRef.current.isPlaying) handlePause()
+        else handlePlay()
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)

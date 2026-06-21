@@ -1,4 +1,4 @@
-import { Pool } from 'pg'
+import { Pool, type PoolClient } from 'pg'
 
 let pool: Pool | null = null
 
@@ -16,17 +16,22 @@ function getPool() {
   return pool
 }
 
-export async function query(text: string, params?: any[], retries = 2): Promise<any> {
+export async function query(
+  text: string,
+  params?: unknown[],
+  retries = 2
+): Promise<any> {
   for (let attempt = 0; attempt <= retries; attempt++) {
-    let client
+    let client: PoolClient | undefined
     try {
       client = await getPool().connect()
       const result = await client.query(text, params)
       return result
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (client) { try { client.release() } catch {} }
       if (attempt === retries) throw error
-      if (error.message.includes('Connection terminated') || error.message.includes('timeout')) {
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('Connection terminated') || message.includes('timeout')) {
         pool?.end().catch(() => {})
         pool = null
         await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
@@ -35,15 +40,45 @@ export async function query(text: string, params?: any[], retries = 2): Promise<
       if (client) { try { client.release() } catch {} }
     }
   }
+  throw new Error('Query failed')
 }
 
 export async function initDb() {
   try {
     await query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        google_id TEXT UNIQUE NOT NULL,
+        email TEXT,
+        account_name TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await query(`
       CREATE TABLE IF NOT EXISTS prompter_songs (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
         artist TEXT,
+        description TEXT DEFAULT '',
+        created_by INTEGER REFERENCES users(id),
+        is_public BOOLEAN DEFAULT true,
+        cover_text TEXT DEFAULT '',
+        bg_color TEXT DEFAULT '#000000',
+        original_bpm INTEGER,
+        playback_bpm INTEGER,
+        show_progress_bar BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS playlists (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        description TEXT,
+        created_by INTEGER REFERENCES users(id),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
@@ -72,24 +107,15 @@ export async function initDb() {
     `)
 
     await query(`ALTER TABLE prompter_lyrics ADD COLUMN IF NOT EXISTS word_members JSONB DEFAULT '[]'`)
+    await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS description TEXT DEFAULT ''`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS is_public BOOLEAN DEFAULT true`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS cover_text TEXT DEFAULT ''`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS bg_color TEXT DEFAULT '#000000'`)
-
-    await query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        google_id TEXT UNIQUE NOT NULL,
-        email TEXT,
-        account_name TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `)
-
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS original_bpm INTEGER`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS playback_bpm INTEGER`)
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS show_progress_bar BOOLEAN DEFAULT true`)
+    await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description TEXT`)
     await query(`
@@ -109,13 +135,6 @@ export async function initDb() {
         user_id INTEGER NOT NULL REFERENCES users(id),
         joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(collaborator_id, user_id)
-      )
-    `)
-    await query(`
-      CREATE TABLE IF NOT EXISTS playlists (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `)
 

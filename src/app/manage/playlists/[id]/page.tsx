@@ -27,10 +27,9 @@ interface SearchResult {
   lyric_count?: string; timestamp_count?: string; member_count?: string
 }
 
-function SortableItem({ song, index, total, onRemove }: {
+function SortableItem({ song, index, onRemove }: {
   song: Song
   index: number
-  total: number
   onRemove: (id: number) => void
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: song.id })
@@ -284,7 +283,7 @@ export default function PlaylistEditPage() {
           <SortableContext items={songs.map(s => s.id)} strategy={verticalListSortingStrategy}>
             <div className={styles.list}>
               {songs.map((s, i) => (
-                <SortableItem key={s.id} song={s} index={i} total={songs.length} onRemove={removeSong} />
+                <SortableItem key={s.id} song={s} index={i} onRemove={removeSong} />
               ))}
             </div>
           </SortableContext>

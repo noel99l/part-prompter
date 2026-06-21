@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { auth } from '@/auth'
 import { query, initDb } from '@/lib/db'
 
@@ -29,7 +30,7 @@ export default async function SongEditLayout({
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', color: '#fff', gap: '1rem', fontFamily: 'Hiragino Sans, sans-serif' }}>
         <p style={{ fontSize: '1.2rem', color: '#888' }}>この楽曲を編集する権限がありません</p>
-        <a href="/manage/songs" style={{ color: '#FF69B4', textDecoration: 'none', fontSize: '0.95rem' }}>← パート分け管理に戻る</a>
+        <Link href="/manage/songs" style={{ color: '#FF69B4', textDecoration: 'none', fontSize: '0.95rem' }}>← パート分け管理に戻る</Link>
       </div>
     )
   }

@@ -23,7 +23,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       )
       return true
     },
-    async jwt({ token, trigger, session }) {
+    async jwt({ token, trigger }) {
       if (token.sub && (trigger === 'signIn' || trigger === 'update' || !('userId' in token))) {
         const result = await query(
           `SELECT id, account_name FROM users WHERE google_id = $1`,
