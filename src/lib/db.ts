@@ -43,6 +43,44 @@ export async function query(
   throw new Error('Query failed')
 }
 
+/**
+ * 単一接続上で複数ステートメントをトランザクション実行する。
+ * 接続をステートメントごとに取り直さないため、N 件の書き込みを高速化できる。
+ * コールバック内で例外が起きた場合は ROLLBACK する。
+ */
+export async function withTransaction<T>(
+  fn: (client: PoolClient) => Promise<T>,
+  retries = 2
+): Promise<T> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    let client: PoolClient | undefined
+    try {
+      client = await getPool().connect()
+      await client.query('BEGIN')
+      const result = await fn(client)
+      await client.query('COMMIT')
+      return result
+    } catch (error: unknown) {
+      if (client) {
+        try { await client.query('ROLLBACK') } catch {}
+      }
+      if (attempt === retries) throw error
+      const message = error instanceof Error ? error.message : String(error)
+      if (message.includes('Connection terminated') || message.includes('timeout')) {
+        pool?.end().catch(() => {})
+        pool = null
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+      } else {
+        // トランザクション内のロジックエラーはリトライしても無意味なので即時 throw
+        throw error
+      }
+    } finally {
+      if (client) { try { client.release() } catch {} }
+    }
+  }
+  throw new Error('Transaction failed')
+}
+
 export async function initDb() {
   try {
     await query(`
