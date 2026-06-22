@@ -1,0 +1,184 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.dialog {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 2rem 1.5rem 1.5rem;
+  border-radius: 16px;
+  background: #1a1a1a;
+  color: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+
+.skip {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.75rem;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #aaa;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.skip:hover {
+  color: #fff;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.75rem;
+}
+
+.progress {
+  font-size: 0.8rem;
+  color: #FF69B4;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.emoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.lead {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #ddd;
+}
+
+.body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #bbb;
+}
+
+.howto {
+  font-size: 0.85rem;
+  color: #FF69B4;
+  text-decoration: none;
+}
+
+.howto:hover {
+  text-decoration: underline;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.primary,
+.secondary {
+  min-height: 44px;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primary {
+  border: none;
+  background: #FF69B4;
+  color: #fff;
+}
+
+.primary:hover {
+  background: #ff4fa3;
+}
+
+.secondary {
+  border: 1px solid #555;
+  background: transparent;
+  color: #ddd;
+}
+
+.secondary:hover {
+  border-color: #888;
+  color: #fff;
+}
+
+/* キーボードフォーカスの可視表示（Req 9.5） */
+.dialog :focus-visible {
+  outline: 3px solid #66aaff;
+  outline-offset: 2px;
+}
+
+.banner {
+  position: fixed;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: #3a2a2a;
+  color: #ffd7d7;
+  border: 1px solid #6b4a4a;
+  font-size: 0.85rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.bannerClose {
+  min-width: 44px;
+  min-height: 44px;
+  border: none;
+  background: transparent;
+  color: #ffd7d7;
+  cursor: pointer;
+}
+
+/* スマートフォン（320–767px）: タッチ対象・余白の調整 */
+@media (max-width: 767px) {
+  .dialog {
+    padding: 1.75rem 1rem 1rem;
+  }
+
+  .actions {
+    flex-direction: column-reverse;
+  }
+
+  .primary,
+  .secondary {
+    width: 100%;
+  }
+}

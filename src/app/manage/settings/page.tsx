@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useSession, signOut } from 'next-auth/react'
+import { ONBOARDING_REPLAY_EVENT } from '@/components/onboarding/OnboardingGate'
 import styles from '@/app/manage/page.module.css'
 import s from '@/app/common.module.css'
 
@@ -70,6 +71,19 @@ export default function SettingsPage() {
         {message && (
           <p className={message.ok ? s.statusOk : s.statusError}>{message.text}</p>
         )}
+
+        <hr className={s.divider} />
+
+        <p className={styles.artist}>オンボーディング</p>
+        <p className={s.dangerMuted}>
+          アプリの使い方ガイドをもう一度確認できます。
+        </p>
+        <button
+          className={s.btnOutline}
+          onClick={() => window.dispatchEvent(new CustomEvent(ONBOARDING_REPLAY_EVENT))}
+        >
+          🎤 オンボーディングをもう一度見る
+        </button>
 
         <hr className={s.divider} />
 
