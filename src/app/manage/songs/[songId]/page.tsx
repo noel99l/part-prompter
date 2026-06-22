@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
+import { mergeAssignments } from '@/lib/lyrics/merge'
 
 const PALETTE = [
   '#FF4444', '#FF8C00', '#FFD700', '#7CFC00', '#00CED1',
@@ -241,25 +242,18 @@ export default function LyricsEditor() {
   }
 
   // ---- LRCインポート ----
-  const applyLrcText = (text: string) => {
+  // LRCテキストをパースし、テキスト一致・出現順で既存のmember_ids/word_membersを
+  // 引き継いだ行と区切り(breaks)を返す。import・保存の双方で同じ方式を使う。
+  // 引き継ぎロジックの詳細・パターンは src/lib/lyrics/merge.ts（テスト済み）を参照。
+  const mergeLrcText = (text: string): { merged: FlatLine[]; br: Set<number> } => {
     const { lines: fl, breaks: br } = parseLrc(text)
     if (br.size === 0 && fl.length > 0) for (let i = 4; i < fl.length; i += 4) br.add(i)
+    const merged = mergeAssignments(lines, fl) as FlatLine[]
+    return { merged, br }
+  }
 
-    // 既存の割り当てを引き継ぎ：textが一致する行は既存のmember_ids/word_membersを保持
-    const existingMap = new Map<string, { member_ids: number[]; word_members: WordMember[] }>()
-    lines.forEach(l => {
-      if (!existingMap.has(l.text)) {
-        existingMap.set(l.text, { member_ids: l.member_ids, word_members: l.word_members })
-      }
-    })
-
-    const merged = fl.map(l => {
-      const existing = existingMap.get(l.text)
-      return existing
-        ? { ...l, member_ids: existing.member_ids, word_members: existing.word_members }
-        : l
-    })
-
+  const applyLrcText = (text: string) => {
+    const { merged, br } = mergeLrcText(text)
     setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
   }
   const handleLrcImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,21 +266,14 @@ export default function LyricsEditor() {
   // LRCテキストを直接編集して保存＆反映
   const saveLrcAndApply = async () => {
     setSaving(true)
-    const strippedText = lrcText.split('\n').filter(l => l.trim() !== '').join('\n')
-    const { lines: fl } = parseLrc(strippedText)
-
-    // 既存行とタイムスタンプで対応させてmember_ids/word_membersを引き継ぐ
-    const merged = fl.map((l, i) => {
-      const existing = lines[i]
-      return existing ? { ...l, member_ids: existing.member_ids, word_members: existing.word_members } : l
-    })
-
-    // breaksはインデックスが変わらないのでそのまま引き継ぎ
-    setLines(merged); setBreaks(breaks)
+    // applyLrcText と同じ方式で、テキスト一致での引き継ぎと区切りの再生成を行う。
+    // 空行由来のブロック区切りを尊重するため lrcText をそのままパースする。
+    const { merged, br } = mergeLrcText(lrcText)
+    setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
     await fetch(`/api/songs/${songId}/lyrics`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(merged, breaks)),
+      body: JSON.stringify(toDbFormat(merged, br)),
     })
     setSaving(false)
   }
