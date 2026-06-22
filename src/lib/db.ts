@@ -118,6 +118,22 @@ export async function initDb() {
     await query(`ALTER TABLE prompter_songs ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS created_by INTEGER REFERENCES users(id)`)
     await query(`ALTER TABLE playlists ADD COLUMN IF NOT EXISTS description TEXT`)
+
+    // オンボーディング完了状態カラム。NULL=未完了、日時=完了済み。
+    // カラムが今回初めて追加された場合のみ、既存ユーザー（Existing_User）を完了扱いにバックフィルする。
+    const onboardingCol = await query(
+      `SELECT 1 FROM information_schema.columns
+       WHERE table_name = 'users' AND column_name = 'onboarding_completed_at'`
+    )
+    const onboardingColExists = (onboardingCol.rowCount ?? 0) > 0
+    await query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS onboarding_completed_at TIMESTAMP`)
+    if (!onboardingColExists) {
+      await query(
+        `UPDATE users SET onboarding_completed_at = CURRENT_TIMESTAMP
+         WHERE onboarding_completed_at IS NULL`
+      )
+    }
+
     await query(`
       CREATE TABLE IF NOT EXISTS song_collaborators (
         id SERIAL PRIMARY KEY,
