@@ -81,7 +81,24 @@ export async function withTransaction<T>(
   throw new Error('Transaction failed')
 }
 
-export async function initDb() {
+let initDbPromise: Promise<void> | null = null
+
+/**
+ * スキーマ初期化（テーブル・カラム・インデックス）。プロセス内で1回だけ実行する。
+ * 毎リクエストで多数の DDL を Neon へ往復させないようメモ化している。
+ */
+export function initDb(): Promise<void> {
+  if (!initDbPromise) {
+    // 失敗した場合は次回再試行できるよう promise をリセットする
+    initDbPromise = runInitDb().catch((error) => {
+      initDbPromise = null
+      throw error
+    })
+  }
+  return initDbPromise
+}
+
+async function runInitDb() {
   try {
     await query(`
       CREATE TABLE IF NOT EXISTS users (
@@ -200,6 +217,17 @@ export async function initDb() {
         sort_order INTEGER DEFAULT 0
       )
     `)
+
+    // 一覧取得の集計サブクエリ・結合を高速化するインデックス（冪等）
+    await query(`CREATE INDEX IF NOT EXISTS idx_prompter_members_song_id ON prompter_members(song_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_prompter_lyrics_song_id ON prompter_lyrics(song_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_prompter_songs_created_by ON prompter_songs(created_by)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_prompter_songs_is_public ON prompter_songs(is_public)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_playlist_songs_song_id ON playlist_songs(song_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_playlist_songs_playlist_id ON playlist_songs(playlist_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_song_collaborators_song_id ON song_collaborators(song_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_scm_collaborator_id ON song_collaborator_members(collaborator_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_scm_user_id ON song_collaborator_members(user_id)`)
 
   } catch (error) {
     console.error('Database initialization error:', error)
