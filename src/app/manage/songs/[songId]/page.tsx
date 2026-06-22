@@ -106,6 +106,22 @@ function toLrcText(lines: FlatLine[], breaks: Set<number>): string {
   }).join('\n')
 }
 
+// 保存済みかどうかを判定するためのスナップショット文字列を生成する（全編集対象を直列化）。
+interface SnapshotInput {
+  title: string; artist: string; description: string; isPublic: boolean
+  coverText: string; bgColor: string
+  originalBpm: number | ''; playbackBpm: number | ''; showProgressBar: boolean
+  members: Member[]; lines: FlatLine[]; breaks: Set<number>; lrcText: string
+}
+function snapshotOf(v: SnapshotInput): string {
+  return JSON.stringify({
+    title: v.title, artist: v.artist, description: v.description, isPublic: v.isPublic,
+    coverText: v.coverText, bgColor: v.bgColor,
+    originalBpm: v.originalBpm, playbackBpm: v.playbackBpm, showProgressBar: v.showProgressBar,
+    members: v.members, lines: v.lines, breaks: [...v.breaks].sort((a, b) => a - b), lrcText: v.lrcText,
+  })
+}
+
 export default function LyricsEditor() {
   const { songId } = useParams<{ songId: string }>()
   const router = useRouter()
@@ -117,7 +133,9 @@ export default function LyricsEditor() {
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
   const [harmonyMode, setHarmonyMode] = useState<'main' | 'up' | 'down'>('main')
   const harmonyDragRef = useRef<{ lineIdx: number; memberId: number; mode: 'up' | 'down' } | null>(null)
-  const [saving, setSaving] = useState(false)
+  const [savingAll, setSavingAll] = useState(false)
+  const [dirty, setDirty] = useState(false)
+  const savedSnapshotRef = useRef<string | null>(null)
   const [tab, setTab] = useState<'info' | 'lrc' | 'parts' | 'prompter'>('info')
   const [editTitle, setEditTitle] = useState('')
   const [editArtist, setEditArtist] = useState('')
@@ -126,7 +144,6 @@ export default function LyricsEditor() {
   const [originalBpm, setOriginalBpm] = useState<number | ''>('')
   const [playbackBpm, setPlaybackBpm] = useState<number | ''>('')
   const [showProgressBar, setShowProgressBar] = useState(true)
-  const [savingMeta, setSavingMeta] = useState(false)
   const [editDescription, setEditDescription] = useState('')
   const [isPublic, setIsPublic] = useState(true)
   const [toast, setToast] = useState<string | null>(null)
@@ -152,15 +169,46 @@ export default function LyricsEditor() {
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
       setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setShowProgressBar(s.show_progress_bar !== false); setMembers(m)
+      let fl: FlatLine[] = []
+      let br = new Set<number>()
       if (Array.isArray(l) && l.length > 0) {
-        const { lines: fl, breaks: br } = fromDbFormat(l)
+        const parsed = fromDbFormat(l)
+        fl = parsed.lines; br = parsed.breaks
         setLines(fl); setBreaks(br)
         setLrcText(toLrcText(fl, br))
       }
+      // 読み込み直後を「保存済み」基準として記録する
+      savedSnapshotRef.current = snapshotOf({
+        title: s.title, artist: s.artist || '', description: s.description || '', isPublic: s.is_public !== false,
+        coverText: s.cover_text || '', bgColor: s.bg_color || '#000000',
+        originalBpm: s.original_bpm ?? '', playbackBpm: s.playback_bpm ?? '', showProgressBar: s.show_progress_bar !== false,
+        members: m, lines: fl, breaks: br, lrcText: toLrcText(fl, br),
+      })
+      setDirty(false)
     })
   }, [songId])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
+
+  // 編集対象に変更があれば未保存(dirty)としてマークする（保存済みスナップショットと比較）
+  useEffect(() => {
+    if (savedSnapshotRef.current === null) return
+    const cur = snapshotOf({
+      title: editTitle, artist: editArtist, description: editDescription, isPublic,
+      coverText, bgColor, originalBpm, playbackBpm, showProgressBar,
+      members, lines, breaks, lrcText,
+    })
+    setDirty(cur !== savedSnapshotRef.current)
+  }, [editTitle, editArtist, editDescription, isPublic, coverText, bgColor, originalBpm, playbackBpm, showProgressBar, members, lines, breaks, lrcText])
+
+  // 未保存のままページを離れようとしたら警告する
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (dirty) { e.preventDefault(); e.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [dirty])
 
   useEffect(() => {
     const validIds = new Set(members.map(m => m.id))
@@ -178,7 +226,11 @@ export default function LyricsEditor() {
   }, [members])
 
   // ---- メンバー操作 ----
-  const saveMembersApi = async (newMembers: Member[], saveLyricsAfter = true) => {
+  // メンバーを保存し、新規IDのリマップを反映した行を返す（状態は呼び出し側で確定する）。
+  const putMembersAndRemap = async (
+    newMembers: Member[],
+    linesToRemap: FlatLine[]
+  ): Promise<{ savedMembers: Member[]; remapped: FlatLine[] }> => {
     const res = await fetch(`/api/songs/${songId}/members`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -194,24 +246,13 @@ export default function LyricsEditor() {
     const remapIds = (ids: number[]) =>
       ids.map(id => idMap.get(id) ?? id).filter(id => savedIds.has(id))
 
-    const remappedLines = lines.map(l => ({
+    const remapped = linesToRemap.map(l => ({
       ...l,
       member_ids: remapIds(l.member_ids),
       word_members: l.word_members.map(w => ({ ...w, member_ids: remapIds(w.member_ids) })),
     }))
 
-    setLines(remappedLines)
-    setMembers(saved)
-
-    if (saveLyricsAfter) {
-      await fetch(`/api/songs/${songId}/lyrics`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toDbFormat(remappedLines, breaks)),
-      })
-    }
-
-    return remappedLines
+    return { savedMembers: saved, remapped }
   }
 
   const addMember = () => {
@@ -228,17 +269,70 @@ export default function LyricsEditor() {
   const removeMember = (idx: number) =>
     setMembers(prev => prev.filter((_, i) => i !== idx))
 
-  const saveAll = async () => {
-    setSavingMeta(true)
-    await fetch(`/api/songs/${songId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null, show_progress_bar: showProgressBar }),
-    })
-    setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
-    await saveMembersApi(members)
-    setSavingMeta(false)
-    showToast('保存しました')
+  // タブ切替時に歌詞テキスト⇔行データを同期し、編集の取りこぼしを防ぐ
+  const changeTab = (next: 'info' | 'lrc' | 'parts' | 'prompter') => {
+    if (next === tab) return
+    if (tab === 'lrc') {
+      // 歌詞テキストの編集を行・区切りへ反映（lines/breaks を最新化）
+      const { merged, br } = mergeLrcText(lrcText)
+      setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
+    }
+    if (next === 'lrc') {
+      // 最新の行・区切りからテキストを再生成
+      setLrcText(toLrcText(lines, breaks))
+    }
+    setTab(next)
+  }
+
+  // タブに関係なく、曲情報・メンバー・歌詞（パート分け）をまとめて保存する
+  const handleSave = async () => {
+    setSavingAll(true)
+    try {
+      // 歌詞編集タブ中ならテキストの編集を行・区切りへ反映してから保存する
+      let curLines = lines
+      let curBreaks = breaks
+      if (tab === 'lrc') {
+        const { merged, br } = mergeLrcText(lrcText)
+        curLines = merged; curBreaks = br
+      }
+
+      // 1) 楽曲情報
+      await fetch(`/api/songs/${songId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null, show_progress_bar: showProgressBar }),
+      })
+
+      // 2) メンバー（新規IDのリマップ込み）
+      const { savedMembers, remapped } = await putMembersAndRemap(members, curLines)
+
+      // 3) 歌詞（パート分け）
+      await fetch(`/api/songs/${songId}/lyrics`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(toDbFormat(remapped, curBreaks)),
+      })
+
+      // ローカル状態を保存結果で確定
+      const newLrcText = toLrcText(remapped, curBreaks)
+      setSong((s: any) => ({ ...s, title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription }))
+      setMembers(savedMembers)
+      setLines(remapped)
+      setBreaks(curBreaks)
+      setLrcText(newLrcText)
+
+      savedSnapshotRef.current = snapshotOf({
+        title: editTitle, artist: editArtist, description: editDescription, isPublic,
+        coverText, bgColor, originalBpm, playbackBpm, showProgressBar,
+        members: savedMembers, lines: remapped, breaks: curBreaks, lrcText: newLrcText,
+      })
+      setDirty(false)
+      showToast('保存しました')
+    } catch {
+      showToast('保存に失敗しました')
+    } finally {
+      setSavingAll(false)
+    }
   }
 
   // ---- LRCインポート ----
@@ -261,21 +355,6 @@ export default function LyricsEditor() {
     const reader = new FileReader()
     reader.onload = ev => applyLrcText(ev.target?.result as string)
     reader.readAsText(file, 'utf-8'); e.target.value = ''
-  }
-
-  // LRCテキストを直接編集して保存＆反映
-  const saveLrcAndApply = async () => {
-    setSaving(true)
-    // applyLrcText と同じ方式で、テキスト一致での引き継ぎと区切りの再生成を行う。
-    // 空行由来のブロック区切りを尊重するため lrcText をそのままパースする。
-    const { merged, br } = mergeLrcText(lrcText)
-    setLines(merged); setBreaks(br); setLrcText(toLrcText(merged, br))
-    await fetch(`/api/songs/${songId}/lyrics`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(merged, br)),
-    })
-    setSaving(false)
   }
 
   // ---- ブロック区切り ----
@@ -329,18 +408,6 @@ export default function LyricsEditor() {
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 2500)
-  }
-
-  // ---- 歌詞保存 ----
-  const saveLyrics = async () => {
-    setSaving(true)
-    const remappedLines = await saveMembersApi(members, false)
-    await fetch(`/api/songs/${songId}/lyrics`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(toDbFormat(remappedLines, breaks)),
-    })
-    setSaving(false); showToast('パート分けを保存しました')
   }
 
   // ---- 表示ヘルパー ----
@@ -776,16 +843,16 @@ export default function LyricsEditor() {
       </div>
 
       <div className={styles.tabs}>
-        <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => setTab('info')}>
+        <button className={`${styles.tab} ${tab === 'info' ? styles.tabActive : ''}`} onClick={() => changeTab('info')}>
           <span className={styles.tabIcon}>📝</span><span className={styles.tabLabel}> 楽曲情報</span>
         </button>
-        <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => setTab('lrc')}>
+        <button className={`${styles.tab} ${tab === 'lrc' ? styles.tabActive : ''}`} onClick={() => changeTab('lrc')}>
           <span className={styles.tabIcon}>🎵</span><span className={styles.tabLabel}> 歌詞編集</span>
         </button>
-        <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => setTab('parts')}>
+        <button className={`${styles.tab} ${tab === 'parts' ? styles.tabActive : ''}`} onClick={() => changeTab('parts')}>
           <span className={styles.tabIcon}>🎨</span><span className={styles.tabLabel}> パート分け</span>
         </button>
-        <button className={`${styles.tab} ${tab === 'prompter' ? styles.tabActive : ''}`} onClick={() => setTab('prompter')}>
+        <button className={`${styles.tab} ${tab === 'prompter' ? styles.tabActive : ''}`} onClick={() => changeTab('prompter')}>
           <span className={styles.tabIcon}>▶</span><span className={styles.tabLabel}> プロンプター設定</span>
         </button>
       </div>
@@ -879,12 +946,6 @@ export default function LyricsEditor() {
           <div className={styles.memberActions}>
             <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
           </div>
-          <hr className={styles.divider} />
-          <div className={styles.saveBtnRow}>
-            <button className={styles.saveBtn} onClick={saveAll} disabled={savingMeta}>
-              {savingMeta ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
-            </button>
-          </div>
         </div>
       )}
 
@@ -909,21 +970,11 @@ export default function LyricsEditor() {
             placeholder="LRC形式またはテキスト形式の歌詞を貼り付け..."
             spellCheck={false}
           />
-          <div className={styles.saveBtnRow}>
-            <button className={styles.saveBtn} onClick={saveLrcAndApply} disabled={saving}>
-              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
-            </button>
-          </div>
         </div>
       )}
 
       {tab === 'parts' && (
         <div className={styles.lyricsPanel}>
-          <div className={styles.saveBtnRow}>
-            <button className={styles.saveBtn} onClick={saveLyrics} disabled={saving}>
-              {saving ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
-            </button>
-          </div>
           <p className={styles.hint}>行間の「＋ 区切り追加」でブロックを分割。ダブルタップで行全体、長押しなぞりで文字単位に割り当てできます。</p>
 
           {lines.length === 0 ? (
@@ -1249,13 +1300,17 @@ export default function LyricsEditor() {
             )}
           </div>
           <hr className={styles.divider} />
-          <div className={styles.saveBtnRow}>
-            <button className={styles.saveBtn} onClick={saveAll} disabled={savingMeta}>
-              {savingMeta ? <><span className={styles.spinnerSm} />保存中</> : '💾 保存'}
-            </button>
-          </div>
         </div>
       )}
+
+      <div className={styles.stickySaveBar}>
+        <span className={dirty ? styles.dirtyHint : styles.savedHint}>
+          {dirty ? '● 未保存の変更があります' : '✓ すべて保存済み'}
+        </span>
+        <button className={styles.saveBtnLg} onClick={handleSave} disabled={savingAll || !dirty}>
+          {savingAll ? <><span className={styles.spinnerSm} />保存中…</> : '💾 すべて保存'}
+        </button>
+      </div>
 
     </div>
   )
