@@ -5,6 +5,7 @@ import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { mergeAssignments } from '@/lib/lyrics/merge'
+import TimestampTapper from '@/components/TimestampTapper'
 
 const PALETTE = [
   '#FF4444', '#FF8C00', '#FFD700', '#7CFC00', '#00CED1',
@@ -186,6 +187,7 @@ export default function LyricsEditor() {
   }, [])
   const [lrcText, setLrcText] = useState('') // 生のLRCテキスト
   const fileRef = useRef<HTMLInputElement>(null)
+  const [showTimestampTapper, setShowTimestampTapper] = useState(false)
 
 
   useEffect(() => {
@@ -987,13 +989,16 @@ export default function LyricsEditor() {
           <div className={styles.lyricsToolbar}>
             <button className={styles.importBtn} onClick={() => fileRef.current?.click()}>📂 LRCインポート</button>
             <input ref={fileRef} type="file" accept=".lrc,.txt" className={styles.fileInputHidden} onChange={handleLrcImport} />
-            <button className={styles.importBtn} onClick={() => {
-              setLrcText(prev => prev.split('\n').map(line => {
-                if (line.trim() === '') return line
-                if (/^\[\d+:\d+[.::]\d+\]/.test(line.trim())) return line
-                return `[00:00.00]${line}`
-              }).join('\n'))
-            }}>⏱ タイムスタンプ挿入</button>
+            <button
+              className={styles.importBtn}
+              onClick={() => {
+                // LRCテキストからlines/breaksを同期してからタッパーを開く
+                const { merged, br } = mergeLrcText(lrcText)
+                setLines(merged); setBreaks(br)
+                setShowTimestampTapper(true)
+              }}
+              disabled={lines.length === 0 && lrcText.trim() === ''}
+            >🎯 タイムスタンプ作成</button>
           </div>
           <p className={styles.hint}>LRC形式またはプレーンテキスト（空行でブロック区切り）を貼り付けて保存してください。</p>
           <textarea
@@ -1004,6 +1009,20 @@ export default function LyricsEditor() {
             spellCheck={false}
           />
         </div>
+      )}
+
+      {showTimestampTapper && (
+        <TimestampTapper
+          lines={lines.length > 0 ? lines : (() => { const { merged } = mergeLrcText(lrcText); return merged })()}
+          breaks={breaks}
+          onComplete={(updatedLines) => {
+            setLines(updatedLines)
+            setBreaks(breaks)
+            setLrcText(toLrcText(updatedLines, breaks))
+            setShowTimestampTapper(false)
+          }}
+          onCancel={() => setShowTimestampTapper(false)}
+        />
       )}
 
       {tab === 'parts' && (

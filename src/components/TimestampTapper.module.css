@@ -1,0 +1,399 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  width: 100%;
+  padding: 1rem;
+  box-sizing: border-box;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #333;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: 1.1rem;
+  color: #fff;
+  margin: 0;
+  font-family: 'Hiragino Sans', sans-serif;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.timer {
+  font-family: monospace;
+  font-size: 1.2rem;
+  color: #FF69B4;
+  font-weight: bold;
+}
+
+.cancelBtn {
+  background: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.cancelBtn:hover {
+  background: #444;
+}
+
+/* トランスポートコントロール */
+.transport {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  flex-shrink: 0;
+}
+
+.transportBtn {
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.transportBtn:hover {
+  background: #333;
+}
+
+.transportBtn:active {
+  background: #444;
+}
+
+.pausedBanner {
+  text-align: center;
+  color: #FFD700;
+  font-size: 0.9rem;
+  padding: 0.4rem;
+  background: rgba(255, 215, 0, 0.1);
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+/* カウントダウン */
+.countdownOverlay {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.countdownNumber {
+  font-size: 8rem;
+  font-weight: bold;
+  color: #FF69B4;
+  animation: pulse 1s ease-in-out infinite;
+  font-family: monospace;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
+}
+
+.countdownHint {
+  font-size: 1.2rem;
+  color: #888;
+  margin: 0;
+}
+
+/* 準備画面 */
+.readyPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  text-align: center;
+}
+
+.instruction {
+  color: #ccc;
+  font-size: 1rem;
+  line-height: 1.8;
+  margin: 0;
+}
+
+.instructionSub {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.startBtn {
+  background: #FF69B4;
+  border: none;
+  color: #fff;
+  padding: 1rem 3rem;
+  border-radius: 12px;
+  font-size: 1.3rem;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.1s;
+  font-weight: bold;
+}
+
+.startBtn:hover {
+  opacity: 0.9;
+}
+
+.startBtn:active {
+  transform: scale(0.97);
+}
+
+/* タッピングエリア */
+.tappingArea {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  gap: 1rem;
+}
+
+.linesList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.blockBreak {
+  height: 1rem;
+  border-bottom: 1px dashed #333;
+  margin-bottom: 0.5rem;
+}
+
+.lineRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  text-align: left;
+  cursor: default;
+  transition: background 0.15s, transform 0.1s;
+  font-family: 'Hiragino Sans', sans-serif;
+}
+
+.lineActive {
+  background: #1a1a2e;
+  border: 1px solid #FF69B4;
+  cursor: pointer;
+  animation: breathe 1.5s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 105, 180, 0.3); }
+  50% { box-shadow: 0 0 12px 2px rgba(255, 105, 180, 0.2); }
+}
+
+.lineActive:active {
+  transform: scale(0.98);
+}
+
+.lineDone {
+  opacity: 0.5;
+}
+
+.lineTimestamp {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: #7CFC00;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.lineDone .lineTimestamp {
+  color: #5a5;
+}
+
+.lineText {
+  color: #fff;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lineActive .lineText {
+  color: #fff;
+  font-weight: bold;
+}
+
+.lineDone .lineText {
+  color: #888;
+}
+
+/* タップボタン（モバイル向け） */
+.tapButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: #FF69B4;
+  border: none;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: opacity 0.1s, transform 0.05s;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.tapButton:active {
+  opacity: 0.8;
+  transform: scale(0.97);
+}
+
+.tapButtonLabel {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.tapButtonHint {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-top: 0.25rem;
+}
+
+/* 完了時 */
+.doneActions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem 0;
+  flex-shrink: 0;
+}
+
+.doneMessage {
+  color: #7CFC00;
+  font-size: 1rem;
+  margin: 0;
+}
+
+.doneButtons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.applyBtn {
+  background: #7CFC00;
+  border: none;
+  color: #000;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+
+.applyBtn:hover {
+  opacity: 0.9;
+}
+
+.retryBtn {
+  background: #333;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retryBtn:hover {
+  background: #444;
+}
+
+.cancelBtnSmall {
+  background: transparent;
+  border: 1px solid #555;
+  color: #888;
+  padding: 0.7rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.cancelBtnSmall:hover {
+  color: #fff;
+}
+
+/* モバイル対応 */
+@media (max-width: 640px) {
+  .container {
+    padding: 0.75rem;
+  }
+
+  .title {
+    font-size: 1rem;
+  }
+
+  .lineText {
+    font-size: 0.85rem;
+  }
+
+  .tapButton {
+    padding: 2rem;
+  }
+
+  .tapButtonLabel {
+    font-size: 1.8rem;
+  }
+
+  .startBtn {
+    padding: 1.2rem 2.5rem;
+    font-size: 1.2rem;
+  }
+
+  .countdownNumber {
+    font-size: 6rem;
+  }
+}
