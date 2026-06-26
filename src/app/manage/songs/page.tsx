@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import SongCard from '@/components/SongCard'
 import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
@@ -74,8 +74,9 @@ export default function AdminSongsPage() {
   const [selectedLyrics, setSelectedLyrics] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const PER_PAGE = 20
+  const pathname = usePathname()
 
-  useEffect(() => { loadSongs() }, [])
+  useEffect(() => { loadSongs() }, [pathname])
 
   const loadSongs = async () => {
     setLoading(true)
