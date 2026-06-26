@@ -122,6 +122,32 @@ function snapshotOf(v: SnapshotInput): string {
   })
 }
 
+/** タイムスタンプのバリデーション。異常があればエラーメッセージを返す（正常なら null）。 */
+const MAX_TIMESTAMP_MS = 3600000 // 60分
+function validateTimestamps(lines: FlatLine[]): string | null {
+  const tsLines = lines.filter(l => l.timestamp_ms != null)
+  if (tsLines.length === 0) return null // タイムスタンプ無し＝プレーンテキストで正常
+
+  for (let i = 0; i < tsLines.length; i++) {
+    const ts = tsLines[i].timestamp_ms!
+    if (ts < 0) {
+      return `タイムスタンプにマイナス値があります（行: ${tsLines[i].text.slice(0, 20)}…）`
+    }
+    if (ts > MAX_TIMESTAMP_MS) {
+      return `タイムスタンプが60分を超えています（行: ${tsLines[i].text.slice(0, 20)}…）`
+    }
+  }
+
+  // 順序チェック：タイムスタンプが前の行より小さい場合に警告
+  for (let i = 1; i < tsLines.length; i++) {
+    if (tsLines[i].timestamp_ms! < tsLines[i - 1].timestamp_ms!) {
+      return `タイムスタンプが時系列順ではありません（行: ${tsLines[i].text.slice(0, 20)}…）。順序を確認してください`
+    }
+  }
+
+  return null
+}
+
 export default function LyricsEditor() {
   const { songId } = useParams<{ songId: string }>()
   const router = useRouter()
@@ -286,16 +312,23 @@ export default function LyricsEditor() {
 
   // タブに関係なく、曲情報・メンバー・歌詞（パート分け）をまとめて保存する
   const handleSave = async () => {
+    // 歌詞編集タブ中ならテキストの編集を行・区切りへ反映してから保存する
+    let curLines = lines
+    let curBreaks = breaks
+    if (tab === 'lrc') {
+      const { merged, br } = mergeLrcText(lrcText)
+      curLines = merged; curBreaks = br
+    }
+
+    // タイムスタンプのバリデーション（異常値があれば保存を中止して通知）
+    const tsError = validateTimestamps(curLines)
+    if (tsError) {
+      showToast(tsError)
+      return
+    }
+
     setSavingAll(true)
     try {
-      // 歌詞編集タブ中ならテキストの編集を行・区切りへ反映してから保存する
-      let curLines = lines
-      let curBreaks = breaks
-      if (tab === 'lrc') {
-        const { merged, br } = mergeLrcText(lrcText)
-        curLines = merged; curBreaks = br
-      }
-
       // 1) 楽曲情報
       await fetch(`/api/songs/${songId}`, {
         method: 'PUT',
