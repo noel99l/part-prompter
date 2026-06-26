@@ -25,6 +25,13 @@
   min-width: 0;
 }
 
+.prefix {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
 .info {
   display: flex;
   flex-direction: column;

@@ -6,7 +6,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const playlist = await query(`SELECT * FROM playlists WHERE id=$1`, [id])
   if (!playlist.rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   const songs = await query(`
-    SELECT ps.sort_order, s.id, s.title, s.artist
+    SELECT ps.sort_order, s.id, s.title, s.artist,
+      (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
+      (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count,
+      (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count
     FROM playlist_songs ps
     JOIN prompter_songs s ON s.id = ps.song_id
     WHERE ps.playlist_id=$1
