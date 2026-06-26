@@ -46,7 +46,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     }
 
     await client.query(
-      `UPDATE prompter_songs SET updated_at=(NOW() AT TIME ZONE 'Asia/Tokyo') WHERE id=$1`,
+      `UPDATE prompter_songs SET updated_at=NOW() WHERE id=$1`,
       [id]
     )
   })

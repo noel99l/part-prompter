@@ -19,7 +19,7 @@ export async function POST(_: NextRequest, { params }: { params: Promise<{ id: s
   // 曲を複製
   const newSong = await query(
     `INSERT INTO prompter_songs (title, artist, created_by, is_public, updated_at)
-     VALUES ($1, $2, $3, false, NOW() AT TIME ZONE 'Asia/Tokyo') RETURNING *`,
+     VALUES ($1, $2, $3, false, NOW()) RETURNING *`,
     [`${orig.title} (copy)`, orig.artist, userId]
   )
   const newId = newSong.rows[0].id
