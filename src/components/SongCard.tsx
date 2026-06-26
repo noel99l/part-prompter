@@ -15,10 +15,11 @@ interface SongCardProps {
   tags?: Tag[]
   meta?: string[]        // 作者・更新日など最下段に表示するテキスト
   actions?: React.ReactNode  // 右側のボタン群
+  prefix?: React.ReactNode   // タイトル行の左側に表示する要素（番号など）
   skeleton?: boolean
 }
 
-export default function SongCard({ title, href, artist, description, tags, meta, actions }: SongCardProps) {
+export default function SongCard({ title, href, artist, description, tags, meta, actions, prefix }: SongCardProps) {
   const info = (
     <div className={styles.info}>
       <div className={styles.titleRow}>
@@ -39,6 +40,7 @@ export default function SongCard({ title, href, artist, description, tags, meta,
 
   return (
     <div className={styles.card}>
+      {prefix && <div className={styles.prefix}>{prefix}</div>}
       {href ? (
         <Link href={href} className={styles.infoLink}>{info}</Link>
       ) : (
