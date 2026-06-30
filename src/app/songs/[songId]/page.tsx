@@ -38,6 +38,25 @@ export default function SongDetailPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // 歌詞コピー防止
+  useEffect(() => {
+    const preventCopy = (e: ClipboardEvent) => e.preventDefault()
+    const preventContext = (e: MouseEvent) => e.preventDefault()
+    const preventKeys = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'c' || e.key === 'a')) {
+        e.preventDefault()
+      }
+    }
+    document.addEventListener('copy', preventCopy)
+    document.addEventListener('contextmenu', preventContext)
+    document.addEventListener('keydown', preventKeys)
+    return () => {
+      document.removeEventListener('copy', preventCopy)
+      document.removeEventListener('contextmenu', preventContext)
+      document.removeEventListener('keydown', preventKeys)
+    }
+  }, [])
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/songs/${songId}`).then(r => r.json()),
