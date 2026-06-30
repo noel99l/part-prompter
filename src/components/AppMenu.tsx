@@ -31,6 +31,8 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
 
   const isLoggedIn = !!(accountName || session)
 
+  const isMaster = session?.user?.email === 'noelkaikei@gmail.com'
+
   return (
     <div className={styles.wrapper} ref={ref}>
       <button className={styles.hamburger} onClick={() => setOpen(v => !v)} aria-label="メニュー">
@@ -62,6 +64,15 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
                     {item.label}
                   </Link>
                 ))}
+                {isMaster && (
+                  <Link
+                    href="/manage/master-settings"
+                    className={`${styles.navItem} ${pathname === '/manage/master-settings' ? styles.navItemActive : ''}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    🔧 マスタ設定
+                  </Link>
+                )}
               </>
             ) : (
               <Link href="/auth/signin" className={styles.navItem} onClick={() => setOpen(false)}>
