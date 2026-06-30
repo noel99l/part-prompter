@@ -14,7 +14,7 @@ export type OnboardingView =
   | { kind: 'finalAction' }
 
 /** ツアーステップ総数 */
-export const TOUR_TOTAL = 5
+export const TOUR_TOTAL = 4
 
 /** Tour_Step の内容定義 */
 export interface TourStepContent {
@@ -56,13 +56,6 @@ export const TOUR_STEPS: readonly TourStepContent[] = [
     body: '公開楽曲を検索して追加し、ドラッグで並び替え。セットリスト単位で連続表示できます。',
     howToUseHref: '/how-to-use',
   },
-  {
-    index: 5,
-    emoji: '📤',
-    title: '楽曲の出力',
-    body: 'PPTX出力や印刷/PDF保存、パート分けテキストのコピーができます。',
-    howToUseHref: '/how-to-use',
-  },
 ]
 
 /**
@@ -78,7 +71,7 @@ export function shouldShowOnboarding(user: OnboardingUser): boolean {
 
 /**
  * 「次へ」遷移。
- * welcome → tour 1、tour n(<5) → tour n+1、tour 5 → finalAction、finalAction は不動点。
+ * welcome → tour 1、tour n(<4) → tour n+1、tour 4 → finalAction、finalAction は不動点。
  * Requirements 2.5, 3.3, 3.4
  */
 export function nextView(view: OnboardingView): OnboardingView {
