@@ -230,7 +230,7 @@ export default function AdminSongsPage() {
                   { label: '▶ プロンプター', href: `/songs/${s.id}/prompter`, target: '_blank' },
                   ...(s.is_public ? [{ label: '📋 共有URLをコピー', action: () => navigator.clipboard.writeText(`${window.location.origin}/songs/${s.id}`) }] : []),
                   ...(showDownload ? [
-                    { divider: true, label: 'ダウンロード' },
+                    { divider: true as const, label: 'ダウンロード' },
                     { label: '📥 PPTX', href: `/api/songs/${s.id}/export/pptx`, download: true },
                     { label: '🖨️ PDF', href: `/manage/songs/${s.id}/print`, target: '_blank' },
                   ] : []),
