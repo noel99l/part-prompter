@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
@@ -152,6 +153,7 @@ function validateTimestamps(lines: FlatLine[]): string | null {
 export default function LyricsEditor() {
   const { songId } = useParams<{ songId: string }>()
   const router = useRouter()
+  const { data: session } = useSession()
 
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
@@ -177,6 +179,7 @@ export default function LyricsEditor() {
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const exportMenuRef = React.useRef<HTMLDivElement>(null)
+  const [showDownload, setShowDownload] = useState(false)
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -214,6 +217,12 @@ export default function LyricsEditor() {
       })
       setDirty(false)
     })
+    fetch('/api/master-settings').then(r => r.json()).then(data => {
+      const globalOn = data.show_download === '1'
+      const whitelist = (data.download_whitelist || '').split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
+      const userEmail = session?.user?.email?.toLowerCase() || ''
+      setShowDownload(globalOn || whitelist.includes(userEmail))
+    }).catch(() => {})
   }, [songId])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
@@ -862,11 +871,15 @@ export default function LyricsEditor() {
                   <CopyUrlButton songId={songId} inMenu onClose={() => setExportMenuOpen(false)} />
                 )}
                 <div className={styles.exportDropdownDivider} />
-                <div className={styles.exportDropdownLabel}>ダウンロード</div>
-                <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
-                <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF</a>
-                <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
-                <div className={styles.exportDropdownDivider} />
+                {showDownload && (
+                  <>
+                    <div className={styles.exportDropdownLabel}>ダウンロード</div>
+                    <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
+                    <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF</a>
+                    <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
+                    <div className={styles.exportDropdownDivider} />
+                  </>
+                )}
                 <CollaboratorMenuItem songId={songId} />
                 <PlaylistAddMenuItem songId={songId} songTitle={song?.title} />
                 <div className={styles.exportDropdownDivider} />

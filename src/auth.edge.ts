@@ -10,6 +10,7 @@ export const { auth } = NextAuth({
     },
     async session({ session, token }) {
       session.user.accountName = (token.accountName as string | null) ?? null
+      session.user.id = token.userId ? String(token.userId) : ''
       return session
     },
   },

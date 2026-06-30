@@ -28,6 +28,7 @@ export default function SongDetailPage() {
   const [duplicating, setDuplicating] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const [showPartsCopy, setShowPartsCopy] = useState(false)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -45,6 +46,9 @@ export default function SongDetailPage() {
     ]).then(([s, m, l]) => {
       setSong(s); setMembers(m); setLyrics(l); setLoading(false)
     })
+    fetch('/api/master-settings').then(r => r.json()).then(data => {
+      setShowPartsCopy(data.show_parts_copy === '1')
+    }).catch(() => {})
   }, [songId])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
@@ -179,9 +183,11 @@ export default function SongDetailPage() {
           <button className={styles.menuBtn} onClick={() => setMenuOpen(v => !v)}>⋯</button>
           {menuOpen && (
             <div className={styles.menuDropdown}>
-              <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
-                {copied ? '✓ コピー済み' : '📋 パート分けをコピー'}
-              </button>
+              {showPartsCopy && (
+                <button className={styles.menuItem} onClick={() => { handleCopy(); setMenuOpen(false) }}>
+                  {copied ? '✓ コピー済み' : '📋 パート分けをコピー'}
+                </button>
+              )}
               {session && (
                 <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
                   {duplicating ? '複製中...' : '📋 複製して編集'}

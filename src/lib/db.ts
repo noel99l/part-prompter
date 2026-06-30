@@ -229,6 +229,13 @@ async function runInitDb() {
     await query(`CREATE INDEX IF NOT EXISTS idx_scm_collaborator_id ON song_collaborator_members(collaborator_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_scm_user_id ON song_collaborator_members(user_id)`)
 
+    await query(`
+      CREATE TABLE IF NOT EXISTS master_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `)
+
   } catch (error) {
     console.error('Database initialization error:', error)
   }

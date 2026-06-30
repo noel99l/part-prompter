@@ -15,6 +15,7 @@ export default function SideNav({ accountName }: { accountName?: string }) {
   const pathname = usePathname()
   const isLoggedIn = !!session
   const name = accountName ?? session?.user?.accountName ?? null
+  const isMaster = session?.user?.email === 'noelkaikei@gmail.com'
 
   return (
     <nav className={styles.nav}>
@@ -36,6 +37,14 @@ export default function SideNav({ accountName }: { accountName?: string }) {
               {item.label}
             </Link>
           ))}
+          {isMaster && (
+            <Link
+              href="/manage/master-settings"
+              className={`${styles.item} ${pathname === '/manage/master-settings' ? styles.itemActive : ''}`}
+            >
+              🔧 マスタ設定
+            </Link>
+          )}
           <div className={styles.divider} />
           <button className={styles.logoutBtn} onClick={() => signOut({ callbackUrl: '/songs' })}>
             ログアウト

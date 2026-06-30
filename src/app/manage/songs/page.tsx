@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import SongCard from '@/components/SongCard'
 import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
@@ -60,6 +61,7 @@ function parseLrcToDb(lrc: string): DbLyric[] {
 
 export default function AdminSongsPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const [songs, setSongs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -75,8 +77,18 @@ export default function AdminSongsPage() {
   const [page, setPage] = useState(1)
   const PER_PAGE = 20
   const pathname = usePathname()
+  const [showDownload, setShowDownload] = useState(false)
 
   useEffect(() => { loadSongs() }, [pathname])
+
+  useEffect(() => {
+    fetch('/api/master-settings').then(r => r.json()).then(data => {
+      const globalOn = data.show_download === '1'
+      const whitelist = (data.download_whitelist || '').split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
+      const userEmail = session?.user?.email?.toLowerCase() || ''
+      setShowDownload(globalOn || whitelist.includes(userEmail))
+    }).catch(() => {})
+  }, [session])
 
   const loadSongs = async () => {
     setLoading(true)
@@ -217,9 +229,11 @@ export default function AdminSongsPage() {
                   { label: '✏️ 編集', href: `/manage/songs/${s.id}` },
                   { label: '▶ プロンプター', href: `/songs/${s.id}/prompter`, target: '_blank' },
                   ...(s.is_public ? [{ label: '📋 共有URLをコピー', action: () => navigator.clipboard.writeText(`${window.location.origin}/songs/${s.id}`) }] : []),
-                  { divider: true, label: 'ダウンロード' },
-                  { label: '📥 PPTX', href: `/api/songs/${s.id}/export/pptx`, download: true },
-                  { label: '🖨️ PDF', href: `/manage/songs/${s.id}/print`, target: '_blank' },
+                  ...(showDownload ? [
+                    { divider: true, label: 'ダウンロード' },
+                    { label: '📥 PPTX', href: `/api/songs/${s.id}/export/pptx`, download: true },
+                    { label: '🖨️ PDF', href: `/manage/songs/${s.id}/print`, target: '_blank' },
+                  ] : []),
                 ]} />}
               />
             ))}

@@ -33,7 +33,7 @@ async function postComplete(): Promise<boolean> {
   }
 }
 
-export default function OnboardingOverlay({ onClose }: { onClose: () => void }) {
+export default function OnboardingOverlay({ onClose, isReplay }: { onClose: () => void; isReplay?: boolean }) {
   const router = useRouter()
   const [view, setView] = useState<OnboardingView>({ kind: 'welcome' })
   const [saveFailed, setSaveFailed] = useState(false)
@@ -71,7 +71,7 @@ export default function OnboardingOverlay({ onClose }: { onClose: () => void }) 
       navigatingRef.current = true
       const ok = await postComplete()
       onClose()
-      if (navigate) {
+      if (navigate && !isReplay) {
         router.replace('/manage/songs')
       }
       if (!ok) {
@@ -79,7 +79,7 @@ export default function OnboardingOverlay({ onClose }: { onClose: () => void }) 
         setSaveFailed(true)
       }
     },
-    [onClose, router]
+    [onClose, router, isReplay]
   )
 
   // Esc でスキップ相当（完了記録 → 閉じる → フォーカス復帰）（Req 9.7）

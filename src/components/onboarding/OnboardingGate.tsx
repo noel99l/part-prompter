@@ -17,12 +17,14 @@ export default function OnboardingGate({
   initialShouldShow: boolean
 }) {
   const [open, setOpen] = useState(initialShouldShow)
+  const [isReplay, setIsReplay] = useState(false)
   const restoreFocusRef = useRef<HTMLElement | null>(null)
 
   const openOverlay = useCallback(() => {
     if (typeof document !== 'undefined') {
       restoreFocusRef.current = document.activeElement as HTMLElement | null
     }
+    setIsReplay(true)
     setOpen(true)
   }, [])
 
@@ -41,6 +43,7 @@ export default function OnboardingGate({
 
   const handleClose = useCallback(() => {
     setOpen(false)
+    setIsReplay(false)
     const el = restoreFocusRef.current
     restoreFocusRef.current = null
     // 直前にフォーカスがあった要素へ復帰する
@@ -51,5 +54,5 @@ export default function OnboardingGate({
 
   if (!open) return null
 
-  return <OnboardingOverlay onClose={handleClose} />
+  return <OnboardingOverlay onClose={handleClose} isReplay={isReplay} />
 }
