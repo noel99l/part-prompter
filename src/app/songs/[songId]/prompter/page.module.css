@@ -48,6 +48,12 @@
     flex-wrap: nowrap;
   }
 
+  .cornerControls {
+    bottom: 1rem;
+    right: 1rem;
+    gap: 0.3rem;
+  }
+
   .btn {
     font-size: 1rem;
     padding: 0.4rem 0.6rem;
@@ -128,6 +134,23 @@
 .controlsHidden {
   opacity: 0;
   pointer-events: none;
+}
+
+/* 縦画面用：右下に縦積みするボタン群（上が設定、下が全画面） */
+.cornerControls {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  z-index: 10;
+  transition: opacity 0.8s ease;
+}
+
+/* 縦画面では設定パネルを右下ボタン群の上に開く */
+.settingsPanel.settingsPanelPortrait {
+  bottom: 8.5rem;
 }
 
 

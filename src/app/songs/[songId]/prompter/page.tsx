@@ -475,7 +475,7 @@ export default function PrompterView() {
         )}
 
         {settingsOpen && (
-          <div className={styles.settingsPanel} onClick={e => e.stopPropagation()}>
+          <div className={`${styles.settingsPanel} ${isPortrait ? styles.settingsPanelPortrait : ''}`} onClick={e => e.stopPropagation()}>
             <div className={styles.settingsRow}>
               <span className={styles.settingsLabel}>文字サイズ</span>
               <div className={styles.fontSizeControls}>
@@ -523,9 +523,21 @@ export default function PrompterView() {
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
-          <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
-          {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}><IconFullscreen /></button>}
+          {!isPortrait && (
+            <>
+              <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
+              <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}><IconFullscreen /></button>
+            </>
+          )}
         </div>
+
+        {/* 縦画面：設定・全画面ボタンは右下に縦積みで配置（設定が全画面の真上） */}
+        {isPortrait && (
+          <div className={`${styles.cornerControls} ${controlsVisible || settingsOpen ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
+            <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
+            <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }} title="全画面表示" aria-label="全画面表示"><IconFullscreen /></button>
+          </div>
+        )}
       </div>
     </>
   )
