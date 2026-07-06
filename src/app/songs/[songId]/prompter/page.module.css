@@ -48,11 +48,6 @@
     flex-wrap: nowrap;
   }
 
-  .cornerControls {
-    bottom: 1rem;
-    right: 1rem;
-    gap: 0.3rem;
-  }
 
   .btn {
     font-size: 1rem;
@@ -146,6 +141,14 @@
   gap: 0.5rem;
   z-index: 10;
   transition: opacity 0.8s ease;
+}
+
+@media (max-width: 768px) and (orientation: portrait) {
+  .cornerControls {
+    bottom: 1rem;
+    right: 1rem;
+    gap: 0.3rem;
+  }
 }
 
 /* 縦画面では設定パネルを右下ボタン群の上に開く */
