@@ -4,6 +4,7 @@ import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { getCachedJson } from '@/lib/clientCache'
+import { buildDisplayBlocks, type DisplayChunk } from '@/lib/prompterBlocks'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
 
 const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
@@ -21,6 +22,8 @@ interface LyricLine {
   word_members?: { text: string; member_id: number | null }[]
 }
 interface Member { id: number; name: string; color: string; sort_order?: number }
+// 表示用ブロック。自動分割で1つの歌詞ブロックが複数チャンクに分かれることがある
+type DisplayBlock = DisplayChunk<LyricLine>
 
 export default function PrompterView() {
   const { songId } = useParams<{ songId: string }>()
@@ -38,6 +41,7 @@ export default function PrompterView() {
   const pausedElapsedRef = useRef<number | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isPortrait, setIsPortrait] = useState(false)
+  const [viewport, setViewport] = useState({ w: 0, h: 0 })
   const [fullscreenSupported, setFullscreenSupported] = useState(true)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
@@ -53,6 +57,7 @@ export default function PrompterView() {
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
+  const [autoSplit, setAutoSplit] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
@@ -60,27 +65,34 @@ export default function PrompterView() {
       const saved = JSON.parse(localStorage.getItem(DISPLAY_SETTINGS_KEY) || 'null')
       if (saved && typeof saved.fontScale === 'number') setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
       if (saved && typeof saved.showNext === 'boolean') setShowNext(saved.showNext)
+      if (saved && typeof saved.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
     } catch {}
   }, [])
 
-  const persistDisplaySettings = (fs: number, sn: boolean) => {
-    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn })) } catch {}
+  const persistDisplaySettings = (fs: number, sn: boolean, as: boolean) => {
+    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn, autoSplit: as })) } catch {}
   }
   const changeFontScale = (delta: number) => {
     setFontScale(prev => {
       const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +(prev + delta).toFixed(2)))
-      persistDisplaySettings(next, showNext)
+      persistDisplaySettings(next, showNext, autoSplit)
       return next
     })
   }
   const setFontScaleValue = (value: number) => {
     const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +value.toFixed(2)))
     setFontScale(next)
-    persistDisplaySettings(next, showNext)
+    persistDisplaySettings(next, showNext, autoSplit)
   }
   const toggleShowNext = () => {
     setShowNext(prev => {
-      persistDisplaySettings(fontScale, !prev)
+      persistDisplaySettings(fontScale, !prev, autoSplit)
+      return !prev
+    })
+  }
+  const toggleAutoSplit = () => {
+    setAutoSplit(prev => {
+      persistDisplaySettings(fontScale, showNext, !prev)
       return !prev
     })
   }
@@ -110,7 +122,10 @@ export default function PrompterView() {
     setIsMobile(/iphone|ipad|ipod|android/i.test(navigator.userAgent))
     // iPhone Safariなどページの全画面表示APIに非対応のブラウザではボタン自体を出さない
     setFullscreenSupported(typeof document.documentElement.requestFullscreen === 'function')
-    const update = () => setIsPortrait(window.innerHeight > window.innerWidth)
+    const update = () => {
+      setIsPortrait(window.innerHeight > window.innerWidth)
+      setViewport({ w: window.innerWidth, h: window.innerHeight })
+    }
     update()
     window.addEventListener('resize', update)
     return () => window.removeEventListener('resize', update)
@@ -163,6 +178,48 @@ export default function PrompterView() {
 
   const hasTimestamp = useMemo(() => lyrics.some(l => l.timestamp_ms != null), [lyrics])
 
+  // 横画面スライド表示のレイアウト概算。page.module.css の
+  // .container / .line / .nextLine のサイズ定義を数値でなぞっている。
+  // 縦横どちらで見ていても「横画面にしたときの寸法」で計算するため、
+  // 回転してもブロックの区切りとインデックスが変わらない。
+  const layout = useMemo(() => {
+    const W = Math.max(viewport.w, viewport.h)
+    const H = Math.min(viewport.w, viewport.h)
+    if (!W || !H) return null
+    const rem = 16
+    const clampCalc = (min: number, val: number, max: number) => Math.min(Math.max(min, val), max)
+    const small = W <= 768
+    const lineFont = (small ? clampCalc(rem, 0.03 * W, 2 * rem) : clampCalc(2 * rem, 0.06 * W, 6 * rem)) * fontScale
+    const nextFont = (small ? clampCalc(0.75 * rem, 0.022 * W, 1.4 * rem) : clampCalc(1.5 * rem, 0.045 * W, 4 * rem)) * fontScale
+    // 視覚1行分: line-height 1.3 + margin-bottom 0.3em + .currentBlock の gap 0.4rem
+    const rowHeight = lineFont * 1.6 + 0.4 * rem
+    const padTop = 0.03 * W
+    // 次セクションプレビュー（fixed bottom 5rem ＋ CSSで2行分にクリップした高さ）または操作ボタン分の余白
+    const nextArea = showNext
+      ? 5 * rem + nextFont * 2.6 + 1.25 * rem
+      : 5.5 * rem
+    const available = H - padTop - nextArea
+    return {
+      maxRows: Math.max(1, Math.floor(available / rowHeight)),
+      lineFont,
+      contentW: W * 0.92, // padding 左右 4vw ずつ
+    }
+  }, [viewport, fontScale, showNext])
+
+  // 自動ブロック分け：画面に収まらないブロックだけを均等なチャンクに分割する。
+  // パート分けの元ブロック境界は必ずページ境界になる（詳細は lib/prompterBlocks.ts）。
+  const displayBlocks = useMemo<DisplayBlock[]>(
+    () => buildDisplayBlocks(blocks, layout, autoSplit),
+    [blocks, layout, autoSplit]
+  )
+
+  // 分割数が変わって現在位置が範囲外になったら末尾に丸める
+  useEffect(() => {
+    if (displayBlocks.length > 0 && currentBlock >= displayBlocks.length) {
+      setCurrentBlock(displayBlocks.length - 1)
+    }
+  }, [displayBlocks.length, currentBlock])
+
   const bpmRate = useMemo(() => {
     const orig = song?.original_bpm
     const play = song?.playback_bpm
@@ -175,8 +232,8 @@ export default function PrompterView() {
     playlistRef.current = { playlistSongs, playlistIndex, playlistTotal, playlistId }
   }, [playlistSongs, playlistIndex, playlistTotal, playlistId])
 
-  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null, bpmRate: 1 })
-  useEffect(() => { stateRef.current.blocks = blocks }, [blocks])
+  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as DisplayBlock[], startTime: null as number | null, bpmRate: 1 })
+  useEffect(() => { stateRef.current.blocks = displayBlocks }, [displayBlocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
   useEffect(() => { stateRef.current.bpmRate = bpmRate }, [bpmRate])
 
@@ -194,7 +251,7 @@ export default function PrompterView() {
     const startFrom = fromBlock
     const bl = stateRef.current.blocks
     const rate = stateRef.current.bpmRate
-    const rawTs = bl[Math.max(0, fromBlock)]?.[0]?.timestamp_ms ?? 0
+    const rawTs = bl[Math.max(0, fromBlock)]?.startMs ?? 0
     const ts = resumeElapsed != null ? resumeElapsed
       : fromBlock < 0 ? 0
       : rawTs * rate
@@ -208,7 +265,7 @@ export default function PrompterView() {
       const elapsed = Date.now() - (stateRef.current.startTime ?? 0)
       const bl2 = stateRef.current.blocks
       const r = stateRef.current.bpmRate
-      const firstTs = (bl2[0]?.[0]?.timestamp_ms ?? 0) * r
+      const firstTs = (bl2[0]?.startMs ?? 0) * r
       if (elapsed < firstTs) {
         const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
         if (firstTs > 0) {
@@ -221,13 +278,13 @@ export default function PrompterView() {
       }
       let next = 0
       for (let i = 0; i < bl2.length; i++) {
-        const t = bl2[i]?.[0]?.timestamp_ms
+        const t = bl2[i]?.startMs
         if (t != null && elapsed >= t * r) next = i
       }
       stateRef.current.currentBlock = next
       setCurrentBlock(next)
-      const curTs = (bl2[next]?.[0]?.timestamp_ms ?? 0) * r
-      const nextTs = bl2[next + 1]?.[0]?.timestamp_ms
+      const curTs = (bl2[next]?.startMs ?? 0) * r
+      const nextTs = bl2[next + 1]?.startMs
       const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
       if (nextTs != null && nextTs * r > curTs) {
         const progress = Math.max(0, Math.min(1, (elapsed - curTs) / (nextTs * r - curTs)))
@@ -408,7 +465,7 @@ export default function PrompterView() {
                 </div>
               )}
             </div>
-            {blocks.map((block, bi) => (
+            {displayBlocks.map((block, bi) => (
               <div
                 key={bi}
                 ref={el => { blockRefs.current[bi] = el }}
@@ -421,7 +478,7 @@ export default function PrompterView() {
                   }
                 }}
               >
-                {block.map(line => (
+                {block.lines.map(line => (
                   <div key={line.id} className={styles.scrollLine}>{renderLine(line)}</div>
                 ))}
               </div>
@@ -447,9 +504,9 @@ export default function PrompterView() {
                   ))}
                 </div>
               </div>
-              {showNext && blocks[0] && (
+              {showNext && displayBlocks[0] && (
                 <div className={styles.nextBlock}>
-                  {blocks[0].slice(0, 2).map(line => (
+                  {displayBlocks[0].lines.slice(0, 2).map(line => (
                     <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
                   ))}
                 </div>
@@ -458,17 +515,17 @@ export default function PrompterView() {
           ) : (
             <>
               <div className={styles.currentBlock}>
-                {(blocks[currentBlock] || []).map(line => (
+                {(displayBlocks[currentBlock]?.lines || []).map(line => (
                   <div key={line.id} className={styles.line}>{renderLine(line)}</div>
                 ))}
               </div>
-              {showNext && (currentBlock === blocks.length - 1 ? (
+              {showNext && (currentBlock === displayBlocks.length - 1 ? (
                 <div className={styles.nextBlock} style={{ opacity: 0.4, fontStyle: 'italic' }}>
                   <div className={styles.nextLine}>― End ―</div>
                 </div>
               ) : (
                 <div className={styles.nextBlock}>
-                  {(blocks[currentBlock + 1] || []).slice(0, 2).map(line => (
+                  {(displayBlocks[currentBlock + 1]?.lines || []).slice(0, 2).map(line => (
                     <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
                   ))}
                 </div>
@@ -508,6 +565,17 @@ export default function PrompterView() {
                 <span className={styles.switchKnob} />
               </button>
             </div>
+            <div className={styles.settingsRow}>
+              <span className={styles.settingsLabel}>自動ブロック分け</span>
+              <button
+                role="switch"
+                aria-checked={autoSplit}
+                className={`${styles.switch} ${autoSplit ? styles.switchOn : ''}`}
+                onClick={toggleAutoSplit}
+              >
+                <span className={styles.switchKnob} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -522,7 +590,7 @@ export default function PrompterView() {
               <span className={styles.autoLabel}>{isPlaying ? <IconPause /> : <IconPlay />}</span>
             </button>
           )}
-          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}><IconNext /></button>
+          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={currentBlock >= displayBlocks.length - 1} style={{ opacity: currentBlock >= displayBlocks.length - 1 ? 0.3 : 1 }}><IconNext /></button>
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
