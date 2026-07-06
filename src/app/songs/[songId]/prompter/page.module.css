@@ -148,6 +148,11 @@
   bottom: 8.5rem;
 }
 
+/* 縦画面で全画面ボタンがない（＝設定ボタン1個だけ）の場合は詰める */
+.settingsPanel.settingsPanelPortraitSingle {
+  bottom: 5.5rem;
+}
+
 
 .btn {
   background: rgba(255, 255, 255, 0.15);

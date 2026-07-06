@@ -15,6 +15,12 @@ function getPool() {
       max: 5,
       min: 0,
     })
+    // アイドル接続がネットワーク変化やNeon側の切断でエラーになると、リスナーが
+    // 無い場合 uncaughtException でプロセスごと落ちる。壊れたクライアントは
+    // プールが自動破棄するので、ここではログだけ残す。
+    pool.on('error', (err) => {
+      console.warn('pg pool idle client error:', err.message)
+    })
   }
   return pool
 }
