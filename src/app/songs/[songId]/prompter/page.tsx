@@ -38,6 +38,7 @@ export default function PrompterView() {
   const pausedElapsedRef = useRef<number | null>(null)
   const [isMobile, setIsMobile] = useState(false)
   const [isPortrait, setIsPortrait] = useState(false)
+  const [fullscreenSupported, setFullscreenSupported] = useState(true)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
@@ -107,6 +108,8 @@ export default function PrompterView() {
 
   useEffect(() => {
     setIsMobile(/iphone|ipad|ipod|android/i.test(navigator.userAgent))
+    // iPhone Safariなどページの全画面表示APIに非対応のブラウザではボタン自体を出さない
+    setFullscreenSupported(typeof document.documentElement.requestFullscreen === 'function')
     const update = () => setIsPortrait(window.innerHeight > window.innerWidth)
     update()
     window.addEventListener('resize', update)
@@ -475,7 +478,7 @@ export default function PrompterView() {
         )}
 
         {settingsOpen && (
-          <div className={`${styles.settingsPanel} ${isPortrait ? styles.settingsPanelPortrait : ''}`} onClick={e => e.stopPropagation()}>
+          <div className={`${styles.settingsPanel} ${isPortrait ? (fullscreenSupported ? styles.settingsPanelPortrait : styles.settingsPanelPortraitSingle) : ''}`} onClick={e => e.stopPropagation()}>
             <div className={styles.settingsRow}>
               <span className={styles.settingsLabel}>文字サイズ</span>
               <div className={styles.fontSizeControls}>
@@ -526,16 +529,17 @@ export default function PrompterView() {
           {!isPortrait && (
             <>
               <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
-              <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}><IconFullscreen /></button>
+              {fullscreenSupported && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}><IconFullscreen /></button>}
             </>
           )}
         </div>
 
-        {/* 縦画面：設定・全画面ボタンは右下に縦積みで配置（設定が全画面の真上） */}
+        {/* 縦画面：設定・全画面ボタンは右下に縦積みで配置（設定が全画面の真上）。
+            全画面API非対応ブラウザでは全画面ボタンを出さず設定を詰める */}
         {isPortrait && (
           <div className={`${styles.cornerControls} ${controlsVisible || settingsOpen ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
             <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
-            <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }} title="全画面表示" aria-label="全画面表示"><IconFullscreen /></button>
+            {fullscreenSupported && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }} title="全画面表示" aria-label="全画面表示"><IconFullscreen /></button>}
           </div>
         )}
       </div>
