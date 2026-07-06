@@ -5,6 +5,7 @@ import SongCard from '@/components/SongCard'
 import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
+import { getCachedJson, prefetchJson } from '@/lib/clientCache'
 import styles from './page.module.css'
 
 const PER_PAGE = 20
@@ -16,9 +17,10 @@ export default function PrompterList() {
   const [page, setPage] = useState(1)
 
   useEffect(() => {
-    fetch('/api/songs')
-      .then(r => r.json())
-      .then(data => { setSongs(data); setLoading(false) })
+    let alive = true
+    getCachedJson('/api/songs', data => { if (alive) setSongs(data) })
+      .then(data => { if (alive) { setSongs(data); setLoading(false) } })
+    return () => { alive = false }
   }, [])
 
   const filtered = songs.filter(s =>
@@ -55,6 +57,11 @@ export default function PrompterList() {
               <SongCard
                 key={s.id}
                 href={`/songs/${s.id}`}
+                onHover={() => {
+                  prefetchJson(`/api/songs/${s.id}`)
+                  prefetchJson(`/api/songs/${s.id}/members`)
+                  prefetchJson(`/api/songs/${s.id}/lyrics`)
+                }}
                 title={s.title}
                 artist={s.artist}
                 tags={[

@@ -8,8 +8,11 @@ function getPool() {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false }, // Neon requires SSL
       connectionTimeoutMillis: 30000,
-      idleTimeoutMillis: 10000,
-      max: 3,
+      // Neonへの新規TLS接続は約1秒かかるため、人間のページ遷移間隔（数十秒）では
+      // 接続を維持して再接続ペナルティを避ける。60秒で手放せばNeonのautosuspendは妨げない。
+      idleTimeoutMillis: 60000,
+      keepAlive: true,
+      max: 5,
       min: 0,
     })
   }

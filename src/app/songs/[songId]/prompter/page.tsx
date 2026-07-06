@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
+import { getCachedJson } from '@/lib/clientCache'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
 
 const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
@@ -127,14 +128,19 @@ export default function PrompterView() {
       allSongs.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       setPlaylistSongs(allSongs)
     } else {
+      let alive = true
       Promise.all([
-        fetch(`/api/songs/${songId}`).then(r => r.json()),
-        fetch(`/api/songs/${songId}/members`).then(r => r.json()),
-        fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
-      ]).then(([s, m, l]) => { setSong(s); setMembers(m); setLyrics(l) })
+        getCachedJson(`/api/songs/${songId}`, s => { if (alive) setSong(s) }),
+        getCachedJson(`/api/songs/${songId}/members`, m => { if (alive) setMembers(m) }),
+        getCachedJson(`/api/songs/${songId}/lyrics`, l => { if (alive) setLyrics(l) }),
+      ]).then(([s, m, l]) => {
+        if (!alive) return
+        setSong(s); setMembers(m); setLyrics(l)
+      })
       if (playlistId) {
-        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistSongs(data.songs || []))
+        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => { if (alive) setPlaylistSongs(data.songs || []) })
       }
+      return () => { alive = false }
     }
   }, [songId, playlistId])
 
