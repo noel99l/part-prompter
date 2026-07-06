@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import skStyles from '@/components/skeleton.module.css'
+import { getCachedJson } from '@/lib/clientCache'
 import styles from './page.module.css'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -58,16 +59,21 @@ export default function SongDetailPage() {
   }, [])
 
   useEffect(() => {
+    let alive = true
     Promise.all([
-      fetch(`/api/songs/${songId}`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/members`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
+      getCachedJson(`/api/songs/${songId}`, s => { if (alive) setSong(s) }),
+      getCachedJson(`/api/songs/${songId}/members`, m => { if (alive) setMembers(m) }),
+      getCachedJson(`/api/songs/${songId}/lyrics`, l => { if (alive) setLyrics(l) }),
     ]).then(([s, m, l]) => {
+      if (!alive) return
       setSong(s); setMembers(m); setLyrics(l); setLoading(false)
     })
-    fetch('/api/master-settings').then(r => r.json()).then(data => {
-      setShowPartsCopy(data.show_parts_copy === '1')
+    getCachedJson('/api/master-settings', data => {
+      if (alive) setShowPartsCopy(data.show_parts_copy === '1')
+    }).then(data => {
+      if (alive) setShowPartsCopy(data.show_parts_copy === '1')
     }).catch(() => {})
+    return () => { alive = false }
   }, [songId])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
