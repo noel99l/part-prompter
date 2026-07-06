@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import skStyles from '@/components/skeleton.module.css'
 import { getCachedJson } from '@/lib/clientCache'
+import { harmonyIds } from '@/lib/harmony'
 import styles from './page.module.css'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -14,7 +15,7 @@ interface LyricLine {
   text: string
   member_ids: number[]
   timestamp_ms: number | null
-  word_members?: { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
+  word_members?: { text: string; member_ids: number[]; harmony_up_ids?: number[]; harmony_down_ids?: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
 }
 
 export default function SongDetailPage() {
@@ -262,7 +263,7 @@ export default function SongDetailPage() {
                     : ''}
                 </span>
                 {renderLineText(line)}
-{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...(w.harmony_up_id ? [w.harmony_up_id] : []), ...(w.harmony_down_id ? [w.harmony_down_id] : [])]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
+{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
               </div>
             ))}
           </div>

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { query } from '@/lib/db'
+import { harmonyIds } from '@/lib/harmony'
 import PptxGenJS from 'pptxgenjs'
 
 const SLIDE_W = 13.33
@@ -35,12 +36,13 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
   const pptx = new PptxGenJS()
   pptx.layout = 'LAYOUT_WIDE'
 
-  function buildRuns(text: string, memberIds: number[], wordMembers?: { text: string; member_ids?: number[]; harmony_up_id?: number; harmony_down_id?: number }[]) {
+  function buildRuns(text: string, memberIds: number[], wordMembers?: { text: string; member_ids?: number[]; harmony_up_ids?: number[]; harmony_down_ids?: number[]; harmony_up_id?: number; harmony_down_id?: number }[]) {
     if (wordMembers && wordMembers.length > 0) {
       return wordMembers.flatMap(w => {
         const ids: number[] = w.member_ids ?? []
-        const strikeColor = w.harmony_up_id ? (memberMap[w.harmony_up_id]?.color || '#FFFFFF').replace('#', '') : null
-        const underlineColor = w.harmony_down_id ? (memberMap[w.harmony_down_id]?.color || '#FFFFFF').replace('#', '') : null
+        // PowerPointの下線は1色しか指定できないため、下ハモ複数名は先頭メンバーの色で代表する
+        const downIds = harmonyIds(w, 'down')
+        const underlineColor = downIds.length > 0 ? (memberMap[downIds[0]]?.color || '#FFFFFF').replace('#', '') : null
         const baseOpts = {
           fontSize: FONT_SIZE,
           ...(underlineColor ? { underline: { style: 'sng', color: underlineColor } } : {}),
@@ -56,9 +58,6 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
             const color = (memberMap[ids[ci % ids.length]]?.color || '#FFFFFF').replace('#', '')
             runs.push({ text: char, options: { color, ...baseOpts } })
           })
-        }
-        if (strikeColor && w.harmony_up_id) {
-          // 上ハモは行上バーで表現するためここでは何もしない
         }
         return runs
       })
@@ -105,18 +104,23 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
     let y = 0.3
     for (const line of currentBlock) {
       const wm: any[] = line.word_members || []
-      const hasUpHarmony = wm.some((w: any) => w.harmony_up_id)
+      const hasUpHarmony = wm.some((w: any) => harmonyIds(w, 'up').length > 0)
       if (hasUpHarmony) {
         const totalChars = wm.reduce((s: number, w: any) => s + (w.text?.length || 0), 0) || 1
         const lineW = SLIDE_W - X_MARGIN * 2
         let charOffset = 0
         wm.forEach((w: any) => {
           const charLen = w.text?.length || 0
-          if (w.harmony_up_id) {
-            const color = (memberMap[w.harmony_up_id]?.color || '#FFFFFF').replace('#', '')
+          const upIds = harmonyIds(w, 'up')
+          if (upIds.length > 0) {
             const bx = X_MARGIN + (charOffset / totalChars) * lineW
             const bw = (charLen / totalChars) * lineW
-            slide.addShape('rect' as any, { x: bx, y, w: bw, h: BAR_H, fill: { color }, line: { color, width: 0 } })
+            // 複数名の上ハモはバーを縦に分割して各メンバーの色を積む
+            const stripeH = BAR_H / upIds.length
+            upIds.forEach((mid, si) => {
+              const color = (memberMap[mid]?.color || '#FFFFFF').replace('#', '')
+              slide.addShape('rect' as any, { x: bx, y: y + stripeH * si, w: bw, h: stripeH, fill: { color }, line: { color, width: 0 } })
+            })
           }
           charOffset += charLen
         })

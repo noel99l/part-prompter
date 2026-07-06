@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState, useMemo, CSSProperties } from 'react'
 import { useParams } from 'next/navigation'
+import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
 interface LyricLine {
@@ -9,7 +10,7 @@ interface LyricLine {
   text: string
   member_ids: number[]
   timestamp_ms: number | null
-  word_members?: { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
+  word_members?: { text: string; member_ids: number[]; harmony_up_ids?: number[]; harmony_down_ids?: number[]; harmony_up_id?: number; harmony_down_id?: number }[]
 }
 
 export default function PrintPage() {
@@ -63,12 +64,14 @@ export default function PrintPage() {
     return getPrintColor(memberMap[ids[0]]?.color || '#000')
   }
 
-  const renderWord = (text: string, ids: number[], key: number, harmonyUpId?: number, harmonyDownId?: number) => {
-    const upColor = harmonyUpId ? getPrintColor(memberMap[harmonyUpId]?.color || '#000') : null
-    const downColor = harmonyDownId ? getPrintColor(memberMap[harmonyDownId]?.color || '#000') : null
+  const renderWord = (text: string, ids: number[], key: number, upIds: number[], downIds: number[]) => {
+    const band = harmonyBandStyle(
+      upIds.map(id => getPrintColor(memberMap[id]?.color || '#000')),
+      downIds.map(id => getPrintColor(memberMap[id]?.color || '#000')),
+      '0.12em'
+    )
     const decoStyle: CSSProperties = {
-      ...(upColor ? { borderTop: `2px solid ${upColor}`, paddingTop: '1px' } : {}),
-      ...(downColor ? { textDecoration: `underline`, textDecorationColor: downColor, textDecorationThickness: '2px' } : {}),
+      ...(band || {}),
       display: 'inline',
     }
     if (!ids?.length) return <span key={key} style={decoStyle}>{text}</span>
@@ -84,7 +87,7 @@ export default function PrintPage() {
 
   const renderLine = (line: LyricLine) => {
     if (line.word_members?.length) {
-      return <>{line.word_members.map((w, wi) => renderWord(w.text, w.member_ids, wi, w.harmony_up_id, w.harmony_down_id))}</>
+      return <>{line.word_members.map((w, wi) => renderWord(w.text, w.member_ids, wi, harmonyIds(w, 'up'), harmonyIds(w, 'down')))}</>
     }
     if (!line.member_ids?.length) return <span>{line.text}</span>
     if (line.member_ids.length === 1) return <span style={{ color: getColor(line.member_ids) }}>{line.text}</span>

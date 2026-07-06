@@ -6,6 +6,7 @@ import Link from 'next/link'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { mergeAssignments } from '@/lib/lyrics/merge'
+import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 import TimestampTapper from '@/components/TimestampTapper'
 
 const PALETTE = [
@@ -15,7 +16,20 @@ const PALETTE = [
 
 interface Member { id: number; name: string; color: string; sort_order: number }
 
-interface WordMember { text: string; member_ids: number[]; harmony_up_id?: number; harmony_down_id?: number }
+// 上ハモ・下ハモは複数名を登録できる。編集状態では常に配列形式で持ち、
+// 旧形式（harmony_up_id / harmony_down_id）は読み込み時に配列へ正規化する
+interface WordMember { text: string; member_ids: number[]; harmony_up_ids?: number[]; harmony_down_ids?: number[] }
+
+function normalizeWordMember(w: any): WordMember {
+  const up = harmonyIds(w, 'up')
+  const down = harmonyIds(w, 'down')
+  return {
+    text: w.text,
+    member_ids: w.member_ids || [],
+    ...(up.length > 0 ? { harmony_up_ids: up } : {}),
+    ...(down.length > 0 ? { harmony_down_ids: down } : {}),
+  }
+}
 
 interface FlatLine {
   text: string
@@ -85,7 +99,7 @@ function fromDbFormat(dbLines: LyricLine[]): { lines: FlatLine[]; breaks: Set<nu
     text: l.text,
     member_ids: l.member_ids || [],
     timestamp_ms: l.timestamp_ms,
-    word_members: l.word_members || [],
+    word_members: (l.word_members || []).map(normalizeWordMember),
   }))
   const breaks = new Set<number>()
   for (let i = 1; i < sorted.length; i++) {
@@ -161,7 +175,7 @@ export default function LyricsEditor() {
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
   const [harmonyMode, setHarmonyMode] = useState<'main' | 'up' | 'down'>('main')
-  const harmonyDragRef = useRef<{ lineIdx: number; memberId: number; mode: 'up' | 'down' } | null>(null)
+  const harmonyDragRef = useRef<{ lineIdx: number; memberIds: number[]; mode: 'up' | 'down'; op: 'add' | 'remove' } | null>(null)
   const [savingAll, setSavingAll] = useState(false)
   const [dirty, setDirty] = useState(false)
   const savedSnapshotRef = useRef<string | null>(null)
@@ -253,12 +267,16 @@ export default function LyricsEditor() {
     setLines(prev => prev.map(l => ({
       ...l,
       member_ids: l.member_ids.filter(id => validIds.has(id)),
-      word_members: l.word_members.map(w => ({
-        ...w,
-        member_ids: w.member_ids.filter(id => validIds.has(id)),
-        harmony_up_id: w.harmony_up_id && validIds.has(w.harmony_up_id) ? w.harmony_up_id : undefined,
-        harmony_down_id: w.harmony_down_id && validIds.has(w.harmony_down_id) ? w.harmony_down_id : undefined,
-      })),
+      word_members: l.word_members.map(w => {
+        const up = (w.harmony_up_ids ?? []).filter(id => validIds.has(id))
+        const down = (w.harmony_down_ids ?? []).filter(id => validIds.has(id))
+        return {
+          ...w,
+          member_ids: w.member_ids.filter(id => validIds.has(id)),
+          harmony_up_ids: up.length > 0 ? up : undefined,
+          harmony_down_ids: down.length > 0 ? down : undefined,
+        }
+      }),
     })))
   }, [members])
 
@@ -283,10 +301,20 @@ export default function LyricsEditor() {
     const remapIds = (ids: number[]) =>
       ids.map(id => idMap.get(id) ?? id).filter(id => savedIds.has(id))
 
+    const remapHarmony = (ids?: number[]) => {
+      if (!ids || ids.length === 0) return undefined
+      const r = remapIds(ids)
+      return r.length > 0 ? r : undefined
+    }
     const remapped = linesToRemap.map(l => ({
       ...l,
       member_ids: remapIds(l.member_ids),
-      word_members: l.word_members.map(w => ({ ...w, member_ids: remapIds(w.member_ids) })),
+      word_members: l.word_members.map(w => ({
+        ...w,
+        member_ids: remapIds(w.member_ids),
+        harmony_up_ids: remapHarmony(w.harmony_up_ids),
+        harmony_down_ids: remapHarmony(w.harmony_down_ids),
+      })),
     }))
 
     return { savedMembers: saved, remapped }
@@ -412,14 +440,25 @@ export default function LyricsEditor() {
   }
 
   // ---- 行ドラッグでメンバー割り当て ----
-  const assignHarmonyChar = useCallback((lineIdx: number, ci: number, memberId: number, mode: 'up' | 'down') => {
+  // チェック中のメンバー全員（最大3名）を一括で適用する。
+  // op はドラッグ開始時に決めて固定する（クリック＝トグル、ドラッグ＝塗り/消しの一方向）。
+  // 毎回トグルするとポインタ移動のたびに付いたり消えたりしてしまうため。
+  const assignHarmonyChar = useCallback((lineIdx: number, ci: number, memberIds: number[], mode: 'up' | 'down', op: 'add' | 'remove') => {
     setLines(prev => prev.map((l, li) => {
       if (li !== lineIdx) return l
       const lChars = l.text.split('')
       let newWm: WordMember[] = l.word_members.length === lChars.length
         ? [...l.word_members]
-        : lChars.map((c, idx) => ({ text: c, member_ids: [], harmony_up_id: l.word_members[idx]?.harmony_up_id, harmony_down_id: l.word_members[idx]?.harmony_down_id }))
-      newWm = newWm.map((ww, wi) => wi !== ci ? ww : mode === 'up' ? { ...ww, harmony_up_id: memberId } : { ...ww, harmony_down_id: memberId })
+        : lChars.map((c, idx) => ({ text: c, member_ids: [], harmony_up_ids: l.word_members[idx]?.harmony_up_ids, harmony_down_ids: l.word_members[idx]?.harmony_down_ids }))
+      newWm = newWm.map((ww, wi) => {
+        if (wi !== ci) return ww
+        const key = mode === 'up' ? 'harmony_up_ids' : 'harmony_down_ids'
+        const cur = ww[key] ?? []
+        const next = op === 'add'
+          ? [...cur, ...memberIds.filter(id => !cur.includes(id))]
+          : cur.filter(id => !memberIds.includes(id))
+        return { ...ww, [key]: next.length > 0 ? next : undefined }
+      })
       return { ...l, word_members: newWm }
     }))
   }, [])
@@ -430,7 +469,7 @@ export default function LyricsEditor() {
       const lChars = l.text.split('')
       let newWm: WordMember[] = l.word_members.length === lChars.length
         ? [...l.word_members]
-        : lChars.map((c, idx) => ({ text: c, member_ids: l.word_members[idx]?.member_ids || [], harmony_up_id: l.word_members[idx]?.harmony_up_id, harmony_down_id: l.word_members[idx]?.harmony_down_id }))
+        : lChars.map((c, idx) => ({ text: c, member_ids: l.word_members[idx]?.member_ids || [], harmony_up_ids: l.word_members[idx]?.harmony_up_ids, harmony_down_ids: l.word_members[idx]?.harmony_down_ids }))
       newWm = newWm.map((ww, wi) => wi !== ci ? ww : { ...ww, member_ids: memberIds })
       return { ...l, word_members: newWm }
     }))
@@ -466,9 +505,11 @@ export default function LyricsEditor() {
         <span className={styles.lyricText}>
           {chars.map((ch, ci) => {
             const w = currentLine?.word_members.length === chars.length ? currentLine.word_members[ci] : undefined
-            const decos: string[] = []
-            if (w?.harmony_up_id) decos.push(`overline 2px ${memberMap[w.harmony_up_id]?.color || '#888'}`)
-            if (w?.harmony_down_id) decos.push(`underline 2px ${memberMap[w.harmony_down_id]?.color || '#888'}`)
+            const band = harmonyBandStyle(
+              harmonyIds(w, 'up').map(id => memberMap[id]?.color || '#888'),
+              harmonyIds(w, 'down').map(id => memberMap[id]?.color || '#888'),
+              '0.12em'
+            )
             const mainColor = w?.member_ids?.length === 1 ? memberMap[w.member_ids[0]]?.color : undefined
             const isSpace = ch === ' ' || ch === '　'
             return (
@@ -476,34 +517,16 @@ export default function LyricsEditor() {
                 key={ci}
                 className={styles.harmonyCharBtn}
                 disabled={isSpace}
-                style={{
-                  color: mainColor || '#fff',
-                  ...(decos.length > 0 ? { textDecoration: decos.join(', '), textDecorationSkipInk: 'none' } as React.CSSProperties : {})
-                }}
+                style={{ color: mainColor || '#fff', ...(band || {}) }}
                 onPointerDown={e => e.stopPropagation()}
                 onClick={e => {
                   e.stopPropagation()
                   if (isSpace || currentChecked.length === 0) return
-                  const memberId = currentChecked[0]
-                  setLines(prev => prev.map((l, li) => {
-                    if (li !== lineIdx) return l
-                    const lChars = l.text.split('')
-                    let newWm: WordMember[] = l.word_members.length === lChars.length
-                      ? [...l.word_members]
-                      : lChars.map((c, idx) => ({
-                          text: c,
-                          member_ids: l.word_members[idx]?.member_ids || [],
-                          harmony_up_id: l.word_members[idx]?.harmony_up_id,
-                          harmony_down_id: l.word_members[idx]?.harmony_down_id,
-                        }))
-                    newWm = newWm.map((ww, wi) => {
-                      if (wi !== ci) return ww
-                      return currentMode === 'up'
-                        ? { ...ww, harmony_up_id: memberId }
-                        : { ...ww, harmony_down_id: memberId }
-                    })
-                    return { ...l, word_members: newWm }
-                  }))
+                  const memberIds = currentChecked
+                  const mode = currentMode as 'up' | 'down'
+                  const cur = harmonyIds(w, mode)
+                  const op = memberIds.every(id => cur.includes(id)) ? 'remove' : 'add'
+                  assignHarmonyChar(lineIdx, ci, memberIds, mode, op)
                 }}
               >
                 {ch === ' ' || ch === '　' ? ' ' : ch}
@@ -520,15 +543,17 @@ export default function LyricsEditor() {
         {chars.map((ch, ci) => {
           const w = line.word_members.length === chars.length ? line.word_members[ci] : undefined
           const mainIds = w?.member_ids?.length ? w.member_ids : (line.member_ids.length ? line.member_ids : [])
-          const upColor = w?.harmony_up_id ? memberMap[w.harmony_up_id]?.color : null
-          const downColor = w?.harmony_down_id ? memberMap[w.harmony_down_id]?.color : null
+          const band = harmonyBandStyle(
+            harmonyIds(w, 'up').map(id => memberMap[id]?.color || '#888'),
+            harmonyIds(w, 'down').map(id => memberMap[id]?.color || '#888'),
+            '0.12em'
+          )
           let charContent: React.ReactNode
           const displayCh = ch === ' ' || ch === '　' ? ' ' : ch
           if (mainIds.length === 0) charContent = <span style={{ color: '#fff' }}>{displayCh}</span>
           else if (mainIds.length === 1) charContent = <span style={{ color: memberMap[mainIds[0]]?.color || '#fff' }}>{displayCh}</span>
           else { const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', '); charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{displayCh}</span> }
-          if (downColor) charContent = <span style={{ textDecoration: `underline 2px ${downColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
-          if (upColor) charContent = <span style={{ textDecoration: `overline 2px ${upColor}`, textDecorationSkipInk: 'none' }}>{charContent}</span>
+          if (band) charContent = <span style={band}>{charContent}</span>
           const isSpace = ch === ' ' || ch === '　'
           return (
             <button
@@ -558,12 +583,7 @@ export default function LyricsEditor() {
   const hasTimestamp = useMemo(() => lines.some(l => l.timestamp_ms != null), [lines])
 
   const toggleMemberCheck = (id: number) => {
-    if (harmonyMode !== 'main') {
-      // ハモリモード時は単一選択
-      setCheckedMemberIds(prev => prev[0] === id ? [] : [id])
-    } else {
-      setCheckedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
-    }
+    setCheckedMemberIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
   const blockOf = (i: number) => {
@@ -1051,10 +1071,7 @@ export default function LyricsEditor() {
                 <div className={styles.harmonyToggle}>
                   <button
                     className={`${styles.harmonyBtn} ${harmonyMode === 'up' ? styles.harmonyBtnActive : ''}`}
-                    onClick={() => {
-                      if (checkedMemberIds.length !== 1) setCheckedMemberIds([])
-                      setHarmonyMode('up')
-                    }}
+                    onClick={() => setHarmonyMode('up')}
                   >上ハモ</button>
                   <button
                     className={`${styles.harmonyBtn} ${harmonyMode === 'main' ? styles.harmonyBtnMain : ''}`}
@@ -1062,10 +1079,7 @@ export default function LyricsEditor() {
                   >メイン</button>
                   <button
                     className={`${styles.harmonyBtn} ${harmonyMode === 'down' ? styles.harmonyBtnActive : ''}`}
-                    onClick={() => {
-                      if (checkedMemberIds.length !== 1) setCheckedMemberIds([])
-                      setHarmonyMode('down')
-                    }}
+                    onClick={() => setHarmonyMode('down')}
                   >下ハモ</button>
                 </div>
                 {members.length === 0 ? (
@@ -1138,8 +1152,8 @@ export default function LyricsEditor() {
                             const ciStr = (el as HTMLElement).dataset?.harmonyCi
                             const liStr = (el as HTMLElement).dataset?.harmonyLine
                             if (ciStr !== undefined && liStr !== undefined) {
-                              const { memberId, mode } = harmonyDragRef.current
-                              assignHarmonyChar(Number(liStr), Number(ciStr), memberId, mode)
+                              const { memberIds, mode, op } = harmonyDragRef.current
+                              assignHarmonyChar(Number(liStr), Number(ciStr), memberIds, mode, op)
                               break
                             }
                           }
@@ -1172,18 +1186,21 @@ export default function LyricsEditor() {
                             word_members: l.word_members.map(w => ({ ...w, member_ids: sorted }))
                           }))
                         } else {
-                          const memberId = checkedMemberIds[0]
+                          const memberIds = checkedMemberIds
                           const mode = harmonyMode
+                          const key = mode === 'up' ? 'harmony_up_ids' as const : 'harmony_down_ids' as const
+                          const addTo = (ids?: number[]) =>
+                            [...(ids ?? []), ...memberIds.filter(id => !(ids ?? []).includes(id))]
                           setLines(prev => prev.map((l, idx) => {
                             if (idx !== i) return l
                             const lChars = l.text.split('')
                             const newWm: WordMember[] = l.word_members.length === lChars.length
-                              ? l.word_members.map(w => mode === 'up' ? { ...w, harmony_up_id: memberId } : { ...w, harmony_down_id: memberId })
+                              ? l.word_members.map(w => ({ ...w, [key]: addTo(w[key]) }))
                               : lChars.map((c, ci) => ({
                                   text: c,
                                   member_ids: l.word_members[ci]?.member_ids || [],
-                                  harmony_up_id: mode === 'up' ? memberId : l.word_members[ci]?.harmony_up_id,
-                                  harmony_down_id: mode === 'down' ? memberId : l.word_members[ci]?.harmony_down_id,
+                                  harmony_up_ids: mode === 'up' ? addTo(l.word_members[ci]?.harmony_up_ids) : l.word_members[ci]?.harmony_up_ids,
+                                  harmony_down_ids: mode === 'down' ? addTo(l.word_members[ci]?.harmony_down_ids) : l.word_members[ci]?.harmony_down_ids,
                                 }))
                             return { ...l, word_members: newWm }
                           }))
@@ -1205,8 +1222,9 @@ export default function LyricsEditor() {
                         <span className={styles.lyricText}>
                           {line.text.split('').map((ch, ci) => {
                             const w = line.word_members[ci]
-                            const upColor = w?.harmony_up_id ? memberMap[w.harmony_up_id]?.color : null
-                            const downColor = w?.harmony_down_id ? memberMap[w.harmony_down_id]?.color : null
+                            const upColors = harmonyIds(w, 'up').map(id => memberMap[id]?.color || '#888')
+                            const downColors = harmonyIds(w, 'down').map(id => memberMap[id]?.color || '#888')
+                            const band = harmonyBandStyle(upColors, downColors, '0.12em')
                             // メインパートの色分け：word_membersがあればそちら、なければ行全体の member_ids
                             const mainIds = (w?.member_ids?.length ? w.member_ids : line.member_ids) || []
                             let charContent: React.ReactNode
@@ -1218,9 +1236,7 @@ export default function LyricsEditor() {
                               const stops = mainIds.map((id, idx) => { const pct = 100 / mainIds.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${idx * pct}%, ${color} ${(idx + 1) * pct}%` }).join(', ')
                               charContent = <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{ch}</span>
                             }
-                            let content: React.ReactNode = charContent
-                            if (downColor) content = <span style={{ textDecoration: `underline 2px ${downColor}`, textDecorationSkipInk: 'none' }}>{content}</span>
-                            if (upColor) content = <span style={{ textDecoration: `overline 2px ${upColor}`, textDecorationSkipInk: 'none' }}>{content}</span>
+                            const content: React.ReactNode = band ? <span style={band}>{charContent}</span> : charContent
                             return (
                               <button
                                 key={ci}
@@ -1231,13 +1247,18 @@ export default function LyricsEditor() {
                                 onPointerDown={e => {
                                   e.stopPropagation()
                                   if (checkedMemberIds.length === 0) return
-                                  harmonyDragRef.current = { lineIdx: i, memberId: checkedMemberIds[0], mode: harmonyMode as 'up' | 'down' }
-                                  assignHarmonyChar(i, ci, checkedMemberIds[0], harmonyMode as 'up' | 'down')
+                                  const memberIds = checkedMemberIds
+                                  const mode = harmonyMode as 'up' | 'down'
+                                  // 選択メンバーが全員割り当て済みの文字から始めたら「消す」ドラッグ、そうでなければ「塗る」ドラッグ
+                                  const cur = harmonyIds(w, mode)
+                                  const op = memberIds.every(id => cur.includes(id)) ? 'remove' : 'add'
+                                  harmonyDragRef.current = { lineIdx: i, memberIds, mode, op }
+                                  assignHarmonyChar(i, ci, memberIds, mode, op)
                                 }}
                                 onPointerEnter={() => {
                                   if (!harmonyDragRef.current || harmonyDragRef.current.lineIdx !== i) return
-                                  const { memberId, mode } = harmonyDragRef.current
-                                  assignHarmonyChar(i, ci, memberId, mode)
+                                  const { memberIds, mode, op } = harmonyDragRef.current
+                                  assignHarmonyChar(i, ci, memberIds, mode, op)
                                 }}
                                 onPointerUp={e => { e.stopPropagation(); harmonyDragRef.current = null }}
                               >{content}</button>
@@ -1245,7 +1266,7 @@ export default function LyricsEditor() {
                           })}
                         </span>
                       ) : renderLineText(line, i)}
-                      {(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...(w.harmony_up_id ? [w.harmony_up_id] : []), ...(w.harmony_down_id ? [w.harmony_down_id] : [])]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.memberBadges}>{ids.map(id => (<span key={id} className={styles.memberBadge} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />))}</span>) : null })()} 
+                      {(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.memberBadges}>{ids.map(id => (<span key={id} className={styles.memberBadge} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name} />))}</span>) : null })()}
                       <button
                         className={styles.clearLineBtn}
                         onPointerDown={e => e.stopPropagation()}
@@ -1254,9 +1275,9 @@ export default function LyricsEditor() {
                           if (harmonyMode === 'main') {
                             setLines(prev => prev.map((l, idx) => idx === i ? { ...l, member_ids: [], word_members: l.word_members.map(w => ({ ...w, member_ids: [] })) } : l))
                           } else if (harmonyMode === 'up') {
-                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_up_id: undefined })) } : l))
+                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_up_ids: undefined })) } : l))
                           } else {
-                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_down_id: undefined })) } : l))
+                            setLines(prev => prev.map((l, idx) => idx === i ? { ...l, word_members: l.word_members.map(w => ({ ...w, harmony_down_ids: undefined })) } : l))
                           }
                         }}
                         title="割り当て解除"

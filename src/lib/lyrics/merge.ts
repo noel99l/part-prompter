@@ -12,6 +12,9 @@
 export interface WordMemberLike {
   text: string
   member_ids: number[]
+  harmony_up_ids?: number[]
+  harmony_down_ids?: number[]
+  // 旧形式（1名のみ）。既存データとの互換のため残す
   harmony_up_id?: number
   harmony_down_id?: number
 }
