@@ -3,7 +3,12 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
-import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay } from '@/components/icons'
+import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
+
+const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
+const FONT_SCALE_MIN = 0.6
+const FONT_SCALE_MAX = 1.6
+const FONT_SCALE_STEP = 0.01
 
 interface LyricLine {
   id: number
@@ -44,6 +49,39 @@ export default function PrompterView() {
   }
   const [controlsVisible, setControlsVisible] = useState(true)
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [fontScale, setFontScale] = useState(1)
+  const [showNext, setShowNext] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DISPLAY_SETTINGS_KEY) || 'null')
+      if (saved && typeof saved.fontScale === 'number') setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
+      if (saved && typeof saved.showNext === 'boolean') setShowNext(saved.showNext)
+    } catch {}
+  }, [])
+
+  const persistDisplaySettings = (fs: number, sn: boolean) => {
+    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn })) } catch {}
+  }
+  const changeFontScale = (delta: number) => {
+    setFontScale(prev => {
+      const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +(prev + delta).toFixed(2)))
+      persistDisplaySettings(next, showNext)
+      return next
+    })
+  }
+  const setFontScaleValue = (value: number) => {
+    const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +value.toFixed(2)))
+    setFontScale(next)
+    persistDisplaySettings(next, showNext)
+  }
+  const toggleShowNext = () => {
+    setShowNext(prev => {
+      persistDisplaySettings(fontScale, !prev)
+      return !prev
+    })
+  }
   const rafRef = useRef<number | null>(null)
   const startTimeRef = useRef<number | null>(null)
 
@@ -342,7 +380,7 @@ export default function PrompterView() {
         <div className={styles.rotateIcon}>↺</div>
         <p className={styles.rotateText}>端末を横向きにしてください</p>
       </div>
-      <div className={styles.container} style={{ background: song?.bg_color || '#000' }} onClick={isMobile && !isPortrait ? handleTap : undefined}>
+      <div className={styles.container} style={{ background: song?.bg_color || '#000', '--fontScale': fontScale } as React.CSSProperties} onClick={isMobile && !isPortrait ? handleTap : undefined}>
         {isPortrait ? (
           // 縦表示：全ブロックをスクロール表示
           <div className={styles.scrollView}>
@@ -400,7 +438,7 @@ export default function PrompterView() {
                   ))}
                 </div>
               </div>
-              {blocks[0] && (
+              {showNext && blocks[0] && (
                 <div className={styles.nextBlock}>
                   {blocks[0].slice(0, 2).map(line => (
                     <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
@@ -415,7 +453,7 @@ export default function PrompterView() {
                   <div key={line.id} className={styles.line}>{renderLine(line)}</div>
                 ))}
               </div>
-              {currentBlock === blocks.length - 1 ? (
+              {showNext && (currentBlock === blocks.length - 1 ? (
                 <div className={styles.nextBlock} style={{ opacity: 0.4, fontStyle: 'italic' }}>
                   <div className={styles.nextLine}>― End ―</div>
                 </div>
@@ -425,12 +463,46 @@ export default function PrompterView() {
                     <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
                   ))}
                 </div>
-              )}
+              ))}
             </>
           )
         )}
 
-        <div className={`${styles.controls} ${controlsVisible ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
+        {settingsOpen && (
+          <div className={styles.settingsPanel} onClick={e => e.stopPropagation()}>
+            <div className={styles.settingsRow}>
+              <span className={styles.settingsLabel}>文字サイズ</span>
+              <div className={styles.fontSizeControls}>
+                <button className={styles.fontBtn} onClick={() => changeFontScale(-FONT_SCALE_STEP)} disabled={fontScale <= FONT_SCALE_MIN} aria-label="文字を小さく">A−</button>
+                <span className={styles.fontValue}>{Math.round(fontScale * 100)}%</span>
+                <button className={styles.fontBtn} onClick={() => changeFontScale(FONT_SCALE_STEP)} disabled={fontScale >= FONT_SCALE_MAX} aria-label="文字を大きく">A＋</button>
+              </div>
+            </div>
+            <input
+              type="range"
+              className={styles.fontSlider}
+              min={Math.round(FONT_SCALE_MIN * 100)}
+              max={Math.round(FONT_SCALE_MAX * 100)}
+              step={1}
+              value={Math.round(fontScale * 100)}
+              onChange={e => setFontScaleValue(Number(e.target.value) / 100)}
+              aria-label="文字サイズ"
+            />
+            <div className={styles.settingsRow}>
+              <span className={styles.settingsLabel}>次のセクションを表示</span>
+              <button
+                role="switch"
+                aria-checked={showNext}
+                className={`${styles.switch} ${showNext ? styles.switchOn : ''}`}
+                onClick={toggleShowNext}
+              >
+                <span className={styles.switchKnob} />
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className={`${styles.controls} ${controlsVisible || settingsOpen ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={handlePrevSong} title="前の曲 (Shift+←)"><IconPrevSong /></button>
           )}
@@ -445,6 +517,7 @@ export default function PrompterView() {
           {playlistId && (
             <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
+          <button className={`${styles.btn} ${settingsOpen ? styles.btnActive : ''}`} onClick={() => setSettingsOpen(v => !v)} title="表示設定" aria-label="表示設定"><IconSettings /></button>
           {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}><IconFullscreen /></button>}
         </div>
       </div>
