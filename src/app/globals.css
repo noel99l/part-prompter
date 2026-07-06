@@ -4,6 +4,13 @@
   box-sizing: border-box;
 }
 
+html {
+  /* モバイルブラウザのフォント自動拡大（iOS Safari横向き・Android Chromeのfont boosting）を無効化。
+     これがあると指定フォントサイズが勝手に上書きされ、プロンプターの文字サイズ設定が反映されない。 */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', sans-serif;
   background: #000;
