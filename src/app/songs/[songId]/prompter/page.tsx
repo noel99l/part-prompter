@@ -5,6 +5,7 @@ import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { getCachedJson } from '@/lib/clientCache'
 import { buildDisplayBlocks, type DisplayChunk } from '@/lib/prompterBlocks'
+import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
 
 const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
@@ -400,14 +401,12 @@ export default function PrompterView() {
             const isSpace = w.text === ' ' || w.text === '　'
             if (isSpace) return <span key={wi} className={styles.textTransparent}>{w.text}</span>
             const ids: number[] = (w as any).member_ids ?? ((w as any).member_id ? [(w as any).member_id] : [])
-            const upId = (w as any).harmony_up_id as number | undefined
-            const downId = (w as any).harmony_down_id as number | undefined
-            const wrapHarmony = (node: React.ReactNode) => {
-              let result = node
-              if (downId) result = <span style={{ textDecoration: `underline 5px ${memberMap[downId]?.color || '#888'}`, textDecorationSkipInk: 'none' }}>{result}</span>
-              if (upId) result = <span style={{ textDecoration: `overline 5px ${memberMap[upId]?.color || '#888'}`, textDecorationSkipInk: 'none' }}>{result}</span>
-              return result
-            }
+            const band = harmonyBandStyle(
+              harmonyIds(w as any, 'up').map(id => memberMap[id]?.color || '#888'),
+              harmonyIds(w as any, 'down').map(id => memberMap[id]?.color || '#888'),
+              '0.07em'
+            )
+            const wrapHarmony = (node: React.ReactNode) => band ? <span style={band}>{node}</span> : node
             if (ids.length === 0) return <span key={wi} className={styles.textWhite}>{wrapHarmony(w.text)}</span>
             if (ids.length === 1) return <span key={wi} style={{ color: memberMap[ids[0]]?.color || '#fff' }}>{wrapHarmony(w.text)}</span>
             const stops = ids.map((id, i) => { const pct = 100 / ids.length; const color = memberMap[id]?.color || '#fff'; return `${color} ${i * pct}%, ${color} ${(i + 1) * pct}%` }).join(', ')
