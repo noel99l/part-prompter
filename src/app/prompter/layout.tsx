@@ -1,5 +1,5 @@
-import Link from 'next/link'
 import AppMenu from '@/components/AppMenu'
+import BrandLogo from '@/components/BrandLogo'
 import SideNav from '@/components/SideNav'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
@@ -16,7 +16,7 @@ export default async function PrompterLayout({ children }: { children: React.Rea
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <Link href="/prompter" className={styles.logo}>PART-PROMPTER</Link>
+        <BrandLogo href="/prompter" size="compact" ariaLabel="プロンプター一覧へ" />
         <AppMenu accountName={accountName} />
       </header>
       <div className={styles.body}>

@@ -17,14 +17,6 @@
   z-index: 200;
 }
 
-.logo {
-  color: #fff;
-  font-size: 1rem;
-  font-family: 'Hiragino Sans', sans-serif;
-  font-weight: bold;
-  text-decoration: none;
-}
-
 .body {
   flex: 1;
   display: flex;

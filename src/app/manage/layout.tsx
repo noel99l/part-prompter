@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
 import { shouldShowOnboarding } from '@/lib/onboarding/state'
 import AdminMenu from '@/components/AppMenu'
+import BrandLogo from '@/components/BrandLogo'
 import SideNav from '@/components/SideNav'
 import OnboardingGate from '@/components/onboarding/OnboardingGate'
 import styles from './layout.module.css'
@@ -39,10 +39,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   return (
     <div className={styles.root}>
       <header className={styles.header}>
-        <Link href="/manage/songs" className={styles.logoWrap}>
-          <span className={styles.logo}>PART-PROMPTER</span>
+        <div className={styles.logoWrap}>
+          <BrandLogo href="/manage/songs" size="compact" ariaLabel="パート分け管理へ" />
           <span className={styles.badge}>管理</span>
-        </Link>
+        </div>
         <AdminMenu accountName={accountName} />
       </header>
       <div className={styles.body}>

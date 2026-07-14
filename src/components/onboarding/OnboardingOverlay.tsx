@@ -52,7 +52,6 @@ export default function OnboardingOverlay({ onClose, isReplay }: { onClose: () =
   useEffect(() => {
     const first = getFocusable()[0]
     first?.focus()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.kind])
 
   function getFocusable(): HTMLElement[] {
@@ -130,10 +129,10 @@ export default function OnboardingOverlay({ onClose, isReplay }: { onClose: () =
         {view.kind === 'welcome' && (
           <div className={styles.content}>
             <h2 id="onboarding-title" className={styles.title}>
-              ようこそ、Part Prompter へ 🎤
+              ようこそ、PART-PROMPTER へ 🎤
             </h2>
             <p className={styles.lead}>
-              Part Prompter は、歌詞をメンバーごとに色分けして管理し、プロンプター表示・セットリスト再生・出力ができる歌詞パート分けアプリです。
+              PART-PROMPTER は、歌詞をメンバーごとに色分けして管理し、プロンプター表示・セットリスト再生・出力ができる歌詞パート分けアプリです。
             </p>
             <p className={styles.body}>
               かんたんなツアーで主な使い方を紹介します。あとからアカウント設定画面でいつでも見直せます。
