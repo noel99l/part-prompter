@@ -1,0 +1,41 @@
+.viewer { position: relative; height: 100dvh; color: #fff; overflow: hidden; font-family: 'Hiragino Sans', sans-serif; }
+.topbar { position: relative; z-index: 3; min-height: 58px; padding: .55rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; background: #07090ddd; border-bottom: 1px solid #27303a; box-sizing: border-box; }
+.topbar > div:first-child { display: flex; align-items: baseline; gap: .8rem; }
+.topbar span { color: #a8b2be; font-size: .84rem; }
+.badges { display: flex; align-items: center; gap: .5rem; }
+.badges > span { padding: .38rem .6rem; background: #202731; border-radius: 999px; }
+.partsBadge { display: flex; align-items: center; }
+.badges .selectedPart { padding: 0; color: inherit; background: transparent; border-radius: 0; font-weight: 800; }
+.selectedPart + .selectedPart::before { content: '・'; margin: 0 .12rem; color: #a8b2be; }
+.badges .connected { color: #7ce4a1; background: #12341f; }
+.badges .reconnecting { color: #ffd27a; background: #403016; }
+.stage { min-height: calc(100dvh - 58px); padding: 4vh 4vw 11vh; display: flex; flex-direction: column; justify-content: flex-start; box-sizing: border-box; background: #000; cursor: pointer; user-select: none; }
+.textTransparent { color: transparent; }
+.viewerControls { position: fixed; z-index: 10; right: 1.5rem; bottom: 1.5rem; display: flex; gap: .5rem; flex-wrap: nowrap; }
+.viewerControls button { min-width: 44px; min-height: 44px; padding: .6rem 1rem; display: grid; place-items: center; color: #fff; background: rgba(255, 255, 255, .15); border: 0; border-radius: 8px; font-size: 1.5rem; cursor: pointer; backdrop-filter: blur(4px); transition: background .2s; }
+.viewerControls button:hover { background: rgba(255, 255, 255, .28); }
+.viewerControls .activeButton { color: #fff; background: rgba(255, 105, 180, .45); }
+.settingsPanel { position: fixed; z-index: 5; right: 1rem; bottom: 5.2rem; width: min(340px, calc(100vw - 2rem)); padding: 1rem; display: grid; gap: .85rem; color: #fff; background: #11161ded; border: 1px solid #536173; border-radius: 14px; box-sizing: border-box; backdrop-filter: blur(10px); }
+.settingsPanel p { margin: 0; color: #9ea9b7; font-size: .78rem; }
+.settingsRow { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.fontControls { display: flex; align-items: center; gap: .4rem; }
+.fontControls button { min-width: 42px; min-height: 36px; color: #fff; background: #29313d; border: 0; border-radius: 7px; }
+.fontControls button:disabled { opacity: .35; }
+.fontControls strong { min-width: 3.5rem; text-align: center; }
+.fontSlider { width: 100%; accent-color: #ff69b4; }
+.switch { position: relative; width: 46px; height: 26px; flex: none; padding: 0; background: #4a525e; border: 0; border-radius: 999px; }
+.switch span { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: transform .2s; }
+.switchOn { background: #ff69b4; }
+.switchOn span { transform: translateX(20px); }
+.reconnectOverlay { position: fixed; z-index: 6; top: 70px; left: 50%; transform: translateX(-50%); padding: .65rem 1rem; color: #ffe0a3; background: #4a3519ee; border-radius: 999px; white-space: nowrap; }
+.error { position: fixed; z-index: 6; top: 68px; left: 1rem; padding: .55rem .8rem; color: #ffc0c4; background: #481f25; border-radius: 7px; }
+.messagePage { min-height: 100dvh; padding: 2rem; display: grid; place-items: center; text-align: center; color: #fff; background: #07090d; font-family: 'Hiragino Sans', sans-serif; }
+.messagePage section { max-width: 600px; }
+.messagePage p { color: #aab3bf; line-height: 1.7; }
+@media (orientation: portrait) { .stage { height: calc(100dvh - 58px); min-height: 0; overflow-y: auto; padding-top: 2rem; padding-bottom: 7rem; scroll-padding-top: 1rem; }.topbar { align-items: flex-start; }.badges { flex-wrap: wrap; justify-content: flex-end; } }
+@media (max-width: 700px) { .topbar > div:first-child { flex-direction: column; gap: .1rem; }.reconnectOverlay { top: 64px; max-width: calc(100vw - 2rem); white-space: normal; text-align: center; }.stage { padding-left: 1rem; padding-right: 1rem; }.viewerControls { left: 1rem; right: 1rem; bottom: 1rem; justify-content: center; }.settingsPanel { left: 1rem; right: 1rem; width: auto; } }
+@media (prefers-reduced-motion: reduce) { .viewer, .viewer * { scroll-behavior: auto !important; transition: none !important; } }
+.badges .manualBadge { color: #8ddfff; background: #153746; }
+.viewerControls .pageButton, .viewerControls .settingsButton, .viewerControls .changeButton { padding: .6rem 1rem; }
+.viewerControls svg { width: 1.35rem; height: 1.35rem; display: block; }
+.viewerControls button:disabled { opacity: .3; cursor: not-allowed; }

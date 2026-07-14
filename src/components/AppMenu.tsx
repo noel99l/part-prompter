@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
+import { useSyncCapability } from '@/hooks/useSyncCapability'
 import styles from './AdminMenu.module.css'
 
 const ADMIN_NAV = [
@@ -15,6 +16,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
   const { data: session } = useSession()
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
+  const canUseSyncPrompter = useSyncCapability()
   const ref = useRef<HTMLDivElement>(null)
 
   const name = accountName ?? session?.user?.accountName ?? null
@@ -64,6 +66,15 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
                     {item.label}
                   </Link>
                 ))}
+                {canUseSyncPrompter && (
+                  <Link
+                    href="/manage/sync"
+                    className={`${styles.navItem} ${pathname === '/manage/sync' || pathname.startsWith('/manage/sync/') ? styles.navItemActive : ''}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    📡 同期プロンプター
+                  </Link>
+                )}
                 {isMaster && (
                   <Link
                     href="/manage/master-settings"

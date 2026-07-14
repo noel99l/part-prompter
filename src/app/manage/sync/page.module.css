@@ -1,0 +1,19 @@
+.page { min-height: 100vh; padding: clamp(1rem, 4vw, 3rem); color: #fff; background: #08090c; box-sizing: border-box; font-family: 'Hiragino Sans', sans-serif; }
+.header { max-width: 900px; margin: 0 auto 2rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.header h1 { margin: .2rem 0 0; font-size: clamp(1.6rem, 4vw, 2.4rem); }
+.eyebrow { margin: 0; color: #65d7ff; font-size: .72rem; letter-spacing: .14em; }
+.back { color: #aaa; text-decoration: none; min-height: 44px; display: inline-flex; align-items: center; }
+.card { max-width: 760px; margin: 0 auto; padding: clamp(1.25rem, 4vw, 2.5rem); background: #11141a; border: 1px solid #29303c; border-radius: 18px; box-shadow: 0 18px 60px #0008; }
+.card h2 { margin-top: 0; }
+.card p { color: #adb5c2; line-height: 1.7; }
+.field { display: grid; gap: .55rem; color: #cbd3df; font-weight: 700; }
+.field select { min-height: 48px; padding: 0 .8rem; color: #fff; background: #090b10; border: 1px solid #3a4555; border-radius: 8px; font-size: 1rem; }
+.summary { margin: 1.2rem 0; padding: 1rem; display: flex; justify-content: space-between; gap: 1rem; background: #090b10; border-radius: 10px; }
+.summary span { color: #65d7ff; }
+.notes { margin: 1.4rem 0; padding-left: 1.4rem; color: #adb5c2; line-height: 1.9; }
+.primary { min-height: 48px; padding: .7rem 1.25rem; display: inline-flex; justify-content: center; align-items: center; color: #071015; background: #65d7ff; border: 0; border-radius: 9px; font-weight: 800; font-size: 1rem; text-decoration: none; cursor: pointer; }
+.primary:disabled { opacity: .4; cursor: not-allowed; }
+.error { max-width: 760px; margin: 0 auto 1rem; padding: .75rem 1rem; color: #ffb4b4 !important; background: #431c24; border-radius: 8px; }
+.live { color: #72e29a; font-weight: 800; }
+.status { max-width: 760px; margin: 3rem auto; color: #aaa; }
+@media (max-width: 640px) { .header { align-items: flex-start; flex-direction: column; } .summary { flex-direction: column; } .primary { width: 100%; box-sizing: border-box; } }

@@ -23,6 +23,7 @@ export interface PromptLayout {
 export interface DisplayChunk<L extends PromptLine> {
   lines: L[]
   startMs: number | null
+  sourceBlockIndex: number
 }
 
 // 行の折り返しを含めた視覚行数を推定する（全角≈1em・半角≈0.6em）
@@ -44,7 +45,7 @@ export function buildDisplayBlocks<L extends PromptLine>(
     const maxRows = layout?.maxRows ?? Infinity
     const rows = block.map(l => estimateRows(l, layout))
     const totalRows = rows.reduce((a, b) => a + b, 0)
-    if (!autoSplit || totalRows <= maxRows) return [{ lines: block, startMs: startTs }]
+    if (!autoSplit || totalRows <= maxRows) return [{ lines: block, startMs: startTs, sourceBlockIndex: bi }]
     const count = Math.ceil(totalRows / maxRows)
     const target = Math.ceil(totalRows / count) // 上限5行で7行なら 4+3 に均す
     const nextTs = blocks[bi + 1]?.[0]?.timestamp_ms ?? null
@@ -59,7 +60,7 @@ export function buildDisplayBlocks<L extends PromptLine>(
       else if (cur[0]?.timestamp_ms != null) startMs = cur[0].timestamp_ms
       else if (startTs != null && nextTs != null && nextTs > startTs) startMs = Math.round(startTs + ((nextTs - startTs) * startIdx) / block.length)
       else startMs = null
-      chunks.push({ lines: cur, startMs })
+      chunks.push({ lines: cur, startMs, sourceBlockIndex: bi })
     }
     block.forEach((line, li) => {
       if (cur.length > 0 && curRows + rows[li] > target) {

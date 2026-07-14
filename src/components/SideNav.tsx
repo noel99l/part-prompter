@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
+import { useSyncCapability } from '@/hooks/useSyncCapability'
 import styles from './SideNav.module.css'
 
 const ADMIN_NAV = [
@@ -13,6 +14,7 @@ const ADMIN_NAV = [
 export default function SideNav({ accountName }: { accountName?: string }) {
   const { data: session } = useSession()
   const pathname = usePathname()
+  const canUseSyncPrompter = useSyncCapability()
   const isLoggedIn = !!session
   const name = accountName ?? session?.user?.accountName ?? null
   const isMaster = session?.user?.email === 'noelkaikei@gmail.com'
@@ -37,6 +39,14 @@ export default function SideNav({ accountName }: { accountName?: string }) {
               {item.label}
             </Link>
           ))}
+          {canUseSyncPrompter && (
+            <Link
+              href="/manage/sync"
+              className={`${styles.item} ${pathname === '/manage/sync' || pathname.startsWith('/manage/sync/') ? styles.itemActive : ''}`}
+            >
+              📡 同期プロンプター
+            </Link>
+          )}
           {isMaster && (
             <Link
               href="/manage/master-settings"
