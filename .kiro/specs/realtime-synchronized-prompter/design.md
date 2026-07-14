@@ -277,6 +277,8 @@ export interface PresenceData {
 
 実装前に`node_modules/next/dist/docs/`の当該Next.js 15 Route Handler、動的params、Server/Client Componentガイドを確認し、既存の`{ params: Promise<...> }`形式に従う。AblyとQR生成ライブラリは導入時点の公式ドキュメントを再確認し、package.jsonへ正確な固定バージョンで追加する。QRコードは参加URLの表示用途だけとし、生成失敗時もURLコピーで参加可能にする。
 
+Vercelの環境変数は、名前を`ABLY_API_KEY`、値をAblyダッシュボードから取得したAPIキー本体として別々に登録する。値へ`ABLY_API_KEY=`という代入式、引用符、前後空白を含めない。サーバーはキー名部分とsecretを区切る`:`およびキー名内の`.`を検証し、形式不正時は秘密値をログやレスポンスへ出さず設定エラーを返す。
+
 ## Correctness Properties
 
 ### Property 1: マスタ権限の排他性
