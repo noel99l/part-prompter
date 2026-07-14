@@ -1,3 +1,7 @@
+:root {
+  --brand-pink: #FF69B4;
+}
+
 * {
   margin: 0;
   padding: 0;
