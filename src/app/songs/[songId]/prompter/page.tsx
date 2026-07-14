@@ -5,7 +5,9 @@ import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { getCachedJson } from '@/lib/clientCache'
 import { buildDisplayBlocks, type DisplayChunk } from '@/lib/prompterBlocks'
+import { displayBlockAtPosition, prompterBpmRate } from '@/lib/prompterTimeline'
 import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
+import PrompterStage from '@/components/prompter/PrompterStage'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
 
 const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
@@ -45,7 +47,6 @@ export default function PrompterView() {
   const [viewport, setViewport] = useState({ w: 0, h: 0 })
   const [fullscreenSupported, setFullscreenSupported] = useState(true)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
-  const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const [flashBtn, setFlashBtn] = useState<'prev' | 'next' | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -221,12 +222,10 @@ export default function PrompterView() {
     }
   }, [displayBlocks.length, currentBlock])
 
-  const bpmRate = useMemo(() => {
-    const orig = song?.original_bpm
-    const play = song?.playback_bpm
-    if (orig && play && orig > 0) return orig / play
-    return 1
-  }, [song])
+  const bpmRate = useMemo(
+    () => prompterBpmRate(song?.original_bpm, song?.playback_bpm),
+    [song]
+  )
 
   const playlistRef = useRef({ playlistSongs: [] as {id:number;title:string}[], playlistIndex: -1, playlistTotal: 0, playlistId: null as string|null })
   useEffect(() => {
@@ -237,11 +236,6 @@ export default function PrompterView() {
   useEffect(() => { stateRef.current.blocks = displayBlocks }, [displayBlocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
   useEffect(() => { stateRef.current.bpmRate = bpmRate }, [bpmRate])
-
-  useEffect(() => {
-    if (!isPortrait || currentBlock < 0) return
-    blockRefs.current[currentBlock]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [currentBlock, isPortrait])
 
   const stopLoop = () => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
@@ -277,11 +271,7 @@ export default function PrompterView() {
         rafRef.current = requestAnimationFrame(tick)
         return
       }
-      let next = 0
-      for (let i = 0; i < bl2.length; i++) {
-        const t = bl2[i]?.startMs
-        if (t != null && elapsed >= t * r) next = i
-      }
+      const next = displayBlockAtPosition(bl2, elapsed, 0, r)
       stateRef.current.currentBlock = next
       setCurrentBlock(next)
       const curTs = (bl2[next]?.startMs ?? 0) * r
@@ -446,92 +436,27 @@ export default function PrompterView() {
         <p className={styles.rotateText}>端末を横向きにしてください</p>
       </div>
       <div className={styles.container} style={{ background: song?.bg_color || '#000', '--fontScale': fontScale } as React.CSSProperties} onClick={isMobile && !isPortrait ? handleTap : undefined}>
-        {isPortrait ? (
-          // 縦表示：全ブロックをスクロール表示
-          <div className={styles.scrollView}>
-            <div className={styles.scrollCover}>
-              <div className={styles.coverTitle}>{song.title}</div>
-              {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
-              {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
-              {members.length > 0 && (
-                <div className={styles.coverMembers}>
-                  {members.map((m, i) => (
-                    <div key={m.id} className={styles.coverMember}>
-                      <span className={styles.coverMemberDot} style={{ background: m.color }} />
-                      <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            {displayBlocks.map((block, bi) => (
-              <div
-                key={bi}
-                ref={el => { blockRefs.current[bi] = el }}
-                className={`${styles.scrollBlock} ${bi === currentBlock ? styles.scrollBlockActive : ''}`}
-                onClick={() => {
-                  if (isPlaying) {
-                    startLoop(bi)
-                  } else {
-                    setCurrentBlock(bi)
-                  }
-                }}
-              >
-                {block.lines.map(line => (
-                  <div key={line.id} className={styles.scrollLine}>{renderLine(line)}</div>
-                ))}
-              </div>
-            ))}
-            <div className={styles.scrollEnd}>― End ―</div>
-            <div className={styles.scrollSpacer} />
-          </div>
-        ) : (
-          // 横表示：スライド表示
-          currentBlock === -1 ? (
-            <>
-              <div className={styles.cover}>
-                <div className={styles.coverTitle}>{song.title}</div>
-                {song.artist && <div className={styles.coverArtist}>{song.artist}</div>}
-                {song.cover_text && <div className={styles.coverText}>{song.cover_text}</div>}
-                <div className={styles.coverSeparator} />
-                <div className={styles.coverMembers}>
-                  {members.map((m, i) => (
-                    <div key={m.id} className={styles.coverMember}>
-                      <span className={styles.coverMemberDot} style={{ background: m.color }} />
-                      <span className={styles.coverMemberName} style={{ color: m.color }}>{m.name || String.fromCharCode(65 + (m.sort_order ?? i))}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              {showNext && displayBlocks[0] && (
-                <div className={styles.nextBlock}>
-                  {displayBlocks[0].lines.slice(0, 2).map(line => (
-                    <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
-                  ))}
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className={styles.currentBlock}>
-                {(displayBlocks[currentBlock]?.lines || []).map(line => (
-                  <div key={line.id} className={styles.line}>{renderLine(line)}</div>
-                ))}
-              </div>
-              {showNext && (currentBlock === displayBlocks.length - 1 ? (
-                <div className={styles.nextBlock} style={{ opacity: 0.4, fontStyle: 'italic' }}>
-                  <div className={styles.nextLine}>― End ―</div>
-                </div>
-              ) : (
-                <div className={styles.nextBlock}>
-                  {(displayBlocks[currentBlock + 1]?.lines || []).slice(0, 2).map(line => (
-                    <div key={line.id} className={styles.nextLine}>{renderLine(line)}</div>
-                  ))}
-                </div>
-              ))}
-            </>
-          )
-        )}
+        <PrompterStage
+          title={song.title}
+          artist={song.artist}
+          coverText={song.cover_text}
+          members={members.map(member => ({
+            id: member.id,
+            name: member.name,
+            color: member.color,
+            sortOrder: member.sort_order,
+          }))}
+          displayBlocks={displayBlocks}
+          currentBlock={currentBlock}
+          isPortrait={isPortrait}
+          showNext={showNext}
+          renderLine={renderLine}
+          lineKey={line => line.id}
+          onSelectBlock={blockIndex => {
+            if (isPlaying) startLoop(blockIndex)
+            else setCurrentBlock(blockIndex)
+          }}
+        />
 
         {settingsOpen && (
           <div className={`${styles.settingsPanel} ${isPortrait ? (fullscreenSupported ? styles.settingsPanelPortrait : styles.settingsPanelPortraitSingle) : ''}`} onClick={e => e.stopPropagation()}>

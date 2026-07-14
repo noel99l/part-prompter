@@ -63,17 +63,20 @@ export async function withTransaction<T>(
 ): Promise<T> {
   for (let attempt = 0; attempt <= retries; attempt++) {
     let client: PoolClient | undefined
+    let commitStarted = false
     try {
       client = await getPool().connect()
       await client.query('BEGIN')
       const result = await fn(client)
+      // COMMIT送信後の接続断は成否が不明なため、callbackを再実行してはならない。
+      commitStarted = true
       await client.query('COMMIT')
       return result
     } catch (error: unknown) {
-      if (client) {
+      if (client && !commitStarted) {
         try { await client.query('ROLLBACK') } catch {}
       }
-      if (attempt === retries) throw error
+      if (commitStarted || attempt === retries) throw error
       const message = error instanceof Error ? error.message : String(error)
       if (message.includes('Connection terminated') || message.includes('timeout')) {
         pool?.end().catch(() => {})
@@ -239,6 +242,63 @@ async function runInitDb() {
     await query(`CREATE INDEX IF NOT EXISTS idx_scm_user_id ON song_collaborator_members(user_id)`)
 
     await query(`
+      CREATE TABLE IF NOT EXISTS prompter_sync_sessions (
+        id UUID PRIMARY KEY,
+        playlist_id INTEGER NOT NULL REFERENCES playlists(id),
+        created_by INTEGER NOT NULL REFERENCES users(id),
+        status TEXT NOT NULL CHECK (status IN ('active', 'ended', 'expired')),
+        join_token_hash TEXT NOT NULL UNIQUE,
+        playlist_snapshot JSONB NOT NULL,
+        current_song_index INTEGER NOT NULL DEFAULT 0,
+        current_block INTEGER NOT NULL DEFAULT -1,
+        is_playing BOOLEAN NOT NULL DEFAULT false,
+        position_ms INTEGER NOT NULL DEFAULT 0 CHECK (position_ms >= 0),
+        started_at TIMESTAMPTZ,
+        version BIGINT NOT NULL DEFAULT 0 CHECK (version >= 0),
+        last_command_id UUID,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMPTZ NOT NULL,
+        ended_at TIMESTAMPTZ
+      )
+    `)
+    await query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS uq_sync_active_creator
+      ON prompter_sync_sessions(created_by) WHERE status = 'active'
+    `)
+    await query(`CREATE INDEX IF NOT EXISTS idx_sync_sessions_join_hash ON prompter_sync_sessions(join_token_hash)`)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS prompter_sync_commands (
+        session_id UUID NOT NULL REFERENCES prompter_sync_sessions(id) ON DELETE CASCADE,
+        command_id UUID NOT NULL,
+        resulting_state JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (session_id, command_id)
+      )
+    `)
+
+    await query(`
+      CREATE TABLE IF NOT EXISTS prompter_sync_devices (
+        id UUID PRIMARY KEY,
+        session_id UUID NOT NULL REFERENCES prompter_sync_sessions(id) ON DELETE CASCADE,
+        device_number INTEGER NOT NULL CHECK (device_number > 0),
+        display_name TEXT CHECK (display_name IS NULL OR char_length(display_name) BETWEEN 1 AND 20),
+        configured_at TIMESTAMPTZ,
+        reconnect_token_hash TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        released_at TIMESTAMPTZ,
+        UNIQUE(session_id, device_number),
+        UNIQUE(session_id, reconnect_token_hash)
+      )
+    `)
+    await query(`CREATE INDEX IF NOT EXISTS idx_sync_devices_session ON prompter_sync_devices(session_id)`)
+    await query(`
+      CREATE INDEX IF NOT EXISTS idx_sync_devices_configured
+      ON prompter_sync_devices(session_id, configured_at)
+    `)
+
+    await query(`
       CREATE TABLE IF NOT EXISTS master_settings (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL
@@ -247,5 +307,6 @@ async function runInitDb() {
 
   } catch (error) {
     console.error('Database initialization error:', error)
+    throw error
   }
 }
