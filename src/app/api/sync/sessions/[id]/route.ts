@@ -12,7 +12,10 @@ export async function GET(_: NextRequest, { params }: Context) {
     await initDb()
     const master = await requireSyncMaster()
     const { id } = await params
-    return NextResponse.json(await getMasterSnapshot(id, master.id))
+    return NextResponse.json(
+      await getMasterSnapshot(id, master.id),
+      { headers: { 'Cache-Control': 'no-store' } }
+    )
   } catch (error) {
     return syncErrorResponse(error)
   }

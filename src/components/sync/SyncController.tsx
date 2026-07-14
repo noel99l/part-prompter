@@ -41,7 +41,7 @@ async function apiError(response: Response): Promise<string> {
 }
 
 function mergeSnapshotDevices(previous: Map<string, LiveDevice>, devices: SyncDevice[], songId: number) {
-  const next = new Map<string, LiveDevice>()
+  const next = new Map(previous)
   for (const device of devices) {
     if (!device.configured) continue
     const current = previous.get(device.id)
@@ -74,13 +74,25 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const snapshotRef = useRef<MasterSyncSnapshot | null>(null)
   const dbDevicesRef = useRef<Map<string, SyncDevice>>(new Map())
   const connectionsRef = useRef<Map<string, Set<string>>>(new Map())
+  const snapshotRequestRef = useRef(0)
+  const appliedSnapshotRequestRef = useRef(0)
 
   const loadSnapshot = useCallback(async () => {
-    const response = await fetch(`/api/sync/sessions/${encodeURIComponent(sessionId)}`)
+    const requestId = ++snapshotRequestRef.current
+    const response = await fetch(`/api/sync/sessions/${encodeURIComponent(sessionId)}`, { cache: 'no-store' })
     if (!response.ok) throw new Error(await apiError(response))
-    const value = await response.json() as MasterSyncSnapshot
+    const received = await response.json() as MasterSyncSnapshot
+    if (requestId < appliedSnapshotRequestRef.current) return received
+    appliedSnapshotRequestRef.current = requestId
+
+    const current = snapshotRef.current
+    const value = current && current.state.version > received.state.version
+      ? { ...received, state: current.state }
+      : received
+    const nextDbDevices = new Map(dbDevicesRef.current)
+    for (const device of value.devices) nextDbDevices.set(device.id, device)
     snapshotRef.current = value
-    dbDevicesRef.current = new Map(value.devices.map(device => [device.id, device]))
+    dbDevicesRef.current = nextDbDevices
     setSnapshot(value)
     setDevices(previous => mergeSnapshotDevices(previous, value.devices, value.state.songId))
     if (value.session.status !== 'active') {
@@ -175,9 +187,11 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
       if (!data || message.clientId !== `device:${data.deviceId}` || !message.connectionId) return
 
       let dbDevice = dbDevicesRef.current.get(data.deviceId)
-      if (!dbDevice && message.action !== 'leave') {
-        await loadSnapshot()
-        dbDevice = dbDevicesRef.current.get(data.deviceId)
+      const needsRefresh = !dbDevice || (data.configured && !dbDevice.configured)
+      if (needsRefresh && message.action !== 'leave') {
+        const latest = await loadSnapshot()
+        dbDevice = latest.devices.find(device => device.id === data.deviceId)
+          ?? dbDevicesRef.current.get(data.deviceId)
       }
       if (!dbDevice?.configured) return
 
@@ -202,10 +216,17 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
         return next
       })
     }
+    let presenceQueue: Promise<void> = Promise.resolve()
+    const enqueuePresence = (message: Ably.PresenceMessage) => {
+      presenceQueue = presenceQueue
+        .then(() => disposed ? undefined : applyPresence(message))
+        .catch(reason => realtimeError(
+          reason instanceof Error ? reason.message : '端末状態を同期できませんでした。'
+        ))
+      return presenceQueue
+    }
     const onPresence = (message: Ably.PresenceMessage) => {
-      void applyPresence(message).catch(reason => realtimeError(
-        reason instanceof Error ? reason.message : '端末状態を同期できませんでした。'
-      ))
+      void enqueuePresence(message)
     }
 
     void channel.subscribe('state.updated', onState).catch(() => realtimeError('状態更新の購読に失敗しました。'))
@@ -217,7 +238,7 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
       connectionsRef.current.clear()
       setDevices(previous => new Map([...previous].map(([id, device]) => [id, { ...device, online: false }])))
       const members = await channel.presence.get()
-      for (const member of members) await applyPresence(member)
+      for (const member of members) await enqueuePresence(member)
     }
     realtime.connection.on('connected', () => {
       if (disposed) return

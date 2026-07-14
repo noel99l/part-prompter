@@ -182,6 +182,8 @@ export interface PresenceData {
 ```
 
 チャンネル名は`part-prompter:session:{sessionId}`とする。stateイベントはDBコミット後にサーバーから1回publishする。表示端末は保持中のversionより大きい場合だけ適用する。再生中の現在位置は`positionMs + max(0, Date.now() - Date.parse(startedAt))`、停止中は`positionMs`とする。曲変更時は`currentBlock=-1`、`isPlaying=false`、`positionMs=0`、`startedAt=null`へリセットする。
+
+コントローラーはPresenceの`enter / update / leave`を受信順に直列処理する。端末名設定直前の未設定snapshotが設定完了後に遅れて返っても一覧を巻き戻さないよう、master snapshotは`Cache-Control: no-store`かつクライアントfetchも`cache: 'no-store'`とし、並行取得にはrequest generationを適用する。設定完了端末はセッション中に未設定へ戻らない単調状態としてマージし、子端末側も古いdevice snapshotの`configured:false`で確定済み状態を上書きしない。
 ## Components and Interfaces
 
 | Module | Responsibility |
@@ -205,7 +207,7 @@ export interface PresenceData {
 
 初回参加では端末名だけを入力し、`configuration` APIへ`displayName`と`configured:true`だけを送って端末設定を完了する。その直後、曲変更時と同じ担当選択モーダルをプロンプター上に表示し、現在曲の担当を1名以上選択する。担当選択は`sessionStorage`の`part-prompter:sync:{sessionId}:parts:{songId}`へ保存し、曲変更ごとに必ずモーダルを表示して前回値は初期選択としてだけ利用する。presenceへ送るのは`deviceId`、`deviceNumber`、`displayName`、`configured`、`ready`、`songId`で、メンバーIDは送らない。端末名設定後から担当確定までは`configured:true, ready:false`とし、コントローラーには「担当選択待ち」で表示する。曲別担当選択と「担当変更」はどちらもプロンプター上のモーダルとして表示し、再選択中は一覧に残したまま`ready:false`へ更新する。キャンセルは手動の担当変更時だけ許可し、モーダル開始前の担当、選択理由、`ready`状態を復元して未確定端末を誤って準備完了にしない。
 
-各表示端末は歌詞領域の左半分タップまたは前ボタンで1ページ前、右半分タップまたは次ボタンで1ページ後を端末ローカルに表示できる。端末種別・画面向きに依存せず同じ操作を提供する。この手動表示は同期stateを変更せず、同期計算上の表示ページが手動表示ページへ追いついた時点で自動解除して同期表示へ戻る。新しい有効な`state.updated`、再接続snapshot、または表示ブロック再構成時にも解除する。設定パネル、操作ボタン、担当選択モーダルの操作は背景タップとして扱わない。Viewer上部の選択担当バッジは、選択したメンバー名をそれぞれ登録済みのパート色で表示する。
+各表示端末は歌詞領域の左半分タップまたは前ボタンで1ページ前、右半分タップまたは次ボタンで1ページ後を端末ローカルに表示できる。端末種別・画面向きに依存せず同じ操作を提供する。この手動表示は同期stateを変更せず、同期計算上の表示ページが手動表示ページへ追いついた時点で自動解除して同期表示へ戻る。新しい有効な`state.updated`、再接続snapshot、または表示ブロック再構成時にも解除する。設定パネル、操作ボタン、担当選択モーダルの操作は背景タップとして扱わない。Viewer上部の選択担当バッジは、選択したメンバー名をそれぞれ登録済みのパート色で表示する。子端末の操作ボタン列には全画面アイコンを表示し、Fullscreen API対応ブラウザでは全画面表示の開始と終了を切り替える。標準APIに加えてWebKit接頭辞付きAPIも検出し、非対応環境ではボタンを表示しない。
 
 ## Authentication and Ably Capabilities
 
