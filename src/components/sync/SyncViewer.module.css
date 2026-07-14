@@ -36,6 +36,6 @@
 @media (max-width: 700px) { .topbar > div:first-child { flex-direction: column; gap: .1rem; }.reconnectOverlay { top: 64px; max-width: calc(100vw - 2rem); white-space: normal; text-align: center; }.stage { padding-left: 1rem; padding-right: 1rem; }.viewerControls { left: 1rem; right: 1rem; bottom: 1rem; justify-content: center; }.settingsPanel { left: 1rem; right: 1rem; width: auto; } }
 @media (prefers-reduced-motion: reduce) { .viewer, .viewer * { scroll-behavior: auto !important; transition: none !important; } }
 .badges .manualBadge { color: #8ddfff; background: #153746; }
-.viewerControls .pageButton, .viewerControls .settingsButton, .viewerControls .changeButton { padding: .6rem 1rem; }
+.viewerControls .pageButton, .viewerControls .settingsButton, .viewerControls .fullscreenButton, .viewerControls .changeButton { padding: .6rem 1rem; }
 .viewerControls svg { width: 1.35rem; height: 1.35rem; display: block; }
 .viewerControls button:disabled { opacity: .3; cursor: not-allowed; }

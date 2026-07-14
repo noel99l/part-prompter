@@ -3,7 +3,7 @@
 import * as Ably from 'ably'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent } from 'react'
 import PrompterStage from '@/components/prompter/PrompterStage'
-import { IconChangeMember, IconNext, IconPrev, IconSettings } from '@/components/icons'
+import { IconChangeMember, IconFullscreen, IconNext, IconPrev, IconSettings } from '@/components/icons'
 import { harmonyBandStyle, harmonyIds } from '@/lib/harmony'
 import { memberDisplayName } from '@/lib/memberDisplayName'
 import { buildDisplayBlocks } from '@/lib/prompterBlocks'
@@ -14,6 +14,11 @@ import MemberSelector from './MemberSelector'
 import styles from './SyncViewer.module.css'
 
 interface Credentials { deviceId: string; reconnectToken: string }
+type FullscreenRoot = HTMLElement & { webkitRequestFullscreen?: () => Promise<void> | void }
+type FullscreenDocument = Document & {
+  webkitFullscreenElement?: Element | null
+  webkitExitFullscreen?: () => Promise<void> | void
+}
 type SelectReason = 'initial' | 'song-change' | 'manual'
 type DisplaySyncLine = SyncLyricLine & {
   timestamp_ms: number | null
@@ -102,6 +107,8 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
   const [showNext, setShowNext] = useState(true)
   const [autoSplit, setAutoSplit] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [fullscreenSupported, setFullscreenSupported] = useState(false)
+  const [fullscreenActive, setFullscreenActive] = useState(false)
   const realtimeRef = useRef<Ably.Realtime | null>(null)
   const channelRef = useRef<Ably.RealtimeChannel | null>(null)
   const snapshotRef = useRef<SyncSnapshot | null>(null)
@@ -152,6 +159,25 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     updateViewport()
     window.addEventListener('resize', updateViewport)
     return () => window.removeEventListener('resize', updateViewport)
+  }, [])
+
+  useEffect(() => {
+    const root = document.documentElement as FullscreenRoot
+    const fullscreenDocument = document as FullscreenDocument
+    setFullscreenSupported(
+      typeof root.requestFullscreen === 'function'
+      || typeof root.webkitRequestFullscreen === 'function'
+    )
+    const updateFullscreen = () => {
+      setFullscreenActive(Boolean(document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement))
+    }
+    updateFullscreen()
+    document.addEventListener('fullscreenchange', updateFullscreen)
+    document.addEventListener('webkitfullscreenchange', updateFullscreen)
+    return () => {
+      document.removeEventListener('fullscreenchange', updateFullscreen)
+      document.removeEventListener('webkitfullscreenchange', updateFullscreen)
+    }
   }, [])
 
   useEffect(() => {
@@ -272,6 +298,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     if (!credentials) return null
     const response = await fetch(`/api/sync/devices/${encodeURIComponent(credentials.deviceId)}/snapshot`, {
       headers: { Authorization: `Bearer ${credentials.reconnectToken}` },
+      cache: 'no-store',
     })
     if (response.status === 410) {
       removeStoredCredential(credentials)
@@ -279,10 +306,14 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     }
     if (!response.ok) throw new Error(await responseError(response))
     const value = await response.json() as { device: SyncDevice; snapshot: SyncSnapshot }
+    const previousDevice = deviceRef.current
+    const nextDevice = previousDevice?.configured && !value.device.configured
+      ? previousDevice
+      : value.device
     storePlaylistSnapshot(value.snapshot)
     setManualDisplayBlock(null)
-    deviceRef.current = value.device; setDevice(value.device); updateSnapshot(value.snapshot)
-    return value
+    deviceRef.current = nextDevice; setDevice(nextDevice); updateSnapshot(value.snapshot)
+    return { ...value, device: nextDevice }
   }, [credentials, updateSnapshot])
 
   const sessionId = snapshot?.session.id
@@ -564,6 +595,18 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     if (event.clientX < window.innerWidth / 2) moveManualDisplay(-1)
     else moveManualDisplay(1)
   }
+  const toggleFullscreen = () => {
+    const root = document.documentElement as FullscreenRoot
+    const fullscreenDocument = document as FullscreenDocument
+    const activeElement = document.fullscreenElement ?? fullscreenDocument.webkitFullscreenElement
+    if (!activeElement) {
+      const request = root.requestFullscreen?.bind(root) ?? root.webkitRequestFullscreen?.bind(root)
+      if (request) void Promise.resolve(request()).catch(() => undefined)
+      return
+    }
+    const exit = document.exitFullscreen?.bind(document) ?? fullscreenDocument.webkitExitFullscreen?.bind(fullscreenDocument)
+    if (exit) void Promise.resolve(exit()).catch(() => undefined)
+  }
 
   if (ended) return <main className={styles.messagePage}><section><h1>同期セッションは終了しました</h1><p>ご参加ありがとうございました。この画面は閉じて構いません。</p></section></main>
   if (error && !snapshot) return <main className={styles.messagePage}><section><h1>参加できませんでした</h1><p>{error}</p></section></main>
@@ -676,6 +719,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
         <button className={styles.pageButton} onClick={() => moveManualDisplay(-1)} disabled={visibleDisplayBlock <= -1} title="前のスライド" aria-label="前のスライド"><IconPrev /></button>
         <button className={styles.pageButton} onClick={() => moveManualDisplay(1)} disabled={visibleDisplayBlock >= displayBlocks.length - 1} title="次のスライド" aria-label="次のスライド"><IconNext /></button>
         <button className={`${styles.settingsButton} ${settingsOpen ? styles.activeButton : ''}`} onClick={() => setSettingsOpen(value => !value)} title="表示設定" aria-label="表示設定" aria-expanded={settingsOpen}><IconSettings /></button>
+        {fullscreenSupported && <button className={`${styles.fullscreenButton} ${fullscreenActive ? styles.activeButton : ''}`} onClick={toggleFullscreen} title={fullscreenActive ? '全画面表示を終了' : '全画面表示'} aria-label={fullscreenActive ? '全画面表示を終了' : '全画面表示'} aria-pressed={fullscreenActive}><IconFullscreen /></button>}
         <button className={styles.changeButton} onClick={startManualSelection} title="担当を変更" aria-label="担当を変更"><IconChangeMember /></button>
       </div>
     </main>
