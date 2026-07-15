@@ -58,7 +58,8 @@ export function hasSelectedMember(memberIds: unknown, selectedMemberIds: unknown
 
 function highlightForIds(memberIds: unknown, selectedMemberIds: unknown): HighlightResult {
   const ids = normalizeMemberIds(memberIds)
-  if (ids.length === 0) return { opacity: 0.55, assigned: false, kind: 'unassigned' }
+  // パート分けなし＝全員歌唱として扱い、常に担当表示
+  if (ids.length === 0) return { opacity: 1, assigned: true, kind: 'unassigned' }
   const assigned = hasSelectedMember(ids, selectedMemberIds)
   return { opacity: assigned ? 1 : 0.2, assigned, kind: assigned ? 'selected' : 'other' }
 }

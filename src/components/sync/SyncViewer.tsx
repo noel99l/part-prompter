@@ -118,6 +118,8 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
   const songGenerationRef = useRef(0)
   const selectionBeforeManualRef = useRef<{ selectedIds: number[]; reason: SelectReason | null; ready: boolean } | null>(null)
 
+  const updatePresenceRef = useRef<((ready: boolean, enter?: boolean) => Promise<void>) | undefined>(undefined)
+
   const updateSnapshot = useCallback((incoming: SyncSnapshot, force = false) => {
     const previous = snapshotRef.current
     if (!force && previous && incoming.state.version <= previous.state.version) return
@@ -128,6 +130,16 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
       readyRef.current = false
       selectionBeforeManualRef.current = null
       const restored = readSelection(incoming.session.id, incoming.state.songId)
+      const song = incoming.playlist.songs[incoming.state.songIndex]
+      // パートが1名のみの場合は自動確定
+      if (song && song.members.length === 1 && restored.length === 0) {
+        const autoIds = [song.members[0].id]
+        sessionStorage.setItem(selectionKey(incoming.session.id, incoming.state.songId), JSON.stringify(autoIds))
+        selectedRef.current = autoIds; setSelectedIds(autoIds)
+        readyRef.current = true; setSelectReason(null); setDisplayBlock(-1)
+        void updatePresenceRef.current?.(true).catch(() => undefined)
+        return
+      }
       selectedRef.current = restored; setSelectedIds(restored); setSelectReason('song-change')
       setDisplayBlock(-1)
     }
@@ -150,6 +162,8 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     if (enter) await channelRef.current.presence.enter(data)
     else await channelRef.current.presence.update(data)
   }, [presenceData])
+
+  useEffect(() => { updatePresenceRef.current = updatePresence }, [updatePresence])
 
   useEffect(() => {
     const updateViewport = () => {
@@ -282,10 +296,19 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
       deviceRef.current = joined.device; setDevice(joined.device); setCredentials(restoredCredentials)
       updateSnapshot(joined.snapshot, true); setDisplayBlock(-1)
       const restored = readSelection(joined.snapshot.session.id, joined.snapshot.state.songId)
-      selectedRef.current = restored; setSelectedIds(restored)
-      readyRef.current = joined.device.configured && restored.length > 0
-      if (!joined.device.configured) setSelectReason('initial')
-      else if (restored.length === 0) setSelectReason('song-change')
+      const joinedSong = joined.snapshot.playlist.songs[joined.snapshot.state.songIndex]
+      // パートが1名のみ＋未選択なら自動確定
+      if (joined.device.configured && restored.length === 0 && joinedSong && joinedSong.members.length === 1) {
+        const autoIds = [joinedSong.members[0].id]
+        sessionStorage.setItem(selectionKey(joined.snapshot.session.id, joined.snapshot.state.songId), JSON.stringify(autoIds))
+        selectedRef.current = autoIds; setSelectedIds(autoIds)
+        readyRef.current = true; setSelectReason(null)
+      } else {
+        selectedRef.current = restored; setSelectedIds(restored)
+        readyRef.current = joined.device.configured && restored.length > 0
+        if (!joined.device.configured) setSelectReason('initial')
+        else if (restored.length === 0) setSelectReason('song-change')
+      }
     }).catch(reason => {
       if (!disposed && !(reason instanceof DOMException && reason.name === 'AbortError')) {
         setError(reason instanceof Error ? reason.message : '参加できませんでした。')
@@ -398,7 +421,18 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     readyRef.current = false
     selectionBeforeManualRef.current = null
     const current = snapshotRef.current
-    const restored = readSelection(current.session.id, current.state.songId)
+    const songId = current.state.songId
+    const song = current.playlist.songs[current.state.songIndex]
+    const restored = readSelection(current.session.id, songId)
+    // パートが1名のみの場合は自動確定
+    if (song && song.members.length === 1 && restored.length === 0) {
+      const autoIds = [song.members[0].id]
+      sessionStorage.setItem(selectionKey(current.session.id, songId), JSON.stringify(autoIds))
+      selectedRef.current = autoIds; setSelectedIds(autoIds)
+      readyRef.current = true; setSelectReason(null)
+      await updatePresence(true)
+      return
+    }
     selectedRef.current = restored
     setSelectedIds(restored)
     setSelectReason('song-change')
@@ -715,6 +749,20 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
           onCancel={cancelSelection}
         />
       )}
+      <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
+        {[-1, ...displayBlocks.map((_, index) => index)].map(blockIndex => {
+          const active = blockIndex === (manualDisplayBlock ?? displayBlock)
+          return (
+            <button
+              key={blockIndex}
+              className={`${styles.slideSegment} ${active ? styles.slideSegmentActive : ''}`}
+              onClick={event => { event.stopPropagation(); setSettingsOpen(false); setManualDisplayBlock(blockIndex === displayBlock ? null : blockIndex) }}
+              aria-label={`スライド ${blockIndex + 2} / ${displayBlocks.length + 1}`}
+              aria-current={active ? 'step' : undefined}
+            />
+          )
+        })}
+      </div>
       <div className={styles.viewerControls} onClick={event => event.stopPropagation()}>
         <button className={styles.pageButton} onClick={() => moveManualDisplay(-1)} disabled={visibleDisplayBlock <= -1} title="前のスライド" aria-label="前のスライド"><IconPrev /></button>
         <button className={styles.pageButton} onClick={() => moveManualDisplay(1)} disabled={visibleDisplayBlock >= displayBlocks.length - 1} title="次のスライド" aria-label="次のスライド"><IconNext /></button>
