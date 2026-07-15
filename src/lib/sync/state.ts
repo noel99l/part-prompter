@@ -4,6 +4,7 @@ import type { PlaylistSnapshot, SyncState } from './types'
 
 export type SyncCommand =
   | { commandId: string; type: 'selectSong'; songIndex: number }
+  | { commandId: string; type: 'selectPage'; block: number }
   | { commandId: string; type: 'previousPage' }
   | { commandId: string; type: 'nextPage' }
   | { commandId: string; type: 'play' }
@@ -34,6 +35,11 @@ export function parseSyncCommand(value: unknown): SyncCommand {
     assertExactKeys(input, ['commandId', 'type', 'songIndex'])
     if (!Number.isInteger(input.songIndex)) throw new SyncHttpError(400, '曲番号が不正です。')
     return { commandId: input.commandId, type: input.type, songIndex: input.songIndex as number }
+  }
+  if (input.type === 'selectPage') {
+    assertExactKeys(input, ['commandId', 'type', 'block'])
+    if (!Number.isInteger(input.block)) throw new SyncHttpError(400, 'ページ番号が不正です。')
+    return { commandId: input.commandId, type: input.type, block: input.block as number }
   }
   if (input.type === 'seek') {
     assertExactKeys(input, ['commandId', 'type', 'positionMs'])
@@ -130,6 +136,13 @@ export function applySyncCommand(
         positionMs: 0,
         startedAt: null,
       }
+    }
+    case 'selectPage': {
+      const blocks = blocksForSong(snapshot, state.songIndex)
+      if (command.block !== -1 && !blocks.includes(command.block)) {
+        throw new SyncHttpError(400, '指定されたページは現在の曲にありません。')
+      }
+      return moveToBlock(state, next, snapshot, command.block, now)
     }
     case 'previousPage': {
       const blocks = blocksForSong(snapshot, state.songIndex)
