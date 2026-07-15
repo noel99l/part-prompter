@@ -40,6 +40,25 @@ export function normalizeMemberIds(value: unknown): number[] {
   return [...ids]
 }
 
+/** word_members 1文字分の主旋律IDだけを取り出す。 */
+function getMainMemberIds(word: unknown): number[] {
+  if (word == null || typeof word !== 'object' || Array.isArray(word)) return []
+  const value = word as Record<string, unknown>
+  return normalizeMemberIds([
+    value.member_ids, value.member_id, value.main_ids, value.main_id, value.main,
+  ])
+}
+
+/** word_members 1文字分のハモリIDだけを取り出す。 */
+function getHarmonyMemberIds(word: unknown): number[] {
+  if (word == null || typeof word !== 'object' || Array.isArray(word)) return []
+  const value = word as Record<string, unknown>
+  return normalizeMemberIds([
+    value.harmony_up_ids, value.harmony_up_id,
+    value.harmony_down_ids, value.harmony_down_id,
+  ])
+}
+
 /** word_members 1文字分の主旋律・上下ハモリをまとめた担当ID。 */
 export function getEffectiveMemberIds(word: unknown): number[] {
   if (word == null || typeof word !== 'object' || Array.isArray(word)) return []
@@ -65,6 +84,23 @@ function highlightForIds(memberIds: unknown, selectedMemberIds: unknown): Highli
 }
 
 export function getWordHighlight(word: unknown, selectedMemberIds: unknown): HighlightResult {
+  const mainIds = getMainMemberIds(word)
+  const harmonyIds = getHarmonyMemberIds(word)
+
+  // メインのパートが未割当で上ハモ/下ハモが設定されている場合:
+  // ハモリ担当以外の全員が歌唱するパートとして扱う
+  if (mainIds.length === 0 && harmonyIds.length > 0) {
+    const selected = new Set(normalizeMemberIds(selectedMemberIds))
+    const harmonySet = new Set(harmonyIds)
+    // 選択中のメンバーがハモリ担当に含まれていれば「ハモリ担当」として表示
+    const isHarmonyMember = [...selected].some(id => harmonySet.has(id))
+    // ハモリ担当でないメンバーは全員歌唱として扱う（常に不透明度1）
+    const isMainMember = [...selected].some(id => !harmonySet.has(id))
+    if (isMainMember || isHarmonyMember) return { opacity: 1, assigned: true, kind: 'selected' }
+    // 選択中メンバーがいない場合はfallback
+    return { opacity: 1, assigned: true, kind: 'unassigned' }
+  }
+
   return highlightForIds(getEffectiveMemberIds(word), selectedMemberIds)
 }
 
