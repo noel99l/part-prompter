@@ -770,6 +770,8 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
           canCancel={false}
           reason="song-change"
           modal
+          songTitle={currentSong.title}
+          lyrics={currentSong.lyrics}
           onConfirm={confirmSelection}
         />
       )}
@@ -783,6 +785,8 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
           canCancel
           reason="manual"
           modal
+          songTitle={currentSong.title}
+          lyrics={currentSong.lyrics}
           onConfirm={confirmSelection}
           onCancel={cancelSelection}
         />

@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import type { SyncMember } from '@/lib/sync/types'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import type { SyncLyricLine, SyncMember } from '@/lib/sync/types'
 import { memberDisplayName } from '@/lib/memberDisplayName'
 import styles from './MemberSelector.module.css'
 
@@ -13,11 +13,13 @@ interface Props {
   canCancel: boolean
   reason: 'initial' | 'song-change' | 'manual'
   modal?: boolean
+  songTitle?: string
+  lyrics?: SyncLyricLine[]
   onConfirm: (displayName: string, selectedIds: number[]) => Promise<void>
   onCancel?: () => void
 }
 
-export default function MemberSelector({ members, selectedIds, initialDisplayName, requireDisplayName, canCancel, reason, modal = false, onConfirm, onCancel }: Props) {
+export default function MemberSelector({ members, selectedIds, initialDisplayName, requireDisplayName, canCancel, reason, modal = false, songTitle, lyrics, onConfirm, onCancel }: Props) {
   const [displayName, setDisplayName] = useState(initialDisplayName)
   const [selected, setSelected] = useState<number[]>(selectedIds)
   const [saving, setSaving] = useState(false)
@@ -57,21 +59,41 @@ export default function MemberSelector({ members, selectedIds, initialDisplayNam
     catch (reasonValue) { setError(reasonValue instanceof Error ? reasonValue.message : '設定を保存できませんでした。'); setSaving(false) }
   }
 
-  const title = reason === 'initial' ? '端末を設定' : reason === 'song-change' ? 'この曲の担当を選択' : '担当を変更'
+  // 各メンバーのサンプル歌詞を抽出（最初に登場するソロまたはメイン担当行のテキスト）
+  const memberSamples = useMemo(() => {
+    if (!lyrics || lyrics.length === 0) return new Map<number, string>()
+    const samples = new Map<number, string>()
+    for (const member of members) {
+      for (const line of lyrics) {
+        if (samples.has(member.id)) break
+        if (line.memberIds.includes(member.id) && line.text.trim()) {
+          samples.set(member.id, line.text.length > 30 ? line.text.slice(0, 30) + '…' : line.text)
+        }
+      }
+    }
+    return samples
+  }, [lyrics, members])
+
+  const title = reason === 'initial' ? '端末を設定' : reason === 'song-change' ? '表示歌唱パートを選択' : '担当を変更'
   const card = (
     <section ref={cardRef} className={`${styles.card} ${modal ? styles.modalCard : ''}`} aria-labelledby="member-selector-title" {...(modal ? { role: 'dialog', 'aria-modal': true } : {})}>
       <p className={styles.step}>{isDeviceSetup ? '端末設定' : '担当設定'}</p>
       <h1 id="member-selector-title">{title}</h1>
+      {songTitle && !isDeviceSetup && <p className={styles.songTitle}>{songTitle}</p>}
       {requireDisplayName && <label className={styles.field}>端末名（1〜20文字）
         <input autoFocus={!modal} value={displayName} maxLength={20} onChange={event => setDisplayName(event.target.value)} placeholder="例：ステージ右 iPad" />
       </label>}
       {!isDeviceSetup && (
         <fieldset className={styles.members}>
-          <legend>現在曲の担当（1名以上）</legend>
+          <legend>表示歌唱パート（1名以上）</legend>
           {members.length === 0 ? <p className={styles.warning}>この曲にはメンバーが登録されていません。</p> : members.map((member, index) => (
             <label key={member.id} className={`${styles.member} ${selected.includes(member.id) ? styles.selected : ''}`}>
               <input type="checkbox" checked={selected.includes(member.id)} onChange={() => toggle(member.id)} />
-              <span className={styles.dot} style={{ background: member.color }} /><span>{memberDisplayName(member, index)}</span>
+              <span className={styles.dot} style={{ background: member.color }} />
+              <span className={styles.memberInfo}>
+                <span className={styles.memberName}>{memberDisplayName(member, index)}</span>
+                {memberSamples.get(member.id) && <span className={styles.memberSample}>{memberSamples.get(member.id)}</span>}
+              </span>
             </label>
           ))}
         </fieldset>

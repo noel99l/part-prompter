@@ -9,3 +9,8 @@
 .hint { color: #9ea9b7; font-size: .86rem; line-height: 1.6; }.warning, .error { grid-column: 1 / -1; color: #ffb5ba; }.actions { margin-top: 1.2rem; display: flex; justify-content: flex-end; gap: .7rem; }.actions button { min-height: 48px; padding: .7rem 1.2rem; border-radius: 8px; font-size: 1rem; cursor: pointer; }.confirm { color: #061016; background: #65d7ff; border: 0; font-weight: 800; }.cancel { color: #fff; background: transparent; border: 1px solid #536173; }.actions button:disabled { opacity: .4; cursor: not-allowed; }
 @media (max-width: 600px) { .members { grid-template-columns: 1fr; }.actions { flex-direction: column-reverse; }.actions button { width: 100%; } }
 @media (orientation: landscape) and (max-height: 700px) { .page { align-items: start; }.card { padding: 1rem 1.5rem; }.card h1 { margin-bottom: .7rem; }.members { margin: .8rem 0; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+.songTitle { margin: -.8rem 0 1.2rem; color: #a8b2be; font-size: 1.05rem; font-weight: 600; }
+.memberInfo { display: flex; flex-direction: column; gap: .15rem; min-width: 0; }
+.memberName { font-weight: 700; }
+.memberSample { color: #8a95a3; font-size: .78rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
