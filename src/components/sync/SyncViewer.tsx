@@ -577,6 +577,44 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     }
   }, [displayBlock, manualDisplayBlock])
 
+  // スライド進捗用の現在時刻
+  const [viewerNowMs, setViewerNowMs] = useState(() => Date.now())
+  useEffect(() => {
+    if (!snapshot?.state.isPlaying) { setViewerNowMs(Date.now()); return }
+    const timer = window.setInterval(() => setViewerNowMs(Date.now()), 100)
+    return () => window.clearInterval(timer)
+  }, [snapshot?.state.isPlaying, snapshot?.state.startedAt, snapshot?.state.positionMs])
+
+  const viewerPosition = snapshot
+    ? playbackPositionMs(snapshot.state.positionMs, snapshot.state.isPlaying, snapshot.state.startedAt, viewerNowMs)
+    : 0
+  const viewerMaxPosition = Math.max(
+    1000,
+    ...((currentSong?.lyrics ?? []).map(line => Math.round((line.timestampMs ?? 0) * bpmRate)))
+  )
+  // Viewer用スライドタイムスタンプ
+  const viewerSlideBlocks = useMemo(() => [-1, ...displayBlocks.map((_, i) => i)], [displayBlocks])
+  const viewerSlideTimestamps = useMemo(() => {
+    return viewerSlideBlocks.map((blockIdx, i) => {
+      if (blockIdx === -1) {
+        // 表紙：次のブロックの開始まで
+        const nextIdx = viewerSlideBlocks[i + 1]
+        const nextStart = nextIdx !== undefined && displayBlocks[nextIdx]?.startMs != null
+          ? Math.round(displayBlocks[nextIdx].startMs! * bpmRate)
+          : 0
+        return { start: 0, end: nextStart }
+      }
+      const start = displayBlocks[blockIdx]?.startMs != null
+        ? Math.round(displayBlocks[blockIdx].startMs! * bpmRate)
+        : 0
+      const nextIdx = viewerSlideBlocks[i + 1]
+      const end = nextIdx !== undefined && displayBlocks[nextIdx]?.startMs != null
+        ? Math.round(displayBlocks[nextIdx].startMs! * bpmRate)
+        : viewerMaxPosition
+      return { start, end }
+    })
+  }, [bpmRate, displayBlocks, viewerMaxPosition, viewerSlideBlocks])
+
   const memberMap = useMemo(() => new Map(currentSong?.members.map(member => [member.id, member]) ?? []), [currentSong])
   const memberNameMap = useMemo(() => new Map(
     currentSong?.members.map((member, index) => [member.id, memberDisplayName(member, index)]) ?? []
@@ -750,14 +788,20 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
         />
       )}
       <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
-        {[-1, ...displayBlocks.map((_, index) => index)].map(blockIndex => {
+        {viewerSlideBlocks.map((blockIndex, i) => {
           const active = blockIndex === (manualDisplayBlock ?? displayBlock)
+          const ts = viewerSlideTimestamps[i]
+          const duration = ts ? ts.end - ts.start : 0
+          const progress = active && duration > 0
+            ? Math.max(0, Math.min(1, (viewerPosition - ts.start) / duration))
+            : 0
           return (
             <button
               key={blockIndex}
               className={`${styles.slideSegment} ${active ? styles.slideSegmentActive : ''}`}
+              style={active && progress > 0 ? { '--slide-progress': `${progress * 100}%` } as CSSProperties : undefined}
               onClick={event => { event.stopPropagation(); setSettingsOpen(false); setManualDisplayBlock(blockIndex === displayBlock ? null : blockIndex) }}
-              aria-label={`スライド ${blockIndex + 2} / ${displayBlocks.length + 1}`}
+              aria-label={`スライド ${i + 1} / ${viewerSlideBlocks.length}`}
               aria-current={active ? 'step' : undefined}
             />
           )
