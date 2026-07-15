@@ -524,9 +524,12 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
     const small = width <= 768
     const lineFont = (small ? clamp(rem, 0.03 * width, 2 * rem) : clamp(2 * rem, 0.06 * width, 6 * rem)) * fontScale
     const nextFont = (small ? clamp(0.75 * rem, 0.022 * width, 1.4 * rem) : clamp(1.5 * rem, 0.045 * width, 4 * rem)) * fontScale
+    const lineHeight = lineFont * 1.6
+    const gap = 0.4 * rem
+    // topbar(58px) + 上下パディング(4vh+11vh) + 次セクション分
     const nextArea = showNext ? nextFont * 2.6 + 1.25 * rem : 0
     const available = height - 58 - height * 0.15 - nextArea
-    return { maxRows: Math.max(1, Math.floor(available / (lineFont * 1.6 + 0.4 * rem))), lineFont, contentW: width * 0.92 }
+    return { maxRows: Math.max(1, Math.floor((available + gap) / (lineHeight + gap))), lineFont, contentW: width * 0.92 }
   }, [fontScale, showNext, viewport])
 
   const displayBlocks = useMemo(
