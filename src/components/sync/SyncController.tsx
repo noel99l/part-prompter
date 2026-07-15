@@ -71,6 +71,9 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const [ended, setEnded] = useState(false)
   const [nowMs, setNowMs] = useState(() => Date.now())
   const [previewFontScale, setPreviewFontScale] = useState(1)
+  const [showNext, setShowNext] = useState(true)
+  const [autoSplit, setAutoSplit] = useState(true)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const realtimeRef = useRef<Ably.Realtime | null>(null)
   const snapshotRef = useRef<MasterSyncSnapshot | null>(null)
@@ -116,17 +119,31 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(CONTROLLER_DISPLAY_SETTINGS_KEY) ?? 'null') as { fontScale?: unknown } | null
+      const saved = JSON.parse(localStorage.getItem(CONTROLLER_DISPLAY_SETTINGS_KEY) ?? 'null') as { fontScale?: unknown; showNext?: unknown; autoSplit?: unknown } | null
       if (typeof saved?.fontScale === 'number') {
         setPreviewFontScale(Math.min(PREVIEW_FONT_SCALE_MAX, Math.max(PREVIEW_FONT_SCALE_MIN, saved.fontScale)))
       }
+      if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
+      if (typeof saved?.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
     } catch {}
   }, [])
+
+  const persistSettings = (fontScale: number, next: boolean, split: boolean) => {
+    try { localStorage.setItem(CONTROLLER_DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale, showNext: next, autoSplit: split })) } catch {}
+  }
 
   const changePreviewFontScale = (value: number) => {
     const next = Math.min(PREVIEW_FONT_SCALE_MAX, Math.max(PREVIEW_FONT_SCALE_MIN, Number(value.toFixed(2))))
     setPreviewFontScale(next)
-    try { localStorage.setItem(CONTROLLER_DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: next })) } catch {}
+    persistSettings(next, showNext, autoSplit)
+  }
+
+  const toggleShowNext = () => {
+    setShowNext(prev => { persistSettings(previewFontScale, !prev, autoSplit); return !prev })
+  }
+
+  const toggleAutoSplit = () => {
+    setAutoSplit(prev => { persistSettings(previewFontScale, showNext, !prev); return !prev })
   }
 
   const rotateJoinUrl = useCallback(async () => {
@@ -272,6 +289,12 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
     return () => window.clearInterval(timer)
   }, [snapshot?.state.isPlaying, snapshot?.state.startedAt, snapshot?.state.positionMs])
 
+  // 曲末に達したら自動停止
+  const autoStopFiredRef = useRef(false)
+  useEffect(() => {
+    if (!snapshot?.state.isPlaying) { autoStopFiredRef.current = false; return }
+  }, [snapshot?.state.isPlaying, snapshot?.state.version])
+
   const sendCommand = useCallback(async (body: Record<string, unknown>) => {
     const payload = JSON.stringify({ commandId: crypto.randomUUID(), ...body })
     const send = () => fetch(`/api/sync/sessions/${encodeURIComponent(sessionId)}/state`, {
@@ -346,8 +369,8 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
     return [...grouped.entries()].sort(([left], [right]) => left - right)
   }, [currentSong])
   const displayBlocks = useMemo(
-    () => buildDisplayBlocks(sourceBlocks.map(([, lines]) => lines), null, false),
-    [sourceBlocks]
+    () => buildDisplayBlocks(sourceBlocks.map(([, lines]) => lines), null, autoSplit),
+    [sourceBlocks, autoSplit]
   )
   const bpmRate = prompterBpmRate(currentSong?.originalBpm, currentSong?.playbackBpm)
   const currentPosition = snapshot
@@ -408,6 +431,42 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
     1000,
     ...((currentSong?.lyrics ?? []).map(line => Math.round((line.timestampMs ?? 0) * bpmRate)))
   )
+
+  // 曲末到達で自動停止
+  useEffect(() => {
+    if (!snapshot?.state.isPlaying || !connected || busy || autoStopFiredRef.current) return
+    if (currentPosition >= maxPosition) {
+      autoStopFiredRef.current = true
+      void command({ type: 'pause' })
+    }
+  }, [busy, command, connected, currentPosition, maxPosition, snapshot?.state.isPlaying])
+
+  // 各スライドの開始タイムスタンプ（bpmRate適用済み）を計算
+  const slideTimestamps = useMemo(() => {
+    return pageBlocks.map((block, index) => {
+      if (block === -1) {
+        // 表紙の終了は最初の歌詞ブロックの開始
+        const nextBlock = pageBlocks[index + 1]
+        const nextLines = nextBlock !== undefined
+          ? (currentSong?.lyrics ?? []).filter(l => l.blockIndex === nextBlock && l.timestampMs !== null)
+          : []
+        const nextStart = nextLines.length > 0 ? Math.round(Math.min(...nextLines.map(l => l.timestampMs!)) * bpmRate) : 0
+        return { start: 0, end: nextStart }
+      }
+      const lines = (currentSong?.lyrics ?? []).filter(l => l.blockIndex === block && l.timestampMs !== null)
+      const start = lines.length > 0 ? Math.round(Math.min(...lines.map(l => l.timestampMs!)) * bpmRate) : 0
+      const nextBlock = pageBlocks[index + 1]
+      let end: number
+      if (nextBlock !== undefined && nextBlock !== -1) {
+        const nextLines = (currentSong?.lyrics ?? []).filter(l => l.blockIndex === nextBlock && l.timestampMs !== null)
+        end = nextLines.length > 0 ? Math.round(Math.min(...nextLines.map(l => l.timestampMs!)) * bpmRate) : maxPosition
+      } else {
+        end = maxPosition
+      }
+      return { start, end }
+    })
+  }, [bpmRate, currentSong?.lyrics, maxPosition, pageBlocks])
+
   const memberMap = new Map(currentSong?.members.map(member => [member.id, member]) ?? [])
   const renderControllerLine = (line: ControllerDisplayLine) => {
     if (line.wordMembers.length > 0) return line.wordMembers.map((word, index) => {
@@ -500,25 +559,65 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
               displayBlocks={displayBlocks}
               currentBlock={controllerBlockIndex}
               isPortrait={false}
+              showNext={showNext}
               renderLine={renderControllerLine}
               lineKey={line => line.id}
               embedded
             />
           </div>
           <div className={styles.previewSettings}>
-            <span>プレビュー文字サイズ</span>
-            <button onClick={() => changePreviewFontScale(previewFontScale - PREVIEW_FONT_SCALE_STEP)} disabled={previewFontScale <= PREVIEW_FONT_SCALE_MIN} aria-label="プレビュー文字を小さく">A−</button>
-            <strong>{Math.round(previewFontScale * 100)}%</strong>
-            <button onClick={() => changePreviewFontScale(previewFontScale + PREVIEW_FONT_SCALE_STEP)} disabled={previewFontScale >= PREVIEW_FONT_SCALE_MAX} aria-label="プレビュー文字を大きく">A＋</button>
-            <input
-              type="range"
-              min={PREVIEW_FONT_SCALE_MIN * 100}
-              max={PREVIEW_FONT_SCALE_MAX * 100}
-              step={1}
-              value={Math.round(previewFontScale * 100)}
-              onChange={event => changePreviewFontScale(Number(event.target.value) / 100)}
-              aria-label="プレビュー文字サイズ"
-            />
+            <button
+              className={`${styles.settingsToggle} ${settingsOpen ? styles.settingsToggleActive : ''}`}
+              onClick={() => setSettingsOpen(v => !v)}
+              aria-expanded={settingsOpen}
+              aria-controls="controller-settings-panel"
+            >
+              ⚙ 表示設定
+            </button>
+            {settingsOpen && (
+              <div id="controller-settings-panel" className={styles.settingsPanel}>
+                <div className={styles.settingsRow}>
+                  <span className={styles.settingsLabel}>文字サイズ</span>
+                  <div className={styles.fontSizeControls}>
+                    <button onClick={() => changePreviewFontScale(previewFontScale - PREVIEW_FONT_SCALE_STEP)} disabled={previewFontScale <= PREVIEW_FONT_SCALE_MIN} aria-label="文字を小さく">A−</button>
+                    <strong>{Math.round(previewFontScale * 100)}%</strong>
+                    <button onClick={() => changePreviewFontScale(previewFontScale + PREVIEW_FONT_SCALE_STEP)} disabled={previewFontScale >= PREVIEW_FONT_SCALE_MAX} aria-label="文字を大きく">A＋</button>
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  className={styles.fontSlider}
+                  min={PREVIEW_FONT_SCALE_MIN * 100}
+                  max={PREVIEW_FONT_SCALE_MAX * 100}
+                  step={1}
+                  value={Math.round(previewFontScale * 100)}
+                  onChange={event => changePreviewFontScale(Number(event.target.value) / 100)}
+                  aria-label="文字サイズ"
+                />
+                <div className={styles.settingsRow}>
+                  <span className={styles.settingsLabel}>次のセクションを表示</span>
+                  <button
+                    role="switch"
+                    aria-checked={showNext}
+                    className={`${styles.switch} ${showNext ? styles.switchOn : ''}`}
+                    onClick={toggleShowNext}
+                  >
+                    <span className={styles.switchKnob} />
+                  </button>
+                </div>
+                <div className={styles.settingsRow}>
+                  <span className={styles.settingsLabel}>自動ブロック分け</span>
+                  <button
+                    role="switch"
+                    aria-checked={autoSplit}
+                    className={`${styles.switch} ${autoSplit ? styles.switchOn : ''}`}
+                    onClick={toggleAutoSplit}
+                  >
+                    <span className={styles.switchKnob} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           <div className={styles.controls} aria-busy={pageCommandBusy}>
             <button onClick={() => movePage(-1)} disabled={!connected || busy || currentPageIndex <= 0}>◀ 前ページ</button>
@@ -526,22 +625,33 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button onClick={() => movePage(1)} disabled={!connected || busy || currentPageIndex >= pageBlocks.length - 1}>次ページ ▶</button>
           </div>
           <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
-            {pageBlocks.map((block, index) => (
-              <button
-                key={block}
-                className={`${styles.slideSegment} ${index === currentPageIndex ? styles.slideSegmentActive : ''}`}
-                onClick={() => {
-                  if (block === previewPageBlock) return
-                  optimisticPageBlockRef.current = block
-                  queuedPageBlockRef.current = block
-                  setOptimisticPageBlock(block)
-                  void flushPageCommands()
-                }}
-                disabled={!connected || busy}
-                aria-label={`スライド ${index + 1} / ${pageBlocks.length}`}
-                aria-current={index === currentPageIndex ? 'step' : undefined}
-              />
-            ))}
+            {pageBlocks.map((block, index) => {
+              const active = index === currentPageIndex
+              const ts = slideTimestamps[index]
+              const duration = ts ? ts.end - ts.start : 0
+              const progress = active && duration > 0 && snapshot?.state.isPlaying
+                ? Math.max(0, Math.min(1, (currentPosition - ts.start) / duration))
+                : active && duration > 0
+                  ? Math.max(0, Math.min(1, (currentPosition - ts.start) / duration))
+                  : 0
+              return (
+                <button
+                  key={block}
+                  className={`${styles.slideSegment} ${active ? styles.slideSegmentActive : ''}`}
+                  style={active && progress > 0 ? { '--slide-progress': `${progress * 100}%` } as CSSProperties : undefined}
+                  onClick={() => {
+                    if (block === previewPageBlock) return
+                    optimisticPageBlockRef.current = block
+                    queuedPageBlockRef.current = block
+                    setOptimisticPageBlock(block)
+                    void flushPageCommands()
+                  }}
+                  disabled={!connected || busy}
+                  aria-label={`スライド ${index + 1} / ${pageBlocks.length}`}
+                  aria-current={active ? 'step' : undefined}
+                />
+              )
+            })}
           </div>
           <label className={styles.seek}>再生位置 {Math.floor(currentPosition / 1000)}秒
             <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy || pageCommandBusy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />

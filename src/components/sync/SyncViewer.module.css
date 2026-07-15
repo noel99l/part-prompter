@@ -41,8 +41,9 @@
 .viewerControls button:disabled { opacity: .3; cursor: not-allowed; }
 .slideSeek { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; display: flex; height: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
 .slideSegment { position: relative; flex: 1; min-width: 0; padding: 0; border: none; background: transparent; cursor: pointer; overflow: hidden; }
+.slideSegment::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--slide-progress, 0%); background: #e00; pointer-events: none; }
 .slideSegment:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, .06); }
 .slideSegment:hover { background: rgba(255, 255, 255, .08); }
 .slideSegment:focus-visible { outline: 2px solid #65d7ff; outline-offset: -1px; }
-.slideSegmentActive { background: #e00; }
-.slideSegmentActive:hover { background: #f22; }
+.slideSegmentActive { background: transparent; }
+.slideSegmentActive:hover { background: rgba(255, 255, 255, .08); }
