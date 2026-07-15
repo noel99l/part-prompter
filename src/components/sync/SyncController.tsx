@@ -525,6 +525,24 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button className={styles.play} onClick={() => command({ type: snapshot.state.isPlaying ? 'pause' : 'play' })} disabled={!connected || busy}>{snapshot.state.isPlaying ? '⏸ 一時停止' : '▶ 再生'}</button>
             <button onClick={() => movePage(1)} disabled={!connected || busy || currentPageIndex >= pageBlocks.length - 1}>次ページ ▶</button>
           </div>
+          <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
+            {pageBlocks.map((block, index) => (
+              <button
+                key={block}
+                className={`${styles.slideSegment} ${index === currentPageIndex ? styles.slideSegmentActive : ''}`}
+                onClick={() => {
+                  if (block === previewPageBlock) return
+                  optimisticPageBlockRef.current = block
+                  queuedPageBlockRef.current = block
+                  setOptimisticPageBlock(block)
+                  void flushPageCommands()
+                }}
+                disabled={!connected || busy}
+                aria-label={`スライド ${index + 1} / ${pageBlocks.length}`}
+                aria-current={index === currentPageIndex ? 'step' : undefined}
+              />
+            ))}
+          </div>
           <label className={styles.seek}>再生位置 {Math.floor(currentPosition / 1000)}秒
             <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy || pageCommandBusy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />
           </label>
