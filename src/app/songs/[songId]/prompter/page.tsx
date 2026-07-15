@@ -193,16 +193,20 @@ export default function PrompterView() {
     const small = W <= 768
     const lineFont = (small ? clampCalc(rem, 0.03 * W, 2 * rem) : clampCalc(2 * rem, 0.06 * W, 6 * rem)) * fontScale
     const nextFont = (small ? clampCalc(0.75 * rem, 0.022 * W, 1.4 * rem) : clampCalc(1.5 * rem, 0.045 * W, 4 * rem)) * fontScale
-    // 視覚1行分: line-height 1.3 + margin-bottom 0.3em + .currentBlock の gap 0.4rem
-    const rowHeight = lineFont * 1.6 + 0.4 * rem
+    // 視覚1行分: line-height 1.3 + margin-bottom 0.3em = 1.6em
+    const lineHeight = lineFont * 1.6
+    // flexbox gap: 行間のみ（最後の行には入らない）
+    const gap = 0.4 * rem
     const padTop = 0.03 * W
     // 次セクションプレビュー（fixed bottom 5rem ＋ CSSで2行分にクリップした高さ）または操作ボタン分の余白
     const nextArea = showNext
       ? 5 * rem + nextFont * 2.6 + 1.25 * rem
       : 5.5 * rem
     const available = H - padTop - nextArea
+    // N行のとき高さ = N * lineHeight + (N-1) * gap
+    // available + gap >= N * (lineHeight + gap) を解く
     return {
-      maxRows: Math.max(1, Math.floor(available / rowHeight)),
+      maxRows: Math.max(1, Math.floor((available + gap) / (lineHeight + gap))),
       lineFont,
       contentW: W * 0.92, // padding 左右 4vw ずつ
     }
