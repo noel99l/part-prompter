@@ -21,6 +21,7 @@ interface PrompterStageProps<Line extends PromptLine> {
   displayBlocks: DisplayChunk<Line>[]
   currentBlock: number
   isPortrait: boolean
+  continuousScroll?: boolean
   showNext?: boolean
   renderLine: (line: Line) => ReactNode
   lineKey: (line: Line) => string | number
@@ -37,6 +38,7 @@ export default function PrompterStage<Line extends PromptLine>({
   displayBlocks,
   currentBlock,
   isPortrait,
+  continuousScroll = false,
   showNext = true,
   renderLine,
   lineKey,
@@ -45,18 +47,28 @@ export default function PrompterStage<Line extends PromptLine>({
   scrollBlockAlign = 'center',
 }: PrompterStageProps<Line>) {
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
+  const coverRef = useRef<HTMLDivElement | null>(null)
+  const scrollMode = isPortrait || continuousScroll
+  const landscapeScroll = continuousScroll && !isPortrait
 
   useEffect(() => {
-    if (!isPortrait || currentBlock < 0) return
-    blockRefs.current[currentBlock]?.scrollIntoView({ behavior: 'smooth', block: scrollBlockAlign })
-  }, [currentBlock, isPortrait, scrollBlockAlign])
+    if (!scrollMode) return
+    if (currentBlock < 0) {
+      coverRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    blockRefs.current[currentBlock]?.scrollIntoView({
+      behavior: 'smooth',
+      block: landscapeScroll ? 'start' : scrollBlockAlign,
+    })
+  }, [currentBlock, landscapeScroll, scrollBlockAlign, scrollMode])
 
   const cover = (
-    <div className={`${isPortrait ? styles.scrollCover : styles.cover} ${embedded ? styles.coverEmbedded : ''}`}>
+    <div ref={coverRef} className={`${scrollMode ? styles.scrollCover : styles.cover} ${landscapeScroll ? styles.scrollCoverLandscape : ''} ${embedded ? styles.coverEmbedded : ''}`}>
       <div className={styles.coverTitle}>{title}</div>
       {artist && <div className={styles.coverArtist}>{artist}</div>}
       {coverText && <div className={styles.coverText}>{coverText}</div>}
-      {!isPortrait && <div className={styles.coverSeparator} />}
+      {(!scrollMode || landscapeScroll) && <div className={styles.coverSeparator} />}
       {members.length > 0 && (
         <div className={styles.coverMembers}>
           {members.map((member, index) => (
@@ -72,19 +84,24 @@ export default function PrompterStage<Line extends PromptLine>({
     </div>
   )
 
-  if (isPortrait) {
+  if (scrollMode) {
     return (
-      <div className={styles.scrollView}>
+      <div className={`${styles.scrollView} ${landscapeScroll ? styles.scrollViewLandscape : ''}`}>
         {cover}
         {displayBlocks.map((block, blockIndex) => (
           <div
             key={blockIndex}
             ref={element => { blockRefs.current[blockIndex] = element }}
-            className={`${styles.scrollBlock} ${blockIndex === currentBlock ? styles.scrollBlockActive : ''}`}
+            className={`${styles.scrollBlock} ${landscapeScroll ? styles.scrollBlockLandscape : ''} ${blockIndex === currentBlock ? styles.scrollBlockActive : ''}`}
             onClick={onSelectBlock ? () => onSelectBlock(blockIndex) : undefined}
           >
             {block.lines.map(line => (
-              <div key={lineKey(line)} className={styles.scrollLine}>{renderLine(line)}</div>
+              <div
+                key={lineKey(line)}
+                className={`${styles.scrollLine} ${landscapeScroll ? styles.scrollLineLandscape : ''} ${landscapeScroll && embedded ? styles.scrollLineEmbedded : ''}`}
+              >
+                {renderLine(line)}
+              </div>
             ))}
           </div>
         ))}

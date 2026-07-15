@@ -106,6 +106,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
   const [autoSplit, setAutoSplit] = useState(true)
+  const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [fullscreenSupported, setFullscreenSupported] = useState(false)
   const [fullscreenActive, setFullscreenActive] = useState(false)
@@ -196,16 +197,17 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
 
   useEffect(() => {
     if (!device?.id) return
-    setFontScale(1); setShowNext(true); setAutoSplit(true); setSettingsOpen(false)
+    setFontScale(1); setShowNext(true); setAutoSplit(true); setDisplayMode('slide'); setSettingsOpen(false)
     try {
       const saved = JSON.parse(localStorage.getItem(displaySettingsKey(device.id)) ?? 'null') as Record<string, unknown> | null
       if (typeof saved?.fontScale === 'number') setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
       if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
       if (typeof saved?.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
+      if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') setDisplayMode(saved.displayMode)
     } catch {}
   }, [device?.id])
 
-  const persistDisplaySettings = (nextFontScale: number, nextShowNext: boolean, nextAutoSplit: boolean) => {
+  const persistDisplaySettings = (nextFontScale: number, nextShowNext: boolean, nextAutoSplit: boolean, nextDisplayMode: 'slide' | 'scroll') => {
     const deviceId = deviceRef.current?.id
     if (!deviceId) return
     try {
@@ -213,6 +215,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
         fontScale: nextFontScale,
         showNext: nextShowNext,
         autoSplit: nextAutoSplit,
+        displayMode: nextDisplayMode,
       }))
     } catch {}
   }
@@ -220,17 +223,23 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
   const changeFontScale = (value: number) => {
     const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, Number(value.toFixed(2))))
     setFontScale(next)
-    persistDisplaySettings(next, showNext, autoSplit)
+    persistDisplaySettings(next, showNext, autoSplit, displayMode)
   }
 
   const toggleShowNext = () => setShowNext(current => {
-    persistDisplaySettings(fontScale, !current, autoSplit)
+    persistDisplaySettings(fontScale, !current, autoSplit, displayMode)
     return !current
   })
 
   const toggleAutoSplit = () => setAutoSplit(current => {
-    persistDisplaySettings(fontScale, showNext, !current)
+    persistDisplaySettings(fontScale, showNext, !current, displayMode)
     return !current
+  })
+
+  const toggleDisplayMode = () => setDisplayMode(current => {
+    const next = current === 'slide' ? 'scroll' : 'slide'
+    persistDisplaySettings(fontScale, showNext, autoSplit, next)
+    return next
   })
 
   useEffect(() => {
@@ -658,6 +667,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
   }
 
   const visibleDisplayBlock = manualDisplayBlock ?? displayBlock
+  const continuousScroll = !isPortrait && displayMode === 'scroll'
   const moveManualDisplay = (delta: -1 | 1) => {
     setSettingsOpen(false)
     setManualDisplayBlock(current => {
@@ -711,7 +721,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
         </div>
       </header>
       {error && <div className={styles.error} role="status">{error}</div>}
-      <section className={styles.stage} aria-live="off" style={{ '--fontScale': fontScale } as CSSProperties} onClick={handleStageTap}>
+      <section className={`${styles.stage} ${continuousScroll ? styles.stageScroll : ''}`} aria-live="off" style={{ '--fontScale': fontScale } as CSSProperties} onClick={continuousScroll ? undefined : handleStageTap}>
         <PrompterStage
           title={currentSong.title}
           artist={currentSong.artist}
@@ -725,6 +735,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
           displayBlocks={displayBlocks}
           currentBlock={visibleDisplayBlock}
           isPortrait={isPortrait}
+          continuousScroll={continuousScroll}
           showNext={showNext}
           renderLine={renderLine}
           lineKey={line => line.id}
@@ -753,7 +764,11 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
             aria-label="文字サイズ"
           />
           <div className={styles.settingsRow}>
-            <span>次のセクションを表示</span>
+            <span>横画面を連続スクロール表示</span>
+            <button role="switch" aria-checked={displayMode === 'scroll'} className={`${styles.switch} ${displayMode === 'scroll' ? styles.switchOn : ''}`} onClick={toggleDisplayMode}><span /></button>
+          </div>
+          <div className={styles.settingsRow}>
+            <span>次のセクションを表示（スライド時）</span>
             <button role="switch" aria-checked={showNext} className={`${styles.switch} ${showNext ? styles.switchOn : ''}`} onClick={toggleShowNext}><span /></button>
           </div>
           <div className={styles.settingsRow}>

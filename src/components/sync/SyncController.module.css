@@ -14,6 +14,7 @@
 .stage, .panel { background: #11151c; border: 1px solid #28313e; border-radius: 16px; }
 .stage { padding: clamp(1rem, 2.5vw, 2rem); }
 .preview { position: relative; height: 390px; margin: 1rem 0; padding: 2rem; display: flex; flex-direction: column; justify-content: flex-start; background: #000; border-radius: 12px; overflow: hidden; }
+.preview.previewScroll { overflow-y: auto; scroll-padding-top: 1rem; }
 .preview.previewExpanded { height: clamp(420px, 58vh, 620px); }
 .textTransparent { color: transparent; }
 .cover { text-align: center; }.cover h2 { font-size: clamp(2rem, 6vw, 4.8rem); margin: 0; }.cover p { color: #aaa; }
@@ -22,8 +23,7 @@
 .controls { display: grid; grid-template-columns: 1fr 1.2fr 1fr; gap: .7rem; }.controls button, .urlRow button, .endButton { min-height: 48px; border-radius: 8px; cursor: pointer; }
 .controls button { color: #fff; background: #242b35; border: 1px solid #465365; font-size: 1rem; }.controls .play { color: #071015; background: #65d7ff; border-color: #65d7ff; font-weight: 800; }
 .controls button:disabled, .endButton:disabled { opacity: .35; cursor: not-allowed; }
-.seek { margin-top: 1rem; display: grid; gap: .4rem; color: #aeb8c6; }.seek input { width: 100%; min-height: 44px; }
-.slideSeek { margin-top: .7rem; display: flex; align-items: center; gap: .6rem; }
+.slideSeek { position: absolute; right: 2rem; bottom: .4rem; left: 2rem; z-index: 3; display: flex; align-items: center; gap: .6rem; }
 .slideTime { flex: none; color: #9aa5b4; font-size: .8rem; font-variant-numeric: tabular-nums; }
 .slideBar { flex: 1; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 2px; overflow: hidden; }
 .slideBarFill { height: 100%; background: #e00; transition: width .1s linear; }
@@ -40,7 +40,7 @@
 .device { margin-top: .65rem; padding: .8rem; display: flex; align-items: center; justify-content: space-between; gap: .6rem; background: #090c11; border-radius: 8px; }.device div { display: grid; gap: .2rem; }.device small { color: #788493; }.device span { color: #ffd27a; font-size: .82rem; }.device span[data-status='準備完了'] { color: #82efab; }.device span[data-status='切断中'] { color: #ff9da4; }
 .endButton { color: #ffb4b8; background: transparent; border: 1px solid #7c343b; font-size: 1rem; }.error { max-width: 1400px; margin: 0 auto 1rem; padding: .7rem 1rem; color: #ffb8be; background: #441e25; border-radius: 8px; }.loading, .ended { max-width: 700px; margin: 5rem auto; text-align: center; }.ended a { color: #65d7ff; }
 @media (max-width: 1020px) { .grid { grid-template-columns: 1fr; }.sidebar { display: grid; grid-template-columns: 1fr 1fr; }.endButton { grid-column: 1 / -1; }.preview { height: 330px; }.preview.previewExpanded { height: clamp(380px, 58vh, 560px); } }
-@media (max-width: 650px) { .page { padding: .8rem; }.header { align-items: flex-start; }.headerActions { flex-direction: column-reverse; align-items: flex-end; }.sidebarToggle { font-size: .82rem; }.sidebar { grid-template-columns: 1fr; }.controls { grid-template-columns: 1fr; }.preview { height: 280px; padding: 1rem; }.preview.previewExpanded { height: max(320px, 58vh); }.urlRow { grid-template-columns: 1fr; } }
+@media (max-width: 650px) { .page { padding: .8rem; }.header { align-items: flex-start; }.headerActions { flex-direction: column-reverse; align-items: flex-end; }.sidebarToggle { font-size: .82rem; }.sidebar { grid-template-columns: 1fr; }.controls { grid-template-columns: 1fr; }.preview { height: 280px; padding: 1rem; }.preview.previewExpanded { height: max(320px, 58vh); }.slideSeek { right: 1rem; left: 1rem; }.urlRow { grid-template-columns: 1fr; } }
 .songNavigation { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: .6rem; }
 .songSelect { min-width: 0; min-height: 46px; padding: 0 .8rem; color: #fff; background: #080b10; border: 1px solid #3c4858; border-radius: 8px; font-size: 1rem; }
 .songNavigation > button { min-height: 46px; padding: 0 .9rem; color: #fff; background: #242b35; border: 1px solid #465365; border-radius: 8px; cursor: pointer; }

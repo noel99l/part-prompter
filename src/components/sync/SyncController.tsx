@@ -73,6 +73,7 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const [previewFontScale, setPreviewFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
   const [autoSplit, setAutoSplit] = useState(true)
+  const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const realtimeRef = useRef<Ably.Realtime | null>(null)
@@ -119,31 +120,40 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(CONTROLLER_DISPLAY_SETTINGS_KEY) ?? 'null') as { fontScale?: unknown; showNext?: unknown; autoSplit?: unknown } | null
+      const saved = JSON.parse(localStorage.getItem(CONTROLLER_DISPLAY_SETTINGS_KEY) ?? 'null') as { fontScale?: unknown; showNext?: unknown; autoSplit?: unknown; displayMode?: unknown } | null
       if (typeof saved?.fontScale === 'number') {
         setPreviewFontScale(Math.min(PREVIEW_FONT_SCALE_MAX, Math.max(PREVIEW_FONT_SCALE_MIN, saved.fontScale)))
       }
       if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
       if (typeof saved?.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
+      if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') setDisplayMode(saved.displayMode)
     } catch {}
   }, [])
 
-  const persistSettings = (fontScale: number, next: boolean, split: boolean) => {
-    try { localStorage.setItem(CONTROLLER_DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale, showNext: next, autoSplit: split })) } catch {}
+  const persistSettings = (fontScale: number, next: boolean, split: boolean, mode: 'slide' | 'scroll') => {
+    try { localStorage.setItem(CONTROLLER_DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale, showNext: next, autoSplit: split, displayMode: mode })) } catch {}
   }
 
   const changePreviewFontScale = (value: number) => {
     const next = Math.min(PREVIEW_FONT_SCALE_MAX, Math.max(PREVIEW_FONT_SCALE_MIN, Number(value.toFixed(2))))
     setPreviewFontScale(next)
-    persistSettings(next, showNext, autoSplit)
+    persistSettings(next, showNext, autoSplit, displayMode)
   }
 
   const toggleShowNext = () => {
-    setShowNext(prev => { persistSettings(previewFontScale, !prev, autoSplit); return !prev })
+    setShowNext(prev => { persistSettings(previewFontScale, !prev, autoSplit, displayMode); return !prev })
   }
 
   const toggleAutoSplit = () => {
-    setAutoSplit(prev => { persistSettings(previewFontScale, showNext, !prev); return !prev })
+    setAutoSplit(prev => { persistSettings(previewFontScale, showNext, !prev, displayMode); return !prev })
+  }
+
+  const toggleDisplayMode = () => {
+    setDisplayMode(prev => {
+      const next = prev === 'slide' ? 'scroll' : 'slide'
+      persistSettings(previewFontScale, showNext, autoSplit, next)
+      return next
+    })
   }
 
   const rotateJoinUrl = useCallback(async () => {
@@ -545,7 +555,7 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
               次の曲 ▶
             </button>
           </div>
-          <div className={`${styles.preview} ${sidebarOpen ? '' : styles.previewExpanded}`} style={{ background: currentSong.bgColor || '#000', '--fontScale': previewFontScale } as CSSProperties}>
+          <div className={`${styles.preview} ${sidebarOpen ? '' : styles.previewExpanded} ${displayMode === 'scroll' ? styles.previewScroll : ''}`} style={{ background: currentSong.bgColor || '#000', '--fontScale': previewFontScale } as CSSProperties}>
             <PrompterStage
               title={currentSong.title}
               artist={currentSong.artist}
@@ -559,11 +569,29 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
               displayBlocks={displayBlocks}
               currentBlock={controllerBlockIndex}
               isPortrait={false}
+              continuousScroll={displayMode === 'scroll'}
               showNext={showNext}
               renderLine={renderControllerLine}
               lineKey={line => line.id}
               embedded
             />
+            <div className={styles.slideSeek} aria-label="スライド再生位置">
+              {(() => {
+                const ts = slideTimestamps[currentPageIndex]
+                if (!ts || ts.end <= ts.start) return null
+                const progress = Math.max(0, Math.min(1, (currentPosition - ts.start) / (ts.end - ts.start)))
+                const formatTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
+                return (
+                  <>
+                    <span className={styles.slideTime}>{formatTime(ts.start)}</span>
+                    <div className={styles.slideBar}>
+                      <div className={styles.slideBarFill} style={{ width: `${progress * 100}%` }} />
+                    </div>
+                    <span className={styles.slideTime}>{formatTime(ts.end)}</span>
+                  </>
+                )
+              })()}
+            </div>
           </div>
           <div className={styles.previewSettings}>
             <button
@@ -595,7 +623,18 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
                   aria-label="文字サイズ"
                 />
                 <div className={styles.settingsRow}>
-                  <span className={styles.settingsLabel}>次のセクションを表示</span>
+                  <span className={styles.settingsLabel}>横画面を連続スクロール表示</span>
+                  <button
+                    role="switch"
+                    aria-checked={displayMode === 'scroll'}
+                    className={`${styles.switch} ${displayMode === 'scroll' ? styles.switchOn : ''}`}
+                    onClick={toggleDisplayMode}
+                  >
+                    <span className={styles.switchKnob} />
+                  </button>
+                </div>
+                <div className={styles.settingsRow}>
+                  <span className={styles.settingsLabel}>次のセクションを表示（スライド時）</span>
                   <button
                     role="switch"
                     aria-checked={showNext}
@@ -624,26 +663,6 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button className={styles.play} onClick={() => command({ type: snapshot.state.isPlaying ? 'pause' : 'play' })} disabled={!connected || busy}>{snapshot.state.isPlaying ? '⏸ 一時停止' : '▶ 再生'}</button>
             <button onClick={() => movePage(1)} disabled={!connected || busy || currentPageIndex >= pageBlocks.length - 1}>次ページ ▶</button>
           </div>
-          <div className={styles.slideSeek} aria-label="スライド再生位置">
-            {(() => {
-              const ts = slideTimestamps[currentPageIndex]
-              if (!ts || ts.end <= ts.start) return null
-              const progress = Math.max(0, Math.min(1, (currentPosition - ts.start) / (ts.end - ts.start)))
-              const formatTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
-              return (
-                <>
-                  <span className={styles.slideTime}>{formatTime(ts.start)}</span>
-                  <div className={styles.slideBar}>
-                    <div className={styles.slideBarFill} style={{ width: `${progress * 100}%` }} />
-                  </div>
-                  <span className={styles.slideTime}>{formatTime(ts.end)}</span>
-                </>
-              )
-            })()}
-          </div>
-          <label className={styles.seek}>再生位置 {Math.floor(currentPosition / 1000)}秒
-            <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy || pageCommandBusy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />
-          </label>
         </section>
         {sidebarOpen && (
           <aside id="sync-controller-sidebar" className={styles.sidebar}>

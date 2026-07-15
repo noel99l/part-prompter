@@ -60,6 +60,7 @@ export default function PrompterView() {
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
   const [autoSplit, setAutoSplit] = useState(true)
+  const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
@@ -68,34 +69,42 @@ export default function PrompterView() {
       if (saved && typeof saved.fontScale === 'number') setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
       if (saved && typeof saved.showNext === 'boolean') setShowNext(saved.showNext)
       if (saved && typeof saved.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
+      if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') setDisplayMode(saved.displayMode)
     } catch {}
   }, [])
 
-  const persistDisplaySettings = (fs: number, sn: boolean, as: boolean) => {
-    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn, autoSplit: as })) } catch {}
+  const persistDisplaySettings = (fs: number, sn: boolean, as: boolean, mode: 'slide' | 'scroll') => {
+    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn, autoSplit: as, displayMode: mode })) } catch {}
   }
   const changeFontScale = (delta: number) => {
     setFontScale(prev => {
       const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +(prev + delta).toFixed(2)))
-      persistDisplaySettings(next, showNext, autoSplit)
+      persistDisplaySettings(next, showNext, autoSplit, displayMode)
       return next
     })
   }
   const setFontScaleValue = (value: number) => {
     const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +value.toFixed(2)))
     setFontScale(next)
-    persistDisplaySettings(next, showNext, autoSplit)
+    persistDisplaySettings(next, showNext, autoSplit, displayMode)
   }
   const toggleShowNext = () => {
     setShowNext(prev => {
-      persistDisplaySettings(fontScale, !prev, autoSplit)
+      persistDisplaySettings(fontScale, !prev, autoSplit, displayMode)
       return !prev
     })
   }
   const toggleAutoSplit = () => {
     setAutoSplit(prev => {
-      persistDisplaySettings(fontScale, showNext, !prev)
+      persistDisplaySettings(fontScale, showNext, !prev, displayMode)
       return !prev
+    })
+  }
+  const toggleDisplayMode = () => {
+    setDisplayMode(prev => {
+      const next = prev === 'slide' ? 'scroll' : 'slide'
+      persistDisplaySettings(fontScale, showNext, autoSplit, next)
+      return next
     })
   }
   const rafRef = useRef<number | null>(null)
@@ -416,6 +425,8 @@ export default function PrompterView() {
     return <span style={{ backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{line.text}</span>
   }
 
+  const continuousScroll = !isPortrait && displayMode === 'scroll'
+
   if (!song) return (
     <div className={styles.skeletonWrap}>
       <div className={skStyles.sk} style={{ width: '60%', height: 'clamp(2.5rem, 6vw, 5rem)', borderRadius: 8 }} />
@@ -439,7 +450,7 @@ export default function PrompterView() {
         <div className={styles.rotateIcon}>↺</div>
         <p className={styles.rotateText}>端末を横向きにしてください</p>
       </div>
-      <div className={styles.container} style={{ background: song?.bg_color || '#000', '--fontScale': fontScale } as React.CSSProperties} onClick={isMobile && !isPortrait ? handleTap : undefined}>
+      <div className={`${styles.container} ${continuousScroll ? styles.containerScroll : ''}`} style={{ background: song?.bg_color || '#000', '--fontScale': fontScale } as React.CSSProperties} onClick={isMobile && !isPortrait && !continuousScroll ? handleTap : undefined}>
         <PrompterStage
           title={song.title}
           artist={song.artist}
@@ -453,6 +464,7 @@ export default function PrompterView() {
           displayBlocks={displayBlocks}
           currentBlock={currentBlock}
           isPortrait={isPortrait}
+          continuousScroll={continuousScroll}
           showNext={showNext}
           renderLine={renderLine}
           lineKey={line => line.id}
@@ -483,7 +495,18 @@ export default function PrompterView() {
               aria-label="文字サイズ"
             />
             <div className={styles.settingsRow}>
-              <span className={styles.settingsLabel}>次のセクションを表示</span>
+              <span className={styles.settingsLabel}>横画面を連続スクロール表示</span>
+              <button
+                role="switch"
+                aria-checked={displayMode === 'scroll'}
+                className={`${styles.switch} ${displayMode === 'scroll' ? styles.switchOn : ''}`}
+                onClick={toggleDisplayMode}
+              >
+                <span className={styles.switchKnob} />
+              </button>
+            </div>
+            <div className={styles.settingsRow}>
+              <span className={styles.settingsLabel}>次のセクションを表示（スライド時）</span>
               <button
                 role="switch"
                 aria-checked={showNext}
