@@ -39,11 +39,7 @@
 .viewerControls .pageButton, .viewerControls .settingsButton, .viewerControls .fullscreenButton, .viewerControls .changeButton { padding: .6rem 1rem; }
 .viewerControls svg { width: 1.35rem; height: 1.35rem; display: block; }
 .viewerControls button:disabled { opacity: .3; cursor: not-allowed; }
-.slideSeek { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; display: flex; height: 3px; background: rgba(255, 255, 255, .1); overflow: hidden; }
-.slideSegment { position: relative; flex: 1; min-width: 0; padding: 0; border: none; background: transparent; cursor: pointer; overflow: hidden; }
-.slideSegment::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--slide-progress, 0%); background: #e00; pointer-events: none; }
-.slideSegment:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, .06); }
-.slideSegment:hover { background: rgba(255, 255, 255, .08); }
-.slideSegment:focus-visible { outline: 2px solid #65d7ff; outline-offset: -1px; }
-.slideSegmentActive { background: transparent; }
-.slideSegmentActive:hover { background: rgba(255, 255, 255, .08); }
+.slideSeek { position: fixed; z-index: 10; left: 0; right: 0; bottom: 0; display: flex; align-items: center; gap: .5rem; height: 20px; padding: 0 .8rem; background: rgba(7, 9, 13, .7); }
+.slideTime { flex: none; color: #9aa5b4; font-size: .7rem; font-variant-numeric: tabular-nums; }
+.slideBar { flex: 1; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 2px; overflow: hidden; }
+.slideBarFill { height: 100%; background: #e00; transition: width .1s linear; }
