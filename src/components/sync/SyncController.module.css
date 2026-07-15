@@ -23,14 +23,10 @@
 .controls button { color: #fff; background: #242b35; border: 1px solid #465365; font-size: 1rem; }.controls .play { color: #071015; background: #65d7ff; border-color: #65d7ff; font-weight: 800; }
 .controls button:disabled, .endButton:disabled { opacity: .35; cursor: not-allowed; }
 .seek { margin-top: 1rem; display: grid; gap: .4rem; color: #aeb8c6; }.seek input { width: 100%; min-height: 44px; }
-.slideSeek { margin-top: .7rem; display: flex; gap: 0; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 0; overflow: hidden; }
-.slideSegment { position: relative; flex: 1; min-width: 0; padding: 0; border: none; background: transparent; cursor: pointer; overflow: hidden; }
-.slideSegment::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: var(--slide-progress, 0%); background: #e00; pointer-events: none; }
-.slideSegment:not(:last-child) { border-right: 1px solid rgba(255, 255, 255, .06); }
-.slideSegment:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
-.slideSegment:focus-visible { outline: 2px solid #65d7ff; outline-offset: -1px; }
-.slideSegmentActive { background: transparent; }
-.slideSegment:disabled { opacity: .35; cursor: not-allowed; }
+.slideSeek { margin-top: .7rem; display: flex; align-items: center; gap: .6rem; }
+.slideTime { flex: none; color: #9aa5b4; font-size: .8rem; font-variant-numeric: tabular-nums; }
+.slideBar { flex: 1; height: 3px; background: rgba(255, 255, 255, .1); border-radius: 2px; overflow: hidden; }
+.slideBarFill { height: 100%; background: #e00; transition: width .1s linear; }
 .sidebar { display: flex; flex-direction: column; gap: 1rem; }
 .panel { padding: 1.1rem; }
 .panel h2 { margin: 0; font-size: 1.05rem; }

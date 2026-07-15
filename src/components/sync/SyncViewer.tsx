@@ -787,25 +787,23 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
           onCancel={cancelSelection}
         />
       )}
-      <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
-        {viewerSlideBlocks.map((blockIndex, i) => {
-          const active = blockIndex === (manualDisplayBlock ?? displayBlock)
-          const ts = viewerSlideTimestamps[i]
-          const duration = ts ? ts.end - ts.start : 0
-          const progress = active && duration > 0
-            ? Math.max(0, Math.min(1, (viewerPosition - ts.start) / duration))
-            : 0
+      <div className={styles.slideSeek} aria-label="スライド再生位置">
+        {(() => {
+          const visibleIdx = viewerSlideBlocks.indexOf(manualDisplayBlock ?? displayBlock)
+          const ts = viewerSlideTimestamps[visibleIdx >= 0 ? visibleIdx : 0]
+          if (!ts || ts.end <= ts.start) return null
+          const progress = Math.max(0, Math.min(1, (viewerPosition - ts.start) / (ts.end - ts.start)))
+          const formatTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
           return (
-            <button
-              key={blockIndex}
-              className={`${styles.slideSegment} ${active ? styles.slideSegmentActive : ''}`}
-              style={active && progress > 0 ? { '--slide-progress': `${progress * 100}%` } as CSSProperties : undefined}
-              onClick={event => { event.stopPropagation(); setSettingsOpen(false); setManualDisplayBlock(blockIndex === displayBlock ? null : blockIndex) }}
-              aria-label={`スライド ${i + 1} / ${viewerSlideBlocks.length}`}
-              aria-current={active ? 'step' : undefined}
-            />
+            <>
+              <span className={styles.slideTime}>{formatTime(ts.start)}</span>
+              <div className={styles.slideBar}>
+                <div className={styles.slideBarFill} style={{ width: `${progress * 100}%` }} />
+              </div>
+              <span className={styles.slideTime}>{formatTime(ts.end)}</span>
+            </>
           )
-        })}
+        })()}
       </div>
       <div className={styles.viewerControls} onClick={event => event.stopPropagation()}>
         <button className={styles.pageButton} onClick={() => moveManualDisplay(-1)} disabled={visibleDisplayBlock <= -1} title="前のスライド" aria-label="前のスライド"><IconPrev /></button>

@@ -624,34 +624,22 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button className={styles.play} onClick={() => command({ type: snapshot.state.isPlaying ? 'pause' : 'play' })} disabled={!connected || busy}>{snapshot.state.isPlaying ? '⏸ 一時停止' : '▶ 再生'}</button>
             <button onClick={() => movePage(1)} disabled={!connected || busy || currentPageIndex >= pageBlocks.length - 1}>次ページ ▶</button>
           </div>
-          <div className={styles.slideSeek} role="group" aria-label="スライドシーク">
-            {pageBlocks.map((block, index) => {
-              const active = index === currentPageIndex
-              const ts = slideTimestamps[index]
-              const duration = ts ? ts.end - ts.start : 0
-              const progress = active && duration > 0 && snapshot?.state.isPlaying
-                ? Math.max(0, Math.min(1, (currentPosition - ts.start) / duration))
-                : active && duration > 0
-                  ? Math.max(0, Math.min(1, (currentPosition - ts.start) / duration))
-                  : 0
+          <div className={styles.slideSeek} aria-label="スライド再生位置">
+            {(() => {
+              const ts = slideTimestamps[currentPageIndex]
+              if (!ts || ts.end <= ts.start) return null
+              const progress = Math.max(0, Math.min(1, (currentPosition - ts.start) / (ts.end - ts.start)))
+              const formatTime = (ms: number) => { const s = Math.floor(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
               return (
-                <button
-                  key={block}
-                  className={`${styles.slideSegment} ${active ? styles.slideSegmentActive : ''}`}
-                  style={active && progress > 0 ? { '--slide-progress': `${progress * 100}%` } as CSSProperties : undefined}
-                  onClick={() => {
-                    if (block === previewPageBlock) return
-                    optimisticPageBlockRef.current = block
-                    queuedPageBlockRef.current = block
-                    setOptimisticPageBlock(block)
-                    void flushPageCommands()
-                  }}
-                  disabled={!connected || busy}
-                  aria-label={`スライド ${index + 1} / ${pageBlocks.length}`}
-                  aria-current={active ? 'step' : undefined}
-                />
+                <>
+                  <span className={styles.slideTime}>{formatTime(ts.start)}</span>
+                  <div className={styles.slideBar}>
+                    <div className={styles.slideBarFill} style={{ width: `${progress * 100}%` }} />
+                  </div>
+                  <span className={styles.slideTime}>{formatTime(ts.end)}</span>
+                </>
               )
-            })}
+            })()}
           </div>
           <label className={styles.seek}>再生位置 {Math.floor(currentPosition / 1000)}秒
             <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy || pageCommandBusy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />
