@@ -65,6 +65,8 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const [devices, setDevices] = useState<Map<string, LiveDevice>>(new Map())
   const [connected, setConnected] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [pageCommandBusy, setPageCommandBusy] = useState(false)
+  const [optimisticPageBlock, setOptimisticPageBlock] = useState<number | null>(null)
   const [error, setError] = useState('')
   const [ended, setEnded] = useState(false)
   const [nowMs, setNowMs] = useState(() => Date.now())
@@ -76,6 +78,9 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const connectionsRef = useRef<Map<string, Set<string>>>(new Map())
   const snapshotRequestRef = useRef(0)
   const appliedSnapshotRequestRef = useRef(0)
+  const queuedPageBlockRef = useRef<number | null>(null)
+  const optimisticPageBlockRef = useRef<number | null>(null)
+  const pageCommandRunningRef = useRef(false)
 
   const loadSnapshot = useCallback(async () => {
     const requestId = ++snapshotRequestRef.current
@@ -267,30 +272,35 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
     return () => window.clearInterval(timer)
   }, [snapshot?.state.isPlaying, snapshot?.state.startedAt, snapshot?.state.positionMs])
 
-  const command = useCallback(async (body: Record<string, unknown>) => {
-    if (!connected || busy) return
+  const sendCommand = useCallback(async (body: Record<string, unknown>) => {
     const payload = JSON.stringify({ commandId: crypto.randomUUID(), ...body })
     const send = () => fetch(`/api/sync/sessions/${encodeURIComponent(sessionId)}/state`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: payload,
     })
+    let response = await send()
+    if (response.status === 503) {
+      const latest = await loadSnapshot()
+      if (latest.session.status !== 'active') throw new Error('同期セッションは終了しています。')
+      response = await send()
+    }
+    if (!response.ok) throw new Error(await apiError(response))
+    const value = await response.json() as { state: SyncState }
+    const current = snapshotRef.current
+    if (current && value.state.version >= current.state.version) {
+      const next = { ...current, state: value.state }; snapshotRef.current = next; setSnapshot(next)
+    }
+    return value.state
+  }, [loadSnapshot, sessionId])
+
+  const command = useCallback(async (body: Record<string, unknown>) => {
+    if (!connected || busy || (body.type === 'selectSong' && pageCommandRunningRef.current)) return
     setBusy(true); setError('')
     try {
-      let response = await send()
-      if (response.status === 503) {
-        const latest = await loadSnapshot()
-        if (latest.session.status !== 'active') return
-        response = await send()
-      }
-      if (!response.ok) throw new Error(await apiError(response))
-      const value = await response.json() as { state: SyncState }
-      const current = snapshotRef.current
-      if (current && value.state.version >= current.state.version) {
-        const next = { ...current, state: value.state }; snapshotRef.current = next; setSnapshot(next)
-      }
+      await sendCommand(body)
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '操作を反映できませんでした。')
     } finally { setBusy(false) }
-  }, [busy, connected, loadSnapshot, sessionId])
+  }, [busy, connected, sendCommand])
 
   const finish = async () => {
     if (!window.confirm('同期セッションを終了しますか？ 終了後は参加URLを利用できません。')) return
@@ -346,9 +356,54 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
   const effectiveBlock = snapshot && currentSong
     ? sourceBlockAtPosition(currentSong.lyrics, currentPosition, snapshot.state.currentBlock, bpmRate)
     : -1
-  const controllerBlockIndex = displayBlocks.findIndex(
-    block => sourceBlocks[block.sourceBlockIndex]?.[0] === effectiveBlock
+  const pageBlocks = useMemo(
+    () => [-1, ...sourceBlocks.map(([block]) => block)],
+    [sourceBlocks]
   )
+  const previewPageBlock = optimisticPageBlock ?? effectiveBlock
+  const currentPageIndex = Math.max(0, pageBlocks.indexOf(previewPageBlock))
+  const controllerBlockIndex = displayBlocks.findIndex(
+    block => sourceBlocks[block.sourceBlockIndex]?.[0] === previewPageBlock
+  )
+
+  const flushPageCommands = useCallback(async () => {
+    if (pageCommandRunningRef.current) return
+    pageCommandRunningRef.current = true
+    setPageCommandBusy(true)
+    setError('')
+    try {
+      while (queuedPageBlockRef.current !== null) {
+        const block = queuedPageBlockRef.current
+        queuedPageBlockRef.current = null
+        await sendCommand({ type: 'selectPage', block })
+      }
+      optimisticPageBlockRef.current = null
+      setOptimisticPageBlock(null)
+    } catch (reason) {
+      queuedPageBlockRef.current = null
+      optimisticPageBlockRef.current = null
+      setOptimisticPageBlock(null)
+      try { await loadSnapshot() } catch {}
+      setError(reason instanceof Error ? reason.message : 'ページ操作を反映できませんでした。')
+    } finally {
+      pageCommandRunningRef.current = false
+      setPageCommandBusy(false)
+    }
+  }, [loadSnapshot, sendCommand])
+
+  const movePage = useCallback((delta: -1 | 1) => {
+    if (!connected || busy || pageBlocks.length <= 1) return
+    const baseBlock = optimisticPageBlockRef.current ?? effectiveBlock
+    const baseIndex = Math.max(0, pageBlocks.indexOf(baseBlock))
+    const targetIndex = Math.min(pageBlocks.length - 1, Math.max(0, baseIndex + delta))
+    if (targetIndex === baseIndex) return
+    const targetBlock = pageBlocks[targetIndex]
+    optimisticPageBlockRef.current = targetBlock
+    queuedPageBlockRef.current = targetBlock
+    setOptimisticPageBlock(targetBlock)
+    void flushPageCommands()
+  }, [busy, connected, effectiveBlock, flushPageCommands, pageBlocks])
+
   const maxPosition = Math.max(
     1000,
     ...((currentSong?.lyrics ?? []).map(line => Math.round((line.timestampMs ?? 0) * bpmRate)))
@@ -410,14 +465,14 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button
               type="button"
               onClick={() => command({ type: 'selectSong', songIndex: snapshot.state.songIndex - 1 })}
-              disabled={!connected || busy || snapshot.state.songIndex <= 0}
+              disabled={!connected || busy || pageCommandBusy || snapshot.state.songIndex <= 0}
             >
               ◀ 前の曲
             </button>
             <select
               className={styles.songSelect}
               value={snapshot.state.songIndex}
-              disabled={!connected || busy}
+              disabled={!connected || busy || pageCommandBusy}
               onChange={event => command({ type: 'selectSong', songIndex: Number(event.target.value) })}
               aria-label="曲を選択"
             >
@@ -426,7 +481,7 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
             <button
               type="button"
               onClick={() => command({ type: 'selectSong', songIndex: snapshot.state.songIndex + 1 })}
-              disabled={!connected || busy || snapshot.state.songIndex >= snapshot.playlist.songs.length - 1}
+              disabled={!connected || busy || pageCommandBusy || snapshot.state.songIndex >= snapshot.playlist.songs.length - 1}
             >
               次の曲 ▶
             </button>
@@ -465,13 +520,13 @@ export default function SyncController({ sessionId }: { sessionId: string }) {
               aria-label="プレビュー文字サイズ"
             />
           </div>
-          <div className={styles.controls}>
-            <button onClick={() => command({ type: 'previousPage' })} disabled={!connected || busy}>◀ 前ページ</button>
+          <div className={styles.controls} aria-busy={pageCommandBusy}>
+            <button onClick={() => movePage(-1)} disabled={!connected || busy || currentPageIndex <= 0}>◀ 前ページ</button>
             <button className={styles.play} onClick={() => command({ type: snapshot.state.isPlaying ? 'pause' : 'play' })} disabled={!connected || busy}>{snapshot.state.isPlaying ? '⏸ 一時停止' : '▶ 再生'}</button>
-            <button onClick={() => command({ type: 'nextPage' })} disabled={!connected || busy}>次ページ ▶</button>
+            <button onClick={() => movePage(1)} disabled={!connected || busy || currentPageIndex >= pageBlocks.length - 1}>次ページ ▶</button>
           </div>
           <label className={styles.seek}>再生位置 {Math.floor(currentPosition / 1000)}秒
-            <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />
+            <input type="range" min={0} max={maxPosition} value={Math.min(currentPosition, maxPosition)} disabled={!connected || busy || pageCommandBusy} onChange={event => command({ type: 'seek', positionMs: Number(event.target.value) })} />
           </label>
         </section>
         {sidebarOpen && (

@@ -104,7 +104,7 @@ sequenceDiagram
 | `GET /api/sync/devices/[deviceId]/snapshot` | iPad | 端末資格情報を検証して最新snapshotを返す |
 | `POST /api/sync/devices/[deviceId]/ably-token` | iPad | 当該channelのsubscribe/presence TokenRequest |
 
-状態更新APIはクライアントから任意の`version`や`startedAt`を受け入れない。操作種別`selectSong | previousPage | nextPage | play | pause | seek`と必要な値だけを受け取り、サーバーが現在行を`FOR UPDATE`して次状態、UTCの`startedAt`、`version + 1`を生成する。Ably publish失敗時はDB状態を保持してHTTP 503を返し、コントローラーは再送前にsnapshotを再取得する。重複操作を防ぐため各要求に`commandId`（UUID）を付け、直近commandIdをセッション行に保存して冪等に扱う。
+状態更新APIはクライアントから任意の`version`や`startedAt`を受け入れない。操作種別`selectSong | selectPage | previousPage | nextPage | play | pause | seek`と必要な値だけを受け取り、サーバーが現在行を`FOR UPDATE`して次状態、UTCの`startedAt`、`version + 1`を生成する。`selectPage`は表紙を示す`-1`または現在曲に実在するsource blockだけを絶対指定として受け入れる。コントローラーの前後ページ操作はクリック直後にローカルプレビューへ反映し、送信中も後続操作を受け付ける。連続操作では送信待ちの中間ページを省略して最新の絶対ページだけへ集約し、応答待ちによる操作の取りこぼしと不要なDB・Ably更新を防ぐ。Ably publish失敗時はDB状態を保持してHTTP 503を返し、コントローラーは再送前にsnapshotを再取得する。重複操作を防ぐため各要求に`commandId`（UUID）を付け、同じ要求の再送では同一IDを維持し、全履歴を冪等に扱う。
 
 ## Data Models
 
