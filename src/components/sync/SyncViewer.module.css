@@ -10,6 +10,7 @@
 .badges .connected { color: #7ce4a1; background: #12341f; }
 .badges .reconnecting { color: #ffd27a; background: #403016; }
 .stage { min-height: calc(100dvh - 58px); padding: 4vh 4vw 11vh; display: flex; flex-direction: column; justify-content: flex-start; box-sizing: border-box; background: #000; cursor: pointer; user-select: none; }
+.stageScroll { height: calc(100dvh - 58px); min-height: 0; overflow-y: auto; padding-bottom: 7rem; scroll-padding-top: 1rem; cursor: default; }
 .textTransparent { color: transparent; }
 .viewerControls { position: fixed; z-index: 10; right: 1.5rem; bottom: 1.5rem; display: flex; gap: .5rem; flex-wrap: nowrap; }
 .viewerControls button { min-width: 44px; min-height: 44px; padding: .6rem 1rem; display: grid; place-items: center; color: #fff; background: rgba(255, 255, 255, .15); border: 0; border-radius: 8px; font-size: 1.5rem; cursor: pointer; backdrop-filter: blur(4px); transition: background .2s; }
