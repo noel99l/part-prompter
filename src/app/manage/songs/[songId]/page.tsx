@@ -194,6 +194,7 @@ export default function LyricsEditor() {
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const exportMenuRef = React.useRef<HTMLDivElement>(null)
   const [showDownload, setShowDownload] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
 
   React.useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -491,6 +492,26 @@ export default function LyricsEditor() {
   const showToast = (msg: string) => {
     setToast(msg)
     setTimeout(() => setToast(null), 2500)
+  }
+
+  // ---- 複製して編集 ----
+  // 現在の曲を複製し、複製先の編集画面へ遷移する。未保存の変更は複製に含まれない旨を確認する。
+  const handleDuplicate = async () => {
+    if (dirty && !window.confirm('未保存の変更は複製に含まれません。複製を続けますか？')) return
+    setDuplicating(true)
+    try {
+      const res = await fetch(`/api/songs/${songId}/duplicate`, { method: 'POST' })
+      const data = await res.json()
+      if (data.id) {
+        router.push(`/manage/songs/${data.id}`)
+      } else {
+        showToast('複製に失敗しました')
+        setDuplicating(false)
+      }
+    } catch {
+      showToast('複製に失敗しました')
+      setDuplicating(false)
+    }
   }
 
   // ---- 表示ヘルパー ----
@@ -902,6 +923,13 @@ export default function LyricsEditor() {
                 )}
                 <CollaboratorMenuItem songId={songId} />
                 <PlaylistAddMenuItem songId={songId} songTitle={song?.title} />
+                <button
+                  className={styles.exportDropdownLink}
+                  onClick={() => { setExportMenuOpen(false); handleDuplicate() }}
+                  disabled={duplicating}
+                >
+                  {duplicating ? '複製中...' : '📄 複製して編集'}
+                </button>
                 <div className={styles.exportDropdownDivider} />
                 <DeleteSongMenuItem songId={songId} onDeleted={() => router.push('/manage/songs')} />
               </div>

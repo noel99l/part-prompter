@@ -4,7 +4,8 @@ import { harmonyIds } from '@/lib/harmony'
 import PptxGenJS from 'pptxgenjs'
 
 const SLIDE_W = 13.33
-const FONT_SIZE = 32
+const FONT_FACE = '創英角ゴシックUB'
+const FONT_SIZE = 72
 const LINE_H = 1.2
 const X_MARGIN = 0.4
 
@@ -38,6 +39,9 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 
   function buildRuns(text: string, memberIds: number[], wordMembers?: { text: string; member_ids?: number[]; harmony_up_ids?: number[]; harmony_down_ids?: number[]; harmony_up_id?: number; harmony_down_id?: number }[]) {
     if (wordMembers && wordMembers.length > 0) {
+      // word_members は通常1文字単位で保存されるため、同じ複数名構成ごとに
+      // 交互表示の位置を行内で引き継ぐ（各文字で先頭色に戻るのを防ぐ）。
+      const multiMemberOffsets = new Map<string, number>()
       return wordMembers.flatMap(w => {
         const ids: number[] = w.member_ids ?? []
         // PowerPointの下線は1色しか指定できないため、下ハモ複数名は先頭メンバーの色で代表する
@@ -54,10 +58,14 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
           const color = (memberMap[ids[0]]?.color || '#FFFFFF').replace('#', '')
           runs.push({ text: w.text, options: { color, ...baseOpts } })
         } else {
-          w.text.split('').forEach((char, ci) => {
-            const color = (memberMap[ids[ci % ids.length]]?.color || '#FFFFFF').replace('#', '')
+          const key = ids.join(',')
+          const offset = multiMemberOffsets.get(key) ?? 0
+          const chars = w.text.split('')
+          chars.forEach((char, ci) => {
+            const color = (memberMap[ids[(offset + ci) % ids.length]]?.color || '#FFFFFF').replace('#', '')
             runs.push({ text: char, options: { color, ...baseOpts } })
           })
+          multiMemberOffsets.set(key, offset + chars.length)
         }
         return runs
       })
@@ -128,7 +136,7 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       const runs = buildRuns(line.text, line.member_ids || [], line.word_members || [])
       const textY = hasUpHarmony ? y + TEXT_Y_OFFSET : y
       const textH = hasUpHarmony ? LINE_H - TEXT_Y_OFFSET : LINE_H
-      slide.addText(runs as any, { x: X_MARGIN, y: textY, w: SLIDE_W - X_MARGIN * 2, h: textH, fontFace: 'Hiragino Sans', fontSize: FONT_SIZE, bold: false, autoFit: false, shrinkText: false })
+      slide.addText(runs as any, { x: X_MARGIN, y: textY, w: SLIDE_W - X_MARGIN * 2, h: textH, fontFace: FONT_FACE, fontSize: FONT_SIZE, bold: false, autoFit: false, shrinkText: false })
       y += LINE_H
     }
   }
