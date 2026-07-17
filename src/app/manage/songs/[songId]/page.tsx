@@ -8,6 +8,7 @@ import styles from './page.module.css'
 import { mergeAssignments } from '@/lib/lyrics/merge'
 import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 import TimestampTapper from '@/components/TimestampTapper'
+import Mp4ExportMenuItem from '@/components/Mp4ExportMenuItem'
 
 const PALETTE = [
   '#FF4444', '#FF8C00', '#FFD700', '#7CFC00', '#00CED1',
@@ -238,7 +239,7 @@ export default function LyricsEditor() {
       const userEmail = session?.user?.email?.toLowerCase() || ''
       setShowDownload(globalOn || whitelist.includes(userEmail))
     }).catch(() => {})
-  }, [songId])
+  }, [songId, session?.user?.email])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
@@ -916,6 +917,11 @@ export default function LyricsEditor() {
                   <>
                     <div className={styles.exportDropdownLabel}>ダウンロード</div>
                     <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
+                    <Mp4ExportMenuItem
+                      songId={songId}
+                      className={styles.exportDropdownLink}
+                      onClose={() => setExportMenuOpen(false)}
+                    />
                     <a href={`/manage/songs/${songId}/print`} target="_blank" className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>🖨️ PDF</a>
                     <LyricsTextExportMenuItem lines={lines} breaks={breaks} members={members} onClose={() => setExportMenuOpen(false)} />
                     <div className={styles.exportDropdownDivider} />
