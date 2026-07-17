@@ -1,0 +1,100 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.78);
+}
+
+.modal {
+  width: min(440px, 100%);
+  padding: 1.4rem;
+  border: 1px solid #333;
+  border-radius: 12px;
+  background: #111;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.65);
+}
+
+.title {
+  margin: 0 0 1rem;
+  color: #fff;
+  font-size: 1.1rem;
+}
+
+.message,
+.note {
+  color: #aaa;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.note {
+  margin: 1rem 0 0;
+  color: #666;
+}
+
+.progressTrack {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #2a2a2a;
+}
+
+.progressBar {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #ff69b4;
+  transition: width 0.15s ease;
+}
+.progressValue {
+  margin-top: 0.45rem;
+  color: #ccc;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.success {
+  color: #7cfc00;
+  font-size: 0.95rem;
+}
+
+.error {
+  padding: 0.75rem;
+  border: 1px solid #662a2a;
+  border-radius: 8px;
+  background: #251313;
+  color: #ff8a8a;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.retryButton,
+.closeButton {
+  padding: 0.55rem 1rem;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.retryButton {
+  border: none;
+  background: #ff69b4;
+  color: #fff;
+}
+
+.closeButton {
+  border: 1px solid #555;
+  background: #222;
+  color: #ddd;
+}
