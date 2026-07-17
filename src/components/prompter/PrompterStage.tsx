@@ -59,7 +59,7 @@ export default function PrompterStage<Line extends PromptLine>({
     }
     blockRefs.current[currentBlock]?.scrollIntoView({
       behavior: 'smooth',
-      block: landscapeScroll ? 'start' : scrollBlockAlign,
+      block: landscapeScroll ? 'center' : scrollBlockAlign,
     })
   }, [currentBlock, landscapeScroll, scrollBlockAlign, scrollMode])
 

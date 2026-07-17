@@ -923,6 +923,7 @@ export default function LyricsEditor() {
                     <a href={`/api/songs/${songId}/export/pptx`} download className={styles.exportDropdownLink} onClick={() => setExportMenuOpen(false)}>📥 PPTX</a>
                     <Mp4ExportMenuItem
                       songId={songId}
+                      backgroundColor={bgColor}
                       className={styles.exportDropdownLink}
                       onClose={() => setExportMenuOpen(false)}
                     />

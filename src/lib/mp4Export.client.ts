@@ -12,6 +12,7 @@ const NEXT_FONT_SIZE = 64
 const X_MARGIN = 77
 const LAST_SLIDE_MS = 5000
 const SCROLL_TRANSITION_MS = 600
+const SCROLL_VIEWPORT_TOP = 16
 
 interface VideoWordMember {
   text: string
@@ -57,6 +58,8 @@ export interface Mp4ExportOptions {
   fontScale?: number
   showNext?: boolean
   displayMode?: 'slide' | 'scroll'
+  autoSplit?: boolean
+  backgroundColor?: string
 }
 
 export interface Mp4PreviewResult {
@@ -370,7 +373,7 @@ function drawScrollView(
 ) {
   clearCanvas(ctx, song)
   const memberMap = new Map(members.map(member => [member.id, member]))
-  const viewportTop = 16
+  const viewportTop = SCROLL_VIEWPORT_TOP
   const textX = X_MARGIN + 15
   const maxWidth = WIDTH - X_MARGIN * 2 - 15
 
@@ -409,6 +412,12 @@ function drawScrollView(
   }
 }
 
+function centeredScrollPosition(geometry: ScrollGeometry, blockIndex: number) {
+  const top = geometry.blockTops[blockIndex] ?? 0
+  const height = geometry.blockHeights[blockIndex] ?? 0
+  return top + height / 2 - HEIGHT / 2 + SCROLL_VIEWPORT_TOP
+}
+
 function scrollPositionAt(
   blocks: DisplayChunk<VideoLine>[],
   geometry: ScrollGeometry,
@@ -416,9 +425,9 @@ function scrollPositionAt(
   positionMs: number,
   bpmRate: number,
 ) {
-  const target = geometry.blockTops[blockIndex] ?? 0
+  const target = centeredScrollPosition(geometry, blockIndex)
   if (blockIndex <= 0) return target
-  const previous = geometry.blockTops[blockIndex - 1] ?? target
+  const previous = centeredScrollPosition(geometry, blockIndex - 1)
   const startedAt = (blocks[blockIndex]?.startMs ?? 0) * bpmRate
   const progress = Math.max(0, Math.min(1, (positionMs - startedAt) / SCROLL_TRANSITION_MS))
   const eased = 1 - Math.pow(1 - progress, 3)
@@ -463,6 +472,7 @@ export async function createPrompterMp4Preview(
     fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
     fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`),
   ])
+  if (options.backgroundColor) song.bg_color = options.backgroundColor
   if (!Array.isArray(lines) || lines.length === 0) throw new Error('プレビューできる歌詞がありません。')
 
   const canvas = document.createElement('canvas')
@@ -477,7 +487,7 @@ export async function createPrompterMp4Preview(
     maxRows: layout.maxRows,
     lineFont: layout.currentFontSize,
     contentW: WIDTH - X_MARGIN * 2,
-  }, true)
+  }, options.autoSplit ?? true)
   const pageIndex = Math.max(0, Math.min(displayBlocks.length - 1, requestedPage))
   if (layout.displayMode === 'scroll') {
     const geometry = buildScrollGeometry(ctx, displayBlocks, layout)
@@ -487,7 +497,7 @@ export async function createPrompterMp4Preview(
       members,
       displayBlocks,
       pageIndex,
-      geometry.blockTops[pageIndex] ?? 0,
+      centeredScrollPosition(geometry, pageIndex),
       layout,
       geometry,
     )
@@ -515,6 +525,7 @@ export async function createPrompterMp4(
     fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
     fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`),
   ])
+  if (options.backgroundColor) song.bg_color = options.backgroundColor
   if (!Array.isArray(lines) || lines.length === 0) throw new Error('歌詞がありません。')
   if (!lines.some(line => line.timestamp_ms != null)) throw new Error('MP4出力にはタイムスタンプが必要です。')
   const canvas = document.createElement('canvas')
@@ -530,7 +541,7 @@ export async function createPrompterMp4(
     maxRows: layout.maxRows,
     lineFont: layout.currentFontSize,
     contentW: WIDTH - X_MARGIN * 2,
-  }, true)
+  }, options.autoSplit ?? true)
   const scrollGeometry = layout.displayMode === 'scroll'
     ? buildScrollGeometry(ctx, displayBlocks, layout)
     : null

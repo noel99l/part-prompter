@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createPrompterMp4, createPrompterMp4Preview } from '@/lib/mp4Export.client'
+import { IconNext, IconPrev } from '@/components/icons'
 import styles from './Mp4ExportMenuItem.module.css'
 
 const FONT_SCALE_MIN = 0.6
@@ -10,11 +11,12 @@ const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
 
 interface Props {
   songId: string
+  backgroundColor?: string
   className?: string
   onClose?: () => void
 }
 
-export default function Mp4ExportMenuItem({ songId, className, onClose }: Props) {
+export default function Mp4ExportMenuItem({ songId, backgroundColor, className, onClose }: Props) {
   const [open, setOpen] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -22,6 +24,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
   const [completed, setCompleted] = useState(false)
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
+  const [autoSplit, setAutoSplit] = useState(true)
   const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
   const [previewPage, setPreviewPage] = useState(0)
   const [previewPageCount, setPreviewPageCount] = useState(0)
@@ -36,6 +39,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
         setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
       }
       if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
+      if (typeof saved?.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
       if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') {
         setDisplayMode(saved.displayMode)
       }
@@ -44,7 +48,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
 
   useEffect(() => {
     setPreviewPage(0)
-  }, [fontScale, showNext, displayMode])
+  }, [fontScale, showNext, displayMode, autoSplit, backgroundColor])
 
   useEffect(() => {
     if (!open) return
@@ -55,7 +59,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
       try {
         const result = await createPrompterMp4Preview(
           songId,
-          { fontScale, showNext, displayMode },
+          { fontScale, showNext, displayMode, autoSplit, backgroundColor },
           previewPage,
         )
         if (active) {
@@ -75,7 +79,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
       active = false
       window.clearTimeout(timer)
     }
-  }, [open, songId, fontScale, showNext, displayMode, previewPage])
+  }, [open, songId, fontScale, showNext, displayMode, autoSplit, backgroundColor, previewPage])
 
   const openDialog = () => {
     setOpen(true)
@@ -96,6 +100,8 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
         fontScale,
         showNext,
         displayMode,
+        autoSplit,
+        backgroundColor,
       })
       const url = URL.createObjectURL(result.blob)
       const anchor = document.createElement('a')
@@ -152,6 +158,15 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                   </button>
                 </div>
               </div>
+              {backgroundColor && (
+                <div className={styles.settingRow}>
+                  <span>背景カラー</span>
+                  <span className={styles.colorValue}>
+                    <i style={{ backgroundColor }} />
+                    {backgroundColor.toUpperCase()}
+                  </span>
+                </div>
+              )}
               <label className={styles.settingRow}>
                 <span>文字サイズ</span>
                 <strong>{Math.round(fontScale * 100)}%</strong>
@@ -178,6 +193,15 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                   次のセクションを表示
                 </label>
               )}
+              <label className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={autoSplit}
+                  disabled={generating}
+                  onChange={event => setAutoSplit(event.target.checked)}
+                />
+                自動ブロック分け（Auto）
+              </label>
             </div>
 
             <div className={styles.previewSection}>
@@ -204,16 +228,20 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                   type="button"
                   disabled={generating || previewLoading || previewPage <= 0}
                   onClick={() => setPreviewPage(page => Math.max(0, page - 1))}
+                  title="前のページ"
+                  aria-label="前のページ"
                 >
-                  ← 前へ
+                  <IconPrev />
                 </button>
                 <span>{displayMode === 'scroll' ? 'スクロール位置' : 'スライド'}</span>
                 <button
                   type="button"
                   disabled={generating || previewLoading || previewPage >= previewPageCount - 1}
                   onClick={() => setPreviewPage(page => Math.min(previewPageCount - 1, page + 1))}
+                  title="次のページ"
+                  aria-label="次のページ"
                 >
-                  次へ →
+                  <IconNext />
                 </button>
               </div>
             </div>
