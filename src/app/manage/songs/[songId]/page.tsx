@@ -182,6 +182,8 @@ export default function LyricsEditor() {
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [memberTemplates, setMemberTemplates] = useState<MemberTemplate[]>([])
+  const [templatePanelOpen, setTemplatePanelOpen] = useState(false)
+  const [templatesLoaded, setTemplatesLoaded] = useState(false)
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
   const [templateName, setTemplateName] = useState('')
   const [templateBusy, setTemplateBusy] = useState(false)
@@ -256,17 +258,21 @@ export default function LyricsEditor() {
   }, [songId, session?.user?.email])
 
   useEffect(() => {
-    if (!session?.user?.email) return
+    if (!session?.user?.email || !templatePanelOpen || templatesLoaded) return
     let active = true
     fetch('/api/member-templates')
       .then(async response => {
         if (!response.ok) throw new Error('テンプレートの読み込みに失敗しました')
         return response.json() as Promise<MemberTemplate[]>
       })
-      .then(data => { if (active) setMemberTemplates(data) })
+      .then(data => {
+        if (!active) return
+        setMemberTemplates(data)
+        setTemplatesLoaded(true)
+      })
       .catch(() => { if (active) showToast('テンプレートの読み込みに失敗しました') })
     return () => { active = false }
-  }, [session?.user?.email])
+  }, [session?.user?.email, templatePanelOpen, templatesLoaded])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
@@ -1149,6 +1155,19 @@ export default function LyricsEditor() {
           </div>
           <hr className={styles.divider} />
           {/* メンバーテンプレート */}
+          <button
+            type="button"
+            className={`${styles.templateToggle} ${templatePanelOpen ? styles.templateToggleOpen : ''}`}
+            onClick={() => setTemplatePanelOpen(open => !open)}
+            aria-expanded={templatePanelOpen}
+          >
+            <span>📋 メンバーテンプレート</span>
+            <span className={styles.templateToggleMeta}>
+              {templatesLoaded && memberTemplates.length > 0 ? `${memberTemplates.length}件` : ''}
+              <span className={styles.templateToggleArrow}>⌄</span>
+            </span>
+          </button>
+          {templatePanelOpen && (
           <section className={styles.templateSection}>
             <div className={styles.templateHeader}>
               <div>
@@ -1160,7 +1179,7 @@ export default function LyricsEditor() {
               <select
                 className={styles.templateSelect}
                 value={selectedTemplateId ?? ''}
-                disabled={templateBusy}
+                disabled={templateBusy || !templatesLoaded}
                 onChange={event => {
                   const id = event.target.value ? Number(event.target.value) : null
                   setSelectedTemplateId(id)
@@ -1168,7 +1187,7 @@ export default function LyricsEditor() {
                   setTemplateName(selected?.name ?? '')
                 }}
               >
-                <option value="">テンプレートを選択</option>
+                <option value="">{templatesLoaded ? 'テンプレートを選択' : '読み込み中...'}</option>
                 {memberTemplates.map(template => (
                   <option key={template.id} value={template.id}>
                     {template.name}（{template.members.length}名）
@@ -1220,6 +1239,7 @@ export default function LyricsEditor() {
               </button>
             </div>
           </section>
+          )}
           {/* メンバー設定 */}
           <p className={styles.hint}>最大{MAX_MEMBERS}名まで登録できます。色はパレットから選択してください。</p>
           <div className={styles.memberList}>

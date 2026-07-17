@@ -179,7 +179,51 @@
   max-width: 800px;
 }
 
+.templateToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 46px;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #333;
+  border-radius: 9px;
+  background: #151515;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-align: left;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.templateToggle:hover,
+.templateToggleOpen {
+  border-color: #555;
+  background: #1b1b1b;
+}
+
+.templateToggleMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: #777;
+  font-size: 0.75rem;
+}
+
+.templateToggleArrow {
+  display: inline-block;
+  color: #aaa;
+  font-size: 1rem;
+  transition: transform 0.2s;
+}
+
+.templateToggleOpen .templateToggleArrow {
+  transform: rotate(180deg);
+}
+
 .templateSection {
+  margin-top: -0.35rem;
   margin-bottom: 1.4rem;
   padding: 1rem;
   border: 1px solid #2e2e2e;
