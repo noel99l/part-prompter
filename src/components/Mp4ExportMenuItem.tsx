@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { createPrompterMp4 } from '@/lib/mp4Export.client'
+import { createPrompterMp4, createPrompterMp4Preview } from '@/lib/mp4Export.client'
 import styles from './Mp4ExportMenuItem.module.css'
 
 const FONT_SCALE_MIN = 0.6
@@ -22,6 +22,9 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
   const [completed, setCompleted] = useState(false)
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -32,6 +35,29 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
       if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
     } catch {}
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    let active = true
+    setPreviewLoading(true)
+    setPreviewError(null)
+    const timer = window.setTimeout(async () => {
+      try {
+        const url = await createPrompterMp4Preview(songId, { fontScale, showNext })
+        if (active) setPreviewUrl(url)
+      } catch (cause) {
+        if (!active) return
+        setPreviewError(cause instanceof Error ? cause.message : 'プレビューの生成に失敗しました。')
+      } finally {
+        if (active) setPreviewLoading(false)
+      }
+    }, 150)
+
+    return () => {
+      active = false
+      window.clearTimeout(timer)
+    }
+  }, [open, songId, fontScale, showNext])
 
   const openDialog = () => {
     setOpen(true)
@@ -106,6 +132,27 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                 />
                 次のセクションを表示
               </label>
+            </div>
+
+            <div className={styles.previewSection}>
+              <div className={styles.previewHeading}>
+                <span>出力サンプル</span>
+                <small>先頭スライド</small>
+              </div>
+              <div className={styles.previewFrame} aria-live="polite">
+                {previewUrl && (
+                  <div
+                    className={styles.previewImage}
+                    style={{ backgroundImage: `url(${previewUrl})` }}
+                    role="img"
+                    aria-label="MP4先頭スライドの出力サンプル"
+                  />
+                )}
+                {previewLoading && <div className={styles.previewStatus}>更新中...</div>}
+                {previewError && !previewLoading && (
+                  <div className={styles.previewError}>{previewError}</div>
+                )}
+              </div>
             </div>
 
             {generating && (
