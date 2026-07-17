@@ -24,6 +24,7 @@ export default function SongDetailPage() {
   const { data: session } = useSession()
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -77,6 +78,12 @@ export default function SongDetailPage() {
     return () => { alive = false }
   }, [songId])
 
+  useEffect(() => {
+    if (selectedMemberId != null && !members.some(member => member.id === selectedMemberId)) {
+      setSelectedMemberId(null)
+    }
+  }, [members, selectedMemberId])
+
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
   const blocks = useMemo(() => {
@@ -95,18 +102,35 @@ export default function SongDetailPage() {
     return { backgroundImage: `linear-gradient(to bottom, ${stops})`, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }
   }
 
+  const partEmphasisClass = (memberIds: number[]) => {
+    if (selectedMemberId == null) return ''
+    return memberIds.includes(selectedMemberId) ? styles.partHighlighted : styles.partDimmed
+  }
+
   function renderLineText(line: LyricLine) {
     if (line.word_members?.length) {
       return (
-        <span>
+        <span className={styles.lineText}>
           {line.word_members.map((w, wi) => {
-            if (!w.member_ids?.length) return <span key={wi} className={styles.textWhite}>{w.text}</span>
-            return <span key={wi} style={gradientStyle(w.member_ids)}>{w.text}</span>
+            const partIds = [...new Set([
+              ...(w.member_ids || []),
+              ...harmonyIds(w, 'up'),
+              ...harmonyIds(w, 'down'),
+            ])]
+            const emphasisClass = partEmphasisClass(partIds)
+            if (!w.member_ids?.length) {
+              return <span key={wi} className={`${styles.textWhite} ${emphasisClass}`}>{w.text}</span>
+            }
+            return <span key={wi} className={emphasisClass} style={gradientStyle(w.member_ids)}>{w.text}</span>
           })}
         </span>
       )
     }
-    return <span style={gradientStyle(line.member_ids)}>{line.text}</span>
+    return (
+      <span className={`${styles.lineText} ${partEmphasisClass(line.member_ids || [])}`} style={gradientStyle(line.member_ids)}>
+        {line.text}
+      </span>
+    )
   }
 
   const buildCopyText = (): string => {
@@ -239,12 +263,24 @@ export default function SongDetailPage() {
               <p className={styles.description}>{song.description}</p>
             )}
             {members.length > 0 && (
-              <div className={styles.memberList}>
-                {members.map((m, i) => (
-                  <span key={m.id} className={styles.memberBadge} style={{ borderColor: m.color, color: m.color }}>
-                    {m.name || String.fromCharCode(65 + i)}
-                  </span>
-                ))}
+              <div className={styles.memberList} role="group" aria-label="強調表示するパート">
+                {members.map((m, i) => {
+                  const label = m.name || String.fromCharCode(65 + i)
+                  const selected = selectedMemberId === m.id
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      className={`${styles.memberBadge} ${selected ? styles.memberBadgeSelected : ''}`}
+                      style={{ borderColor: m.color, color: m.color }}
+                      aria-pressed={selected}
+                      aria-label={`${label}のパートを${selected ? '通常表示に戻す' : '強調表示する'}`}
+                      onClick={() => setSelectedMemberId(current => current === m.id ? null : m.id)}
+                    >
+                      {label}
+                    </button>
+                  )
+                })}
               </div>
             )}
           </div>
@@ -263,7 +299,7 @@ export default function SongDetailPage() {
                     : ''}
                 </span>
                 {renderLineText(line)}
-{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={styles.dot} style={{ background: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
+{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={`${styles.dot} ${selectedMemberId == null ? '' : id === selectedMemberId ? styles.dotHighlighted : styles.dotDimmed}`} style={{ background: memberMap[id]?.color, color: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
               </div>
             ))}
           </div>

@@ -175,10 +175,31 @@
 }
 
 .memberBadge {
+  min-height: 30px;
   border: 1px solid;
   border-radius: 20px;
   padding: 0.15rem 0.65rem;
+  background: transparent;
+  font: inherit;
   font-size: 0.8rem;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s, opacity 0.2s;
+}
+
+.memberBadge:hover {
+  background: rgba(255, 255, 255, 0.06);
+  transform: translateY(-1px);
+}
+
+.memberBadge:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.memberBadgeSelected {
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 0 2px currentColor, 0 0 14px currentColor;
+  font-weight: 700;
 }
 
 .tagRow {
@@ -226,6 +247,25 @@
   font-size: 0.95rem;
 }
 
+.lineText {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.6;
+}
+
+.partHighlighted {
+  opacity: 1;
+  filter: brightness(1.35) saturate(1.15);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.partDimmed {
+  opacity: 0.22;
+  filter: grayscale(0.55);
+  transition: opacity 0.2s, filter 0.2s;
+}
+
 .timestamp {
   color: #444;
   font-size: 0.7rem;
@@ -246,6 +286,16 @@
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+  transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.dotHighlighted {
+  transform: scale(1.5);
+  box-shadow: 0 0 6px currentColor;
+}
+
+.dotDimmed {
+  opacity: 0.16;
 }
 
 .footer {
@@ -278,6 +328,28 @@
     flex: 1;
     text-align: center;
     justify-content: center;
+  }
+
+  .memberList {
+    gap: 0.5rem;
+  }
+
+  .memberBadge {
+    min-height: 44px;
+    padding-inline: 0.8rem;
+  }
+
+  .line {
+    align-items: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memberBadge,
+  .partHighlighted,
+  .partDimmed,
+  .dot {
+    transition: none;
   }
 }
 
