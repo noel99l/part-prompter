@@ -9,6 +9,7 @@ import { mergeAssignments } from '@/lib/lyrics/merge'
 import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 import TimestampTapper from '@/components/TimestampTapper'
 import Mp4ExportMenuItem from '@/components/Mp4ExportMenuItem'
+import { MAX_MEMBERS } from '@/lib/memberTemplates'
 
 const PALETTE = [
   '#FF4444', '#FF8C00', '#FFD700', '#7CFC00', '#00CED1',
@@ -16,6 +17,14 @@ const PALETTE = [
 ]
 
 interface Member { id: number; name: string; color: string; sort_order: number }
+interface MemberTemplateItem { name: string; color: string }
+interface MemberTemplate {
+  id: number
+  name: string
+  members: MemberTemplateItem[]
+  created_at: string
+  updated_at: string
+}
 
 // 上ハモ・下ハモは複数名を登録できる。編集状態では常に配列形式で持ち、
 // 旧形式（harmony_up_id / harmony_down_id）は読み込み時に配列へ正規化する
@@ -172,6 +181,10 @@ export default function LyricsEditor() {
 
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
+  const [memberTemplates, setMemberTemplates] = useState<MemberTemplate[]>([])
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null)
+  const [templateName, setTemplateName] = useState('')
+  const [templateBusy, setTemplateBusy] = useState(false)
   const [lines, setLines] = useState<FlatLine[]>([])
   const [breaks, setBreaks] = useState<Set<number>>(new Set())
   const [checkedMemberIds, setCheckedMemberIds] = useState<number[]>([])
@@ -241,6 +254,19 @@ export default function LyricsEditor() {
       setShowDownload(globalOn || whitelist.includes(userEmail))
     }).catch(() => {})
   }, [songId, session?.user?.email])
+
+  useEffect(() => {
+    if (!session?.user?.email) return
+    let active = true
+    fetch('/api/member-templates')
+      .then(async response => {
+        if (!response.ok) throw new Error('テンプレートの読み込みに失敗しました')
+        return response.json() as Promise<MemberTemplate[]>
+      })
+      .then(data => { if (active) setMemberTemplates(data) })
+      .catch(() => { if (active) showToast('テンプレートの読み込みに失敗しました') })
+    return () => { active = false }
+  }, [session?.user?.email])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
@@ -325,7 +351,7 @@ export default function LyricsEditor() {
   }
 
   const addMember = () => {
-    if (members.length >= 10) return
+    if (members.length >= MAX_MEMBERS) return
     setMembers(prev => [...prev, { id: -(Date.now()), name: '', color: PALETTE[prev.length % PALETTE.length], sort_order: prev.length }])
   }
 
@@ -337,6 +363,96 @@ export default function LyricsEditor() {
 
   const removeMember = (idx: number) =>
     setMembers(prev => prev.filter((_, i) => i !== idx))
+
+  const templatePayload = () => ({
+    name: templateName.trim(),
+    members: members.map(member => ({ name: member.name, color: member.color })),
+  })
+
+  const templateError = async (response: Response, fallback: string) => {
+    const data = await response.json().catch(() => ({}))
+    return typeof data.error === 'string' ? data.error : fallback
+  }
+
+  const createMemberTemplate = async () => {
+    if (!templateName.trim()) return showToast('テンプレート名を入力してください')
+    if (members.length === 0) return showToast('メンバーを1名以上登録してください')
+    setTemplateBusy(true)
+    try {
+      const response = await fetch('/api/member-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(templatePayload()),
+      })
+      if (!response.ok) throw new Error(await templateError(response, 'テンプレートの保存に失敗しました'))
+      const saved: MemberTemplate = await response.json()
+      setMemberTemplates(prev => [saved, ...prev])
+      setSelectedTemplateId(saved.id)
+      setTemplateName(saved.name)
+      showToast('テンプレートを保存しました')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'テンプレートの保存に失敗しました')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  const updateMemberTemplate = async () => {
+    if (!selectedTemplateId) return
+    if (!templateName.trim()) return showToast('テンプレート名を入力してください')
+    if (members.length === 0) return showToast('メンバーを1名以上登録してください')
+    setTemplateBusy(true)
+    try {
+      const response = await fetch(`/api/member-templates/${selectedTemplateId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(templatePayload()),
+      })
+      if (!response.ok) throw new Error(await templateError(response, 'テンプレートの更新に失敗しました'))
+      const saved: MemberTemplate = await response.json()
+      setMemberTemplates(prev => [saved, ...prev.filter(template => template.id !== saved.id)])
+      setTemplateName(saved.name)
+      showToast('テンプレートを更新しました')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'テンプレートの更新に失敗しました')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
+
+  const applyMemberTemplate = () => {
+    const template = memberTemplates.find(item => item.id === selectedTemplateId)
+    if (!template) return
+    if (template.members.length < members.length && !window.confirm(
+      '現在より人数が少ないテンプレートです。対象外になるメンバーの歌詞割り当ても削除されます。適用しますか？'
+    )) return
+    const temporaryIdBase = Date.now() * 100
+    setMembers(current => template.members.map((item, index) => ({
+      id: current[index]?.id ?? -(temporaryIdBase + index + 1),
+      name: item.name,
+      color: item.color,
+      sort_order: index,
+    })))
+    showToast(`「${template.name}」を適用しました`)
+  }
+
+  const deleteMemberTemplate = async () => {
+    const template = memberTemplates.find(item => item.id === selectedTemplateId)
+    if (!template || !window.confirm(`テンプレート「${template.name}」を削除しますか？`)) return
+    setTemplateBusy(true)
+    try {
+      const response = await fetch(`/api/member-templates/${template.id}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error(await templateError(response, 'テンプレートの削除に失敗しました'))
+      setMemberTemplates(prev => prev.filter(item => item.id !== template.id))
+      setSelectedTemplateId(null)
+      setTemplateName('')
+      showToast('テンプレートを削除しました')
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'テンプレートの削除に失敗しました')
+    } finally {
+      setTemplateBusy(false)
+    }
+  }
 
   // タブ切替時に歌詞テキスト⇔行データを同期し、編集の取りこぼしを防ぐ
   const changeTab = (next: 'info' | 'lrc' | 'parts' | 'prompter') => {
@@ -1032,8 +1148,80 @@ export default function LyricsEditor() {
             </div>
           </div>
           <hr className={styles.divider} />
+          {/* メンバーテンプレート */}
+          <section className={styles.templateSection}>
+            <div className={styles.templateHeader}>
+              <div>
+                <h2 className={styles.templateTitle}>メンバーテンプレート</h2>
+                <p className={styles.templateHint}>名前とカラーの組み合わせを保存し、ほかの楽曲でも利用できます。</p>
+              </div>
+            </div>
+            <div className={styles.templateToolbar}>
+              <select
+                className={styles.templateSelect}
+                value={selectedTemplateId ?? ''}
+                disabled={templateBusy}
+                onChange={event => {
+                  const id = event.target.value ? Number(event.target.value) : null
+                  setSelectedTemplateId(id)
+                  const selected = memberTemplates.find(template => template.id === id)
+                  setTemplateName(selected?.name ?? '')
+                }}
+              >
+                <option value="">テンプレートを選択</option>
+                {memberTemplates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}（{template.members.length}名）
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className={styles.templateApplyBtn}
+                disabled={!selectedTemplateId || templateBusy}
+                onClick={applyMemberTemplate}
+              >
+                適用
+              </button>
+            </div>
+            <div className={styles.templateToolbar}>
+              <input
+                className={styles.templateNameInput}
+                value={templateName}
+                maxLength={50}
+                disabled={templateBusy}
+                onChange={event => setTemplateName(event.target.value)}
+                placeholder="テンプレート名（例：いつもの5人）"
+              />
+              <button
+                type="button"
+                className={styles.templateSaveBtn}
+                disabled={templateBusy || !templateName.trim() || members.length === 0}
+                onClick={createMemberTemplate}
+              >
+                新規保存
+              </button>
+              <button
+                type="button"
+                className={styles.templateUpdateBtn}
+                disabled={templateBusy || !selectedTemplateId || !templateName.trim() || members.length === 0}
+                onClick={updateMemberTemplate}
+              >
+                上書き
+              </button>
+              <button
+                type="button"
+                className={styles.templateDeleteBtn}
+                disabled={templateBusy || !selectedTemplateId}
+                onClick={deleteMemberTemplate}
+                aria-label="選択中のテンプレートを削除"
+              >
+                削除
+              </button>
+            </div>
+          </section>
           {/* メンバー設定 */}
-          <p className={styles.hint}>最大10名まで登録できます。色はパレットから選択してください。</p>
+          <p className={styles.hint}>最大{MAX_MEMBERS}名まで登録できます。色はパレットから選択してください。</p>
           <div className={styles.memberList}>
             {members.map((m, i) => (
               <div key={m.id} className={styles.memberRow}>
@@ -1057,7 +1245,7 @@ export default function LyricsEditor() {
             ))}
           </div>
           <div className={styles.memberActions}>
-            <button className={styles.addBtn} onClick={addMember} disabled={members.length >= 10}>＋ メンバー追加</button>
+            <button className={styles.addBtn} onClick={addMember} disabled={members.length >= MAX_MEMBERS}>＋ メンバー追加</button>
           </div>
         </div>
       )}

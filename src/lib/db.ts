@@ -123,6 +123,18 @@ async function runInitDb() {
     `)
 
     await query(`
+      CREATE TABLE IF NOT EXISTS member_templates (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        name TEXT NOT NULL,
+        members JSONB NOT NULL DEFAULT '[]'::jsonb,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, name)
+      )
+    `)
+
+    await query(`
       CREATE TABLE IF NOT EXISTS prompter_songs (
         id SERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -252,6 +264,7 @@ async function runInitDb() {
     `)
 
     // 一覧取得の集計サブクエリ・結合を高速化するインデックス（冪等）
+    await query(`CREATE INDEX IF NOT EXISTS idx_member_templates_user_id ON member_templates(user_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_prompter_members_song_id ON prompter_members(song_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_prompter_lyrics_song_id ON prompter_lyrics(song_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_prompter_songs_created_by ON prompter_songs(created_by)`)

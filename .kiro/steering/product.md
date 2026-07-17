@@ -5,7 +5,7 @@ PART-PROMPTER is a web app for managing song lyric part assignments (歌詞パ�
 ## Core concepts
 
 - **Song (楽曲)** — A song with title, artist, description, and lyrics. Has a creator and can be public or private. Private songs never appear in public listings.
-- **Member (メンバー)** — A vocalist assigned to a song (max 10). Each has a name and color. Lyrics are assigned to members at the character level, with optional upper/lower harmony (上ハモ / 下ハモ).
+- **Member (メンバー)** — A vocalist assigned to a song (max 20). Each has a name and color. Lyrics are assigned to members at the character level, with optional upper/lower harmony (上ハモ / 下ハモ).
 - **Lyrics** — Stored per line within blocks. Supports plain text or LRC (timestamped) format. Timestamps drive auto-scroll playback.
 - **Prompter** — Slide-style live display (cover, current block, next-block preview) with keyboard/tap controls, BPM-based auto-advance, and fullscreen.
 - **Playlist / Setlist (セットリスト)** — An ordered, drag-and-drop collection of songs. Owned privately; can include other users' public songs. Has its own prompter with prev/next-song navigation.

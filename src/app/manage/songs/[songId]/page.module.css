@@ -179,6 +179,109 @@
   max-width: 800px;
 }
 
+.templateSection {
+  margin-bottom: 1.4rem;
+  padding: 1rem;
+  border: 1px solid #2e2e2e;
+  border-radius: 10px;
+  background: #101010;
+}
+
+.templateHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.templateTitle {
+  margin: 0;
+  color: #fff;
+  font-size: 1rem;
+}
+
+.templateHint {
+  margin: 0.3rem 0 0;
+  color: #777;
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.templateToolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.templateSelect,
+.templateNameInput {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid #383838;
+  border-radius: 7px;
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.88rem;
+  box-sizing: border-box;
+}
+
+.templateSelect {
+  flex: 1 1 280px;
+}
+
+.templateNameInput {
+  flex: 1 1 240px;
+}
+
+.templateSelect:focus,
+.templateNameInput:focus {
+  outline: none;
+  border-color: #FF69B4;
+}
+
+.templateApplyBtn,
+.templateSaveBtn,
+.templateUpdateBtn,
+.templateDeleteBtn {
+  min-height: 42px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.templateApplyBtn,
+.templateSaveBtn {
+  border: none;
+  background: #FF69B4;
+  color: #fff;
+}
+
+.templateUpdateBtn {
+  border: 1px solid #555;
+  background: #222;
+  color: #ddd;
+}
+
+.templateDeleteBtn {
+  border: 1px solid #663333;
+  background: #211313;
+  color: #ff8a8a;
+}
+
+.templateApplyBtn:disabled,
+.templateSaveBtn:disabled,
+.templateUpdateBtn:disabled,
+.templateDeleteBtn:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+}
+
 .hint {
   color: #666;
   font-size: 0.9rem;
