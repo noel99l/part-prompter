@@ -24,7 +24,7 @@ import PlaylistCollaboratorManager from '@/components/PlaylistCollaboratorManage
 import { useSyncCapability } from '@/hooks/useSyncCapability'
 
 interface Song {
-  id: number; title: string; artist: string; sort_order: number
+  id: number; title: string; artist: string; sort_order: number; can_edit?: boolean
   lyric_count?: string; timestamp_count?: string; member_count?: string
 }
 interface SearchResult {
@@ -75,8 +75,11 @@ function SortableItem({ song, index, onRemove }: {
         }
         actions={
           <div className={styles.cardActions}>
-            <Link href={`/songs/${song.id}/prompter`} className={styles.viewBtn} target="_blank">▶</Link>
-            <button className={styles.deleteBtn} onClick={() => onRemove(song.id)}>🗑️</button>
+            {song.can_edit && (
+              <Link href={`/manage/songs/${song.id}`} className={styles.viewBtn} title="楽曲を編集">✏️</Link>
+            )}
+            <Link href={`/songs/${song.id}/prompter`} className={styles.viewBtn} target="_blank" title="プロンプターを表示">▶</Link>
+            <button className={styles.deleteBtn} onClick={() => onRemove(song.id)} title="セットリストから削除">🗑️</button>
           </div>
         }
       />

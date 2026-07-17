@@ -22,6 +22,9 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
   const [completed, setCompleted] = useState(false)
   const [fontScale, setFontScale] = useState(1)
   const [showNext, setShowNext] = useState(true)
+  const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
+  const [previewPage, setPreviewPage] = useState(0)
+  const [previewPageCount, setPreviewPageCount] = useState(0)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -33,8 +36,15 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
         setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
       }
       if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
+      if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') {
+        setDisplayMode(saved.displayMode)
+      }
     } catch {}
   }, [])
+
+  useEffect(() => {
+    setPreviewPage(0)
+  }, [fontScale, showNext, displayMode])
 
   useEffect(() => {
     if (!open) return
@@ -43,8 +53,16 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
     setPreviewError(null)
     const timer = window.setTimeout(async () => {
       try {
-        const url = await createPrompterMp4Preview(songId, { fontScale, showNext })
-        if (active) setPreviewUrl(url)
+        const result = await createPrompterMp4Preview(
+          songId,
+          { fontScale, showNext, displayMode },
+          previewPage,
+        )
+        if (active) {
+          setPreviewUrl(result.dataUrl)
+          setPreviewPageCount(result.pageCount)
+          if (result.pageIndex !== previewPage) setPreviewPage(result.pageIndex)
+        }
       } catch (cause) {
         if (!active) return
         setPreviewError(cause instanceof Error ? cause.message : 'プレビューの生成に失敗しました。')
@@ -57,10 +75,11 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
       active = false
       window.clearTimeout(timer)
     }
-  }, [open, songId, fontScale, showNext])
+  }, [open, songId, fontScale, showNext, displayMode, previewPage])
 
   const openDialog = () => {
     setOpen(true)
+    setPreviewPage(0)
     setProgress(0)
     setError(null)
     setCompleted(false)
@@ -73,7 +92,11 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
     setError(null)
     setCompleted(false)
     try {
-      const result = await createPrompterMp4(songId, setProgress, { fontScale, showNext })
+      const result = await createPrompterMp4(songId, setProgress, {
+        fontScale,
+        showNext,
+        displayMode,
+      })
       const url = URL.createObjectURL(result.blob)
       const anchor = document.createElement('a')
       anchor.href = url
@@ -108,6 +131,27 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
             <h2 className={styles.title}>🎬 MP4書き出し</h2>
 
             <div className={styles.settings}>
+              <div className={styles.modeSetting}>
+                <span>表示形式</span>
+                <div className={styles.modeButtons} role="group" aria-label="動画の表示形式">
+                  <button
+                    type="button"
+                    className={`${styles.modeButton} ${displayMode === 'slide' ? styles.modeButtonActive : ''}`}
+                    disabled={generating}
+                    onClick={() => setDisplayMode('slide')}
+                  >
+                    スライド
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.modeButton} ${displayMode === 'scroll' ? styles.modeButtonActive : ''}`}
+                    disabled={generating}
+                    onClick={() => setDisplayMode('scroll')}
+                  >
+                    連続スクロール
+                  </button>
+                </div>
+              </div>
               <label className={styles.settingRow}>
                 <span>文字サイズ</span>
                 <strong>{Math.round(fontScale * 100)}%</strong>
@@ -123,21 +167,23 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                 onChange={event => setFontScale(Number(event.target.value) / 100)}
                 aria-label="動画の歌詞文字サイズ"
               />
-              <label className={styles.checkboxRow}>
-                <input
-                  type="checkbox"
-                  checked={showNext}
-                  disabled={generating}
-                  onChange={event => setShowNext(event.target.checked)}
-                />
-                次のセクションを表示
-              </label>
+              {displayMode === 'slide' && (
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={showNext}
+                    disabled={generating}
+                    onChange={event => setShowNext(event.target.checked)}
+                  />
+                  次のセクションを表示
+                </label>
+              )}
             </div>
 
             <div className={styles.previewSection}>
               <div className={styles.previewHeading}>
                 <span>出力サンプル</span>
-                <small>先頭スライド</small>
+                <small>{previewPageCount > 0 ? `${previewPage + 1} / ${previewPageCount}` : '読み込み中'}</small>
               </div>
               <div className={styles.previewFrame} aria-live="polite">
                 {previewUrl && (
@@ -145,13 +191,30 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
                     className={styles.previewImage}
                     style={{ backgroundImage: `url(${previewUrl})` }}
                     role="img"
-                    aria-label="MP4先頭スライドの出力サンプル"
+                    aria-label={`MP4出力サンプル ${previewPage + 1}ページ目`}
                   />
                 )}
                 {previewLoading && <div className={styles.previewStatus}>更新中...</div>}
                 {previewError && !previewLoading && (
                   <div className={styles.previewError}>{previewError}</div>
                 )}
+              </div>
+              <div className={styles.previewControls}>
+                <button
+                  type="button"
+                  disabled={generating || previewLoading || previewPage <= 0}
+                  onClick={() => setPreviewPage(page => Math.max(0, page - 1))}
+                >
+                  ← 前へ
+                </button>
+                <span>{displayMode === 'scroll' ? 'スクロール位置' : 'スライド'}</span>
+                <button
+                  type="button"
+                  disabled={generating || previewLoading || previewPage >= previewPageCount - 1}
+                  onClick={() => setPreviewPage(page => Math.min(previewPageCount - 1, page + 1))}
+                >
+                  次へ →
+                </button>
               </div>
             </div>
 

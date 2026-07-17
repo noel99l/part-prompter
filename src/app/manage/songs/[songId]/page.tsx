@@ -190,6 +190,7 @@ export default function LyricsEditor() {
   const [showProgressBar, setShowProgressBar] = useState(true)
   const [editDescription, setEditDescription] = useState('')
   const [isPublic, setIsPublic] = useState(true)
+  const [canManageSong, setCanManageSong] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(true)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
@@ -211,11 +212,11 @@ export default function LyricsEditor() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/songs/${songId}`).then(r => r.json()),
+      fetch(`/api/songs/${songId}?access=1`).then(r => r.json()),
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => {
-      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setShowProgressBar(s.show_progress_bar !== false); setMembers(m)
+      setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCanManageSong(s.can_manage_song === true); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setShowProgressBar(s.show_progress_bar !== false); setMembers(m)
       let fl: FlatLine[] = []
       let br = new Set<number>()
       if (Array.isArray(l) && l.length > 0) {
@@ -293,6 +294,7 @@ export default function LyricsEditor() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newMembers.map((m, i) => ({ ...m, sort_order: i }))),
     })
+    if (!res.ok) throw new Error('メンバーの保存に失敗しました')
     const saved: Member[] = await res.json()
 
     const idMap = new Map<number, number>()
@@ -371,21 +373,23 @@ export default function LyricsEditor() {
     setSavingAll(true)
     try {
       // 1) 楽曲情報
-      await fetch(`/api/songs/${songId}`, {
+      const songResponse = await fetch(`/api/songs/${songId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: editTitle, artist: editArtist, is_public: isPublic, description: editDescription, cover_text: coverText, bg_color: bgColor, original_bpm: originalBpm || null, playback_bpm: playbackBpm || null, show_progress_bar: showProgressBar }),
       })
+      if (!songResponse.ok) throw new Error('楽曲情報の保存に失敗しました')
 
       // 2) メンバー（新規IDのリマップ込み）
       const { savedMembers, remapped } = await putMembersAndRemap(members, curLines)
 
       // 3) 歌詞（パート分け）
-      await fetch(`/api/songs/${songId}/lyrics`, {
+      const lyricsResponse = await fetch(`/api/songs/${songId}/lyrics`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(toDbFormat(remapped, curBreaks)),
       })
+      if (!lyricsResponse.ok) throw new Error('歌詞の保存に失敗しました')
 
       // ローカル状態を保存結果で確定
       const newLrcText = toLrcText(remapped, curBreaks)
@@ -927,7 +931,7 @@ export default function LyricsEditor() {
                     <div className={styles.exportDropdownDivider} />
                   </>
                 )}
-                <CollaboratorMenuItem songId={songId} />
+                {canManageSong && <CollaboratorMenuItem songId={songId} />}
                 <PlaylistAddMenuItem songId={songId} songTitle={song?.title} />
                 <button
                   className={styles.exportDropdownLink}
@@ -936,8 +940,12 @@ export default function LyricsEditor() {
                 >
                   {duplicating ? '複製中...' : '📄 複製して編集'}
                 </button>
-                <div className={styles.exportDropdownDivider} />
-                <DeleteSongMenuItem songId={songId} onDeleted={() => router.push('/manage/songs')} />
+                {canManageSong && (
+                  <>
+                    <div className={styles.exportDropdownDivider} />
+                    <DeleteSongMenuItem songId={songId} onDeleted={() => router.push('/manage/songs')} />
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -1002,9 +1010,11 @@ export default function LyricsEditor() {
                 <button
                   type="button"
                   onClick={() => setIsPublic(v => !v)}
+                  disabled={!canManageSong}
+                  title={canManageSong ? undefined : '公開設定は楽曲の作成者のみ変更できます'}
                   style={{
-                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                    background: isPublic ? '#7CFC00' : '#444',
+                    width: 44, height: 24, borderRadius: 12, border: 'none', cursor: canManageSong ? 'pointer' : 'not-allowed',
+                    background: isPublic ? '#7CFC00' : '#444', opacity: canManageSong ? 1 : 0.55,
                     position: 'relative', transition: 'background 0.2s', flexShrink: 0,
                   }}
                 >

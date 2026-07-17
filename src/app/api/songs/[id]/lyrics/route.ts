@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, withTransaction } from '@/lib/db'
+import { auth } from '@/auth'
+import { initDb, query, withTransaction } from '@/lib/db'
+import { getSongAccess } from '@/lib/songAccess'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -11,7 +13,12 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await initDb()
   const { id } = await params
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await getSongAccess(id, session.user.email)
+  if (!access?.canEditContent) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const lyrics: { block_index: number; line_index: number; text: string; member_ids: number[]; timestamp_ms: number | null; word_members?: { text: string; member_ids: number[] }[] }[] = await req.json()
 
