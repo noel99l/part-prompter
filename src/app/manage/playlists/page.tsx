@@ -8,7 +8,14 @@ import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
 import styles from '@/app/manage/page.module.css'
 
-interface Playlist { id: number; name: string; created_at: string; created_by_name?: string; description?: string }
+interface Playlist {
+  id: number
+  name: string
+  created_at: string
+  created_by_name?: string
+  description?: string
+  is_owner: boolean
+}
 
 export default function PlaylistsPage() {
   const router = useRouter()
@@ -85,8 +92,10 @@ export default function PlaylistsPage() {
                 href={`/manage/playlists/${p.id}`}
                 title={p.name}
                 description={p.description}
+                tags={p.is_owner ? undefined : [{ label: '共同編集', type: 'pink' }]}
+                meta={p.created_by_name ? [`作成者: ${p.created_by_name}`] : undefined}
                 actions={<ItemMenu
-                  onDelete={() => remove(p.id)}
+                  onDelete={p.is_owner ? () => remove(p.id) : undefined}
                   menuItems={[
                     { label: '✏️ 編集', href: `/manage/playlists/${p.id}` },
                     { label: '▶ セットリスト再生', href: `/playlists/${p.id}/prompter`, target: '_blank' },

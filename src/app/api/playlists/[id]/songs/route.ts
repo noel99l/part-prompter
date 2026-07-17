@@ -1,30 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { auth } from '@/auth'
+import { initDb, query, withTransaction } from '@/lib/db'
+import { getPlaylistAccess } from '@/lib/playlistAccess'
+
+async function authorizeEditor(id: string): Promise<NextResponse | null> {
+  const session = await auth()
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await getPlaylistAccess(id, session.user.email)
+  if (!access?.canEdit) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  return null
+}
 
 // 曲を追加
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await initDb()
   const { id } = await params
+  const denied = await authorizeEditor(id)
+  if (denied) return denied
+
   const { songId } = await req.json()
-  const max = await query(`SELECT COALESCE(MAX(sort_order), -1) as m FROM playlist_songs WHERE playlist_id=$1`, [id])
-  const nextOrder = max.rows[0].m + 1
-  await query(`INSERT INTO playlist_songs (playlist_id, song_id, sort_order) VALUES ($1,$2,$3)`, [id, songId, nextOrder])
+  if (!Number.isInteger(songId)) return NextResponse.json({ error: 'songId required' }, { status: 400 })
+  await query(`
+    INSERT INTO playlist_songs (playlist_id, song_id, sort_order)
+    SELECT $1, $2, COALESCE(MAX(sort_order), -1) + 1
+    FROM playlist_songs WHERE playlist_id = $1
+  `, [id, songId])
   return NextResponse.json({ ok: true })
 }
 
 // 並び順を更新（song_idの配列を受け取る）
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await initDb()
   const { id } = await params
-  const { songIds }: { songIds: number[] } = await req.json()
-  for (let i = 0; i < songIds.length; i++) {
-    await query(`UPDATE playlist_songs SET sort_order=$1 WHERE playlist_id=$2 AND song_id=$3`, [i, id, songIds[i]])
+  const denied = await authorizeEditor(id)
+  if (denied) return denied
+
+  const { songIds }: { songIds?: number[] } = await req.json()
+  if (!Array.isArray(songIds) || !songIds.every(Number.isInteger)) {
+    return NextResponse.json({ error: 'songIds required' }, { status: 400 })
   }
+  await withTransaction(async (client) => {
+    for (let index = 0; index < songIds.length; index++) {
+      await client.query(
+        `UPDATE playlist_songs SET sort_order=$1 WHERE playlist_id=$2 AND song_id=$3`,
+        [index, id, songIds[index]]
+      )
+    }
+  })
   return NextResponse.json({ ok: true })
 }
 
 // 曲を削除
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  await initDb()
   const { id } = await params
+  const denied = await authorizeEditor(id)
+  if (denied) return denied
+
   const { songId } = await req.json()
+  if (!Number.isInteger(songId)) return NextResponse.json({ error: 'songId required' }, { status: 400 })
   await query(`DELETE FROM playlist_songs WHERE playlist_id=$1 AND song_id=$2`, [id, songId])
   return NextResponse.json({ ok: true })
 }

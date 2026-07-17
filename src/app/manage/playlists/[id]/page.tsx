@@ -20,6 +20,7 @@ import { CSS } from '@dnd-kit/utilities'
 import styles from '@/app/manage/page.module.css'
 import skStyles from '@/components/skeleton.module.css'
 import SongCard from '@/components/SongCard'
+import PlaylistCollaboratorManager from '@/components/PlaylistCollaboratorManager'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
 
 interface Song {
@@ -91,6 +92,7 @@ export default function PlaylistEditPage() {
   const [loading, setLoading] = useState(true)
   const [editingName, setEditingName] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
   const canUseSyncPrompter = useSyncCapability()
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -102,9 +104,15 @@ export default function PlaylistEditPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
-    fetch(`/api/playlists/${id}`)
+    fetch(`/api/playlists/${id}?access=1`)
       .then(r => r.json())
-      .then(data => { setName(data.name); setDescription(data.description || ''); setSongs(data.songs || []); setLoading(false) })
+      .then(data => {
+        setName(data.name)
+        setDescription(data.description || '')
+        setSongs(data.songs || [])
+        setIsOwner(data.is_owner === true)
+        setLoading(false)
+      })
   }, [id])
 
   const songsRef = useRef(songs)
@@ -193,8 +201,9 @@ export default function PlaylistEditPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>📋 セットリスト</h1>
+        {isOwner && <PlaylistCollaboratorManager playlistId={id} />}
         <Link href={`/playlists/${id}/prompter`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
-        {canUseSyncPrompter && songs.length > 0 && (
+        {isOwner && canUseSyncPrompter && songs.length > 0 && (
           <Link href={`/manage/sync?playlistId=${id}`} className={styles.previewLink}>📡 同期プロンプターを開始</Link>
         )}
       </div>
