@@ -24,7 +24,7 @@ export default function SongDetailPage() {
   const { data: session } = useSession()
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
-  const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null)
+  const [selectedMemberIds, setSelectedMemberIds] = useState<number[]>([])
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -79,10 +79,11 @@ export default function SongDetailPage() {
   }, [songId])
 
   useEffect(() => {
-    if (selectedMemberId != null && !members.some(member => member.id === selectedMemberId)) {
-      setSelectedMemberId(null)
-    }
-  }, [members, selectedMemberId])
+    setSelectedMemberIds(current => {
+      const validIds = current.filter(id => members.some(member => member.id === id))
+      return validIds.length === current.length ? current : validIds
+    })
+  }, [members])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
@@ -103,10 +104,10 @@ export default function SongDetailPage() {
   }
 
   const partEmphasisClass = (memberIds: number[]) => {
-    if (selectedMemberId == null) return ''
+    if (selectedMemberIds.length === 0) return ''
     // 担当未設定は全員歌唱として扱い、どのメンバーを選んでも減光しない。
     if (memberIds.length === 0) return styles.partHighlighted
-    return memberIds.includes(selectedMemberId) ? styles.partHighlighted : styles.partDimmed
+    return memberIds.some(id => selectedMemberIds.includes(id)) ? styles.partHighlighted : styles.partDimmed
   }
 
   function renderLineText(line: LyricLine) {
@@ -265,10 +266,10 @@ export default function SongDetailPage() {
               <p className={styles.description}>{song.description}</p>
             )}
             {members.length > 0 && (
-              <div className={styles.memberList} role="group" aria-label="強調表示するパート">
+              <div className={styles.memberList} role="group" aria-label="強調表示するパート（複数選択可）">
                 {members.map((m, i) => {
                   const label = m.name || String.fromCharCode(65 + i)
-                  const selected = selectedMemberId === m.id
+                  const selected = selectedMemberIds.includes(m.id)
                   return (
                     <button
                       key={m.id}
@@ -276,8 +277,11 @@ export default function SongDetailPage() {
                       className={`${styles.memberBadge} ${selected ? styles.memberBadgeSelected : ''}`}
                       style={{ borderColor: m.color, color: m.color }}
                       aria-pressed={selected}
-                      aria-label={`${label}のパートを${selected ? '通常表示に戻す' : '強調表示する'}`}
-                      onClick={() => setSelectedMemberId(current => current === m.id ? null : m.id)}
+                      aria-label={`${label}のパートを${selected ? '選択解除する' : '強調表示する'}`}
+                      onClick={() => setSelectedMemberIds(current => selected
+                        ? current.filter(id => id !== m.id)
+                        : [...current, m.id]
+                      )}
                     >
                       {label}
                     </button>
@@ -301,7 +305,7 @@ export default function SongDetailPage() {
                     : ''}
                 </span>
                 {renderLineText(line)}
-{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={`${styles.dot} ${selectedMemberId == null ? '' : id === selectedMemberId ? styles.dotHighlighted : styles.dotDimmed}`} style={{ background: memberMap[id]?.color, color: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
+{(() => { const ids = line.word_members?.length ? [...new Set(line.word_members.flatMap(w => [...w.member_ids, ...harmonyIds(w, 'up'), ...harmonyIds(w, 'down')]))] : line.member_ids; return ids?.length > 0 ? (<span className={styles.lineBadges}>{ids.map(id => (<span key={id} className={`${styles.dot} ${selectedMemberIds.length === 0 ? '' : selectedMemberIds.includes(id) ? styles.dotHighlighted : styles.dotDimmed}`} style={{ background: memberMap[id]?.color, color: memberMap[id]?.color }} title={memberMap[id]?.name || String.fromCharCode(65 + (memberMap[id]?.sort_order ?? 0))} />))}</span>) : null })()}
               </div>
             ))}
           </div>
