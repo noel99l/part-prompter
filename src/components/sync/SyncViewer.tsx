@@ -764,7 +764,7 @@ export default function SyncViewer({ joinToken }: { joinToken: string }) {
             aria-label="文字サイズ"
           />
           <div className={styles.settingsRow}>
-            <span>横画面を連続スクロール表示</span>
+            <span>スクロール表示</span>
             <button role="switch" aria-checked={displayMode === 'scroll'} className={`${styles.switch} ${displayMode === 'scroll' ? styles.switchOn : ''}`} onClick={toggleDisplayMode}><span /></button>
           </div>
           <div className={styles.settingsRow}>

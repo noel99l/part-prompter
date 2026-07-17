@@ -35,6 +35,40 @@
   background: #191919;
 }
 
+.modeSetting {
+  display: grid;
+  gap: 0.45rem;
+  color: #ddd;
+  font-size: 0.9rem;
+}
+
+.modeButtons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.modeButton {
+  padding: 0.5rem 0.6rem;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #222;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
+.modeButtonActive {
+  border-color: #ff69b4;
+  background: rgba(255, 105, 180, 0.14);
+  color: #fff;
+}
+
+.modeButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .settingRow,
 .checkboxRow {
   display: flex;
@@ -117,6 +151,39 @@
 
 .previewError {
   color: #ff8a8a;
+}
+
+.previewControls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.previewControls span {
+  color: #777;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+.previewControls button {
+  padding: 0.42rem 0.65rem;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: #222;
+  color: #ddd;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.previewControls button:last-child {
+  justify-self: end;
+}
+
+.previewControls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
 }
 
 .message,

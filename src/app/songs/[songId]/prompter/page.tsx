@@ -495,7 +495,7 @@ export default function PrompterView() {
               aria-label="文字サイズ"
             />
             <div className={styles.settingsRow}>
-              <span className={styles.settingsLabel}>横画面を連続スクロール表示</span>
+              <span className={styles.settingsLabel}>スクロール表示</span>
               <button
                 role="switch"
                 aria-checked={displayMode === 'scroll'}

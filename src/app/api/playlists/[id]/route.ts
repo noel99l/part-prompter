@@ -10,24 +10,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!playlist.rows[0]) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   let isOwner = false
+  let viewerUserId: number | null = null
   if (req.nextUrl.searchParams.get('access') === '1') {
     const session = await auth()
     if (session?.user?.email) {
       const access = await getPlaylistAccess(id, session.user.email)
       isOwner = access?.isOwner ?? false
+      viewerUserId = access?.canEdit ? access.userId : null
     }
   }
 
   const songs = await query(`
     SELECT ps.sort_order, s.id, s.title, s.artist,
+      CASE WHEN $2::integer IS NULL THEN FALSE ELSE (
+        s.created_by = $2 OR EXISTS (
+          SELECT 1 FROM song_collaborators sc
+          JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
+          WHERE sc.song_id = s.id AND scm.user_id = $2
+        ) OR p.created_by = s.created_by
+      ) END AS can_edit,
       (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
       (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count,
       (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count
     FROM playlist_songs ps
+    JOIN playlists p ON p.id = ps.playlist_id
     JOIN prompter_songs s ON s.id = ps.song_id
     WHERE ps.playlist_id=$1
     ORDER BY ps.sort_order
-  `, [id])
+  `, [id, viewerUserId])
 
   if (req.nextUrl.searchParams.get('full') === '1') {
     const songIds = songs.rows.map((song: { id: number }) => song.id)

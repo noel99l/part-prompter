@@ -11,6 +11,7 @@ const CURRENT_FONT_SIZE = 96
 const NEXT_FONT_SIZE = 64
 const X_MARGIN = 77
 const LAST_SLIDE_MS = 5000
+const SCROLL_TRANSITION_MS = 600
 
 interface VideoWordMember {
   text: string
@@ -55,6 +56,13 @@ export interface Mp4ExportResult {
 export interface Mp4ExportOptions {
   fontScale?: number
   showNext?: boolean
+  displayMode?: 'slide' | 'scroll'
+}
+
+export interface Mp4PreviewResult {
+  dataUrl: string
+  pageCount: number
+  pageIndex: number
 }
 
 type VideoLayout = {
@@ -62,6 +70,13 @@ type VideoLayout = {
   nextFontSize: number
   maxRows: number
   showNext: boolean
+  displayMode: 'slide' | 'scroll'
+}
+
+type ScrollGeometry = {
+  blockTops: number[]
+  blockHeights: number[]
+  endTop: number
 }
 
 type ProgressCallback = (progress: number) => void
@@ -192,7 +207,8 @@ function resolveVideoLayout(options: Mp4ExportOptions): VideoLayout {
   const fontScale = Math.min(1.6, Math.max(0.6, options.fontScale ?? 1))
   const currentFontSize = CURRENT_FONT_SIZE * fontScale
   const nextFontSize = NEXT_FONT_SIZE * fontScale
-  const showNext = options.showNext ?? true
+  const displayMode = options.displayMode ?? 'slide'
+  const showNext = displayMode === 'slide' && (options.showNext ?? true)
   const lineHeight = currentFontSize * 1.6
   const gap = 6.4
   const padTop = WIDTH * 0.03
@@ -203,6 +219,7 @@ function resolveVideoLayout(options: Mp4ExportOptions): VideoLayout {
     nextFontSize,
     maxRows: Math.max(1, Math.floor((available + gap) / (lineHeight + gap))),
     showNext,
+    displayMode,
   }
 }
 
@@ -298,6 +315,116 @@ function drawSlide(
   ctx.globalAlpha = 1
 }
 
+function measureStyledLineRows(
+  ctx: CanvasRenderingContext2D,
+  line: VideoLine,
+  maxWidth: number,
+  fontSize: number,
+) {
+  ctx.font = `700 ${fontSize}px "Hiragino Sans", "Yu Gothic", sans-serif`
+  let x = 0
+  let rows = 1
+  for (const char of lineChars(line)) {
+    const width = Math.max(ctx.measureText(char.text).width, char.text.trim() ? 1 : fontSize * 0.35)
+    if (x > 0 && x + width > maxWidth) {
+      x = 0
+      rows++
+    }
+    x += width
+  }
+  return rows
+}
+
+function buildScrollGeometry(
+  ctx: CanvasRenderingContext2D,
+  blocks: DisplayChunk<VideoLine>[],
+  layout: VideoLayout,
+): ScrollGeometry {
+  const blockTops: number[] = []
+  const blockHeights: number[] = []
+  const maxWidth = WIDTH - X_MARGIN * 2 - 15
+  let top = 0
+  for (const block of blocks) {
+    blockTops.push(top)
+    let height = 0
+    block.lines.forEach((line, lineIndex) => {
+      const rows = measureStyledLineRows(ctx, line, maxWidth, layout.currentFontSize)
+      height += rows * layout.currentFontSize * 1.3
+      if (lineIndex < block.lines.length - 1) height += layout.currentFontSize * 0.3
+    })
+    blockHeights.push(height)
+    top += height + 64
+  }
+  return { blockTops, blockHeights, endTop: top + 32 }
+}
+
+function drawScrollView(
+  ctx: CanvasRenderingContext2D,
+  song: VideoSong,
+  members: VideoMember[],
+  blocks: DisplayChunk<VideoLine>[],
+  activeBlock: number,
+  scrollY: number,
+  layout: VideoLayout,
+  geometry: ScrollGeometry,
+) {
+  clearCanvas(ctx, song)
+  const memberMap = new Map(members.map(member => [member.id, member]))
+  const viewportTop = 16
+  const textX = X_MARGIN + 15
+  const maxWidth = WIDTH - X_MARGIN * 2 - 15
+
+  blocks.forEach((block, blockIndex) => {
+    const screenTop = viewportTop + geometry.blockTops[blockIndex] - scrollY
+    const blockHeight = geometry.blockHeights[blockIndex]
+    if (screenTop > HEIGHT || screenTop + blockHeight < 0) return
+
+    if (blockIndex === activeBlock) {
+      ctx.fillStyle = 'rgba(255, 105, 180, 0.06)'
+      ctx.fillRect(X_MARGIN, screenTop - 8, WIDTH - X_MARGIN * 2, blockHeight + 16)
+      ctx.fillStyle = '#FF69B4'
+      ctx.fillRect(X_MARGIN, screenTop - 8, 3, blockHeight + 16)
+    }
+
+    let baseline = screenTop + layout.currentFontSize * 0.9
+    block.lines.forEach((line, lineIndex) => {
+      const rows = drawStyledLine(ctx, line, memberMap, {
+        x: textX,
+        baseline,
+        maxWidth,
+        fontSize: layout.currentFontSize,
+      })
+      baseline += rows * layout.currentFontSize * 1.3
+      if (lineIndex < block.lines.length - 1) baseline += layout.currentFontSize * 0.3
+    })
+  })
+
+  const endY = viewportTop + geometry.endTop - scrollY
+  if (endY > -50 && endY < HEIGHT + 50) {
+    ctx.fillStyle = '#666666'
+    ctx.font = 'italic 36px "Hiragino Sans", "Yu Gothic", sans-serif'
+    ctx.textAlign = 'center'
+    ctx.fillText('― End ―', WIDTH / 2, endY)
+    ctx.textAlign = 'start'
+  }
+}
+
+function scrollPositionAt(
+  blocks: DisplayChunk<VideoLine>[],
+  geometry: ScrollGeometry,
+  blockIndex: number,
+  positionMs: number,
+  bpmRate: number,
+) {
+  const target = geometry.blockTops[blockIndex] ?? 0
+  if (blockIndex <= 0) return target
+  const previous = geometry.blockTops[blockIndex - 1] ?? target
+  const startedAt = (blocks[blockIndex]?.startMs ?? 0) * bpmRate
+  const progress = Math.max(0, Math.min(1, (positionMs - startedAt) / SCROLL_TRANSITION_MS))
+  const eased = 1 - Math.pow(1 - progress, 3)
+  return previous + (target - previous) * eased
+}
+
 function groupBlocks(lines: VideoLine[]) {
   const blocks: VideoLine[][] = []
   for (const line of [...lines].sort((a, b) =>
@@ -329,7 +456,8 @@ function yieldToBrowser() {
 export async function createPrompterMp4Preview(
   songId: string,
   options: Mp4ExportOptions = {},
-): Promise<string> {
+  requestedPage = 0,
+): Promise<Mp4PreviewResult> {
   const [song, members, lines] = await Promise.all([
     fetchJson<VideoSong>(`/api/songs/${songId}`),
     fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
@@ -350,8 +478,27 @@ export async function createPrompterMp4Preview(
     lineFont: layout.currentFontSize,
     contentW: WIDTH - X_MARGIN * 2,
   }, true)
-  drawSlide(ctx, song, members, displayBlocks, 0, layout)
-  return canvas.toDataURL('image/png')
+  const pageIndex = Math.max(0, Math.min(displayBlocks.length - 1, requestedPage))
+  if (layout.displayMode === 'scroll') {
+    const geometry = buildScrollGeometry(ctx, displayBlocks, layout)
+    drawScrollView(
+      ctx,
+      song,
+      members,
+      displayBlocks,
+      pageIndex,
+      geometry.blockTops[pageIndex] ?? 0,
+      layout,
+      geometry,
+    )
+  } else {
+    drawSlide(ctx, song, members, displayBlocks, pageIndex, layout)
+  }
+  return {
+    dataUrl: canvas.toDataURL('image/png'),
+    pageCount: displayBlocks.length,
+    pageIndex,
+  }
 }
 
 export async function createPrompterMp4(
@@ -384,6 +531,9 @@ export async function createPrompterMp4(
     lineFont: layout.currentFontSize,
     contentW: WIDTH - X_MARGIN * 2,
   }, true)
+  const scrollGeometry = layout.displayMode === 'scroll'
+    ? buildScrollGeometry(ctx, displayBlocks, layout)
+    : null
   const bpmRate = prompterBpmRate(song.original_bpm, song.playback_bpm)
   const timedStarts = displayBlocks.flatMap(block =>
     block.startMs == null ? [] : [block.startMs * bpmRate]
@@ -415,11 +565,38 @@ export async function createPrompterMp4(
       const positionMs = timestampSeconds * 1000
       const blockIndex = displayBlockAtPosition(displayBlocks, positionMs, -1, bpmRate)
       const blockChanged = blockIndex !== renderedBlock
-      if (blockChanged) {
+      const blockStartedAt = blockIndex >= 0
+        ? (displayBlocks[blockIndex]?.startMs ?? 0) * bpmRate
+        : 0
+      const scrollAnimating = layout.displayMode === 'scroll'
+        && blockIndex > 0
+        && positionMs - blockStartedAt <= SCROLL_TRANSITION_MS
+
+      if (layout.displayMode === 'scroll' && blockIndex >= 0 && scrollGeometry) {
+        if (blockChanged || scrollAnimating) {
+          const scrollY = scrollPositionAt(
+            displayBlocks,
+            scrollGeometry,
+            blockIndex,
+            positionMs,
+            bpmRate,
+          )
+          drawScrollView(
+            ctx,
+            song,
+            members,
+            displayBlocks,
+            blockIndex,
+            scrollY,
+            layout,
+            scrollGeometry,
+          )
+        }
+      } else if (blockChanged) {
         if (blockIndex < 0) drawCover(ctx, song, members)
         else drawSlide(ctx, song, members, displayBlocks, blockIndex, layout)
-        renderedBlock = blockIndex
       }
+      if (blockChanged) renderedBlock = blockIndex
       await videoSource.add(timestampSeconds, 1 / FPS, {
         keyFrame: frame === 0 || frame % (FPS * 2) === 0 || blockChanged,
       })
