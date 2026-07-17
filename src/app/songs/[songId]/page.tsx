@@ -104,6 +104,8 @@ export default function SongDetailPage() {
 
   const partEmphasisClass = (memberIds: number[]) => {
     if (selectedMemberId == null) return ''
+    // 担当未設定は全員歌唱として扱い、どのメンバーを選んでも減光しない。
+    if (memberIds.length === 0) return styles.partHighlighted
     return memberIds.includes(selectedMemberId) ? styles.partHighlighted : styles.partDimmed
   }
 
