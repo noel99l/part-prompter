@@ -5,44 +5,78 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import s from '@/app/common.module.css'
 
+interface InviteData {
+  title: string
+  artist?: string | null
+  invited_by_name?: string | null
+  expires_at: string
+  resourceType?: 'song' | 'playlist'
+  resourceId?: number
+  song_id?: number
+  playlist_id?: number
+  alreadyJoined?: boolean
+  expired?: boolean
+}
+
 export default function InvitePage() {
   const { token } = useParams<{ token: string }>()
   const { status } = useSession()
   const router = useRouter()
-  const [invite, setInvite] = useState<any>(null)
+  const [invite, setInvite] = useState<InviteData | null>(null)
   const [loading, setLoading] = useState(true)
   const [accepting, setAccepting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
 
+  const resourceType = invite?.resourceType ?? 'song'
+  const resourceLabel = resourceType === 'playlist' ? 'セットリスト' : '楽曲'
+  const resourceId = invite?.resourceId ?? invite?.playlist_id ?? invite?.song_id
+  const editPath = resourceType === 'playlist'
+    ? `/manage/playlists/${resourceId}`
+    : `/manage/songs/${resourceId}`
+  const listPath = resourceType === 'playlist' ? '/manage/playlists' : '/songs'
+
   useEffect(() => {
     fetch(`/api/invite/${token}`)
-      .then(r => r.json())
-      .then(data => {
-        setInvite(data)
-        if (data.alreadyJoined) setError('すでにこの楽曲の共同編集者として登録済みです。')
-        setLoading(false)
+      .then(async response => ({ ok: response.ok, data: await response.json() }))
+      .then(({ ok, data }) => {
+        if (!ok) setError(data.error === 'Expired' ? '招待リンクの有効期限が切れています' : '招待リンクが無効です')
+        else {
+          setInvite(data)
+          if (data.expired) setError('招待リンクの有効期限が切れています')
+          else if (data.alreadyJoined) {
+            const label = data.resourceType === 'playlist' ? 'セットリスト' : '楽曲'
+            setError(`すでにこの${label}の共同編集者として登録済みです。`)
+          }
+        }
       })
-      .catch(() => { setError('招待リンクが無効です'); setLoading(false) })
+      .catch(() => setError('招待リンクが無効です'))
+      .finally(() => setLoading(false))
   }, [token])
 
   const handleAccept = async () => {
     setAccepting(true)
-    const res = await fetch(`/api/invite/${token}`, { method: 'POST' })
-    const data = await res.json()
-    if (data.ok) {
-      if (data.alreadyJoined) {
-        setError('すでにこの楽曲の共同編集者として登録済みです。')
-        setAccepting(false)
+    try {
+      const response = await fetch(`/api/invite/${token}`, { method: 'POST' })
+      const data = await response.json()
+      if (data.ok && !data.alreadyJoined) {
+        setDone(true)
+        const destination = data.resourceType === 'playlist'
+          ? `/manage/playlists/${data.playlistId}`
+          : `/manage/songs/${data.songId}`
+        setTimeout(() => router.push(destination), 1500)
         return
       }
-      setDone(true)
-      setTimeout(() => router.push(`/manage/songs/${data.songId}`), 1500)
-    } else {
-      setError(data.error === 'Expired' ? '招待リンクの有効期限が切れています'
-        : data.error === 'Already accepted' ? 'この招待はすでに承認済みです'
-        : data.error === 'Owner cannot accept' ? '自分の楽曲には承認できません'
-        : '承認に失敗しました')
+      if (data.alreadyJoined) {
+        setError(`すでにこの${resourceLabel}の共同編集者として登録済みです。`)
+      } else {
+        setError(data.error === 'Expired' ? '招待リンクの有効期限が切れています'
+          : data.error === 'Owner cannot accept' ? `自分の${resourceLabel}には承認できません`
+          : '承認に失敗しました')
+      }
+    } catch {
+      setError('承認に失敗しました')
+    } finally {
       setAccepting(false)
     }
   }
@@ -56,23 +90,15 @@ export default function InvitePage() {
           {error.includes('登録済み') ? 'ℹ️ すでに登録済み' : '⚠️ エラー'}
         </h1>
         <p className={s.cardSub}>{error}</p>
-        {error.includes('登録済み') && invite?.song_id && (
-          <a href={`/manage/songs/${invite.song_id}`} className={s.btnPrimary}>→ 編集ページへ</a>
+        {error.includes('登録済み') && resourceId && (
+          <Link href={editPath} className={s.btnPrimary}>→ 編集ページへ</Link>
         )}
-        <Link href="/songs" className={s.linkSub}>← 一覧に戻る</Link>
+        <Link href={listPath} className={s.linkSub}>← 一覧に戻る</Link>
       </div>
     </div>
   )
 
-  if (invite?.error) return (
-    <div className={s.pageCenter}>
-      <div className={`${s.card} ${s.cardSm}`}>
-        <h1 className={`${s.cardTitle} ${s.textDanger}`}>⚠️ 無効なリンク</h1>
-        <p className={s.cardSub}>この招待リンクは存在しないか、有効期限が切れています。</p>
-        <Link href="/songs" className={s.linkSub}>← 一覧に戻る</Link>
-      </div>
-    </div>
-  )
+  if (!invite) return null
 
   if (done) return (
     <div className={s.pageCenter}>
@@ -86,10 +112,11 @@ export default function InvitePage() {
   return (
     <div className={s.pageCenter}>
       <div className={`${s.card} ${s.cardSm}`}>
-        <h1 className={s.cardTitle}>🎨 共同編集への招待</h1>
+        <h1 className={s.cardTitle}>👥 共同編集への招待</h1>
         <div className={s.infoBox}>
           <div className={s.infoBoxTitle}>{invite.title}</div>
           {invite.artist && <div className={s.infoBoxSub}>{invite.artist}</div>}
+          <div className={s.infoBoxMeta}>対象: {resourceLabel}</div>
           {invite.invited_by_name && <div className={s.infoBoxMeta}>招待者: {invite.invited_by_name}</div>}
         </div>
         <p className={s.metaText}>
@@ -103,11 +130,11 @@ export default function InvitePage() {
             </Link>
           </>
         ) : (
-          <button className={s.btnPrimary} onClick={handleAccept} disabled={accepting}>
+          <button className={s.btnPrimary} onClick={handleAccept} disabled={accepting || status === 'loading'}>
             {accepting ? '承認中...' : '✓ 共同編集を承認する'}
           </button>
         )}
-        <Link href="/songs" className={s.linkSub}>キャンセル</Link>
+        <Link href={listPath} className={s.linkSub}>キャンセル</Link>
       </div>
     </div>
   )

@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPrompterMp4 } from '@/lib/mp4Export.client'
 import styles from './Mp4ExportMenuItem.module.css'
+
+const FONT_SCALE_MIN = 0.6
+const FONT_SCALE_MAX = 1.6
+const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
 
 interface Props {
   songId: string
@@ -16,16 +20,34 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
+  const [fontScale, setFontScale] = useState(1)
+  const [showNext, setShowNext] = useState(true)
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(DISPLAY_SETTINGS_KEY) || 'null')
+      if (typeof saved?.fontScale === 'number') {
+        setFontScale(Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, saved.fontScale)))
+      }
+      if (typeof saved?.showNext === 'boolean') setShowNext(saved.showNext)
+    } catch {}
+  }, [])
+
+  const openDialog = () => {
+    setOpen(true)
+    setProgress(0)
+    setError(null)
+    setCompleted(false)
+  }
 
   const startExport = async () => {
     if (generating) return
-    setOpen(true)
     setGenerating(true)
     setProgress(0)
     setError(null)
     setCompleted(false)
     try {
-      const result = await createPrompterMp4(songId, setProgress)
+      const result = await createPrompterMp4(songId, setProgress, { fontScale, showNext })
       const url = URL.createObjectURL(result.blob)
       const anchor = document.createElement('a')
       anchor.href = url
@@ -51,13 +73,41 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
 
   return (
     <>
-      <button type="button" className={className} onClick={startExport} disabled={generating}>
+      <button type="button" className={className} onClick={openDialog} disabled={generating}>
         🎬 MP4（無音）
       </button>
       {open && (
         <div className={styles.overlay} onClick={close}>
           <div className={styles.modal} onClick={event => event.stopPropagation()}>
             <h2 className={styles.title}>🎬 MP4書き出し</h2>
+
+            <div className={styles.settings}>
+              <label className={styles.settingRow}>
+                <span>文字サイズ</span>
+                <strong>{Math.round(fontScale * 100)}%</strong>
+              </label>
+              <input
+                type="range"
+                className={styles.slider}
+                min={FONT_SCALE_MIN * 100}
+                max={FONT_SCALE_MAX * 100}
+                step={1}
+                value={Math.round(fontScale * 100)}
+                disabled={generating}
+                onChange={event => setFontScale(Number(event.target.value) / 100)}
+                aria-label="動画の歌詞文字サイズ"
+              />
+              <label className={styles.checkboxRow}>
+                <input
+                  type="checkbox"
+                  checked={showNext}
+                  disabled={generating}
+                  onChange={event => setShowNext(event.target.checked)}
+                />
+                次のセクションを表示
+              </label>
+            </div>
+
             {generating && (
               <>
                 <p className={styles.message}>端末内で動画を生成しています。画面を閉じずにお待ちください。</p>
@@ -74,9 +124,9 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
             <p className={styles.note}>1920×1080・30fps・無音／最後のスライドは5秒間表示されます。保存済みのデータから生成します。</p>
             {!generating && (
               <div className={styles.actions}>
-                {error && (
-                  <button type="button" className={styles.retryButton} onClick={startExport}>再試行</button>
-                )}
+                <button type="button" className={styles.exportButton} onClick={startExport}>
+                  {completed ? 'この設定で再生成' : error ? '再試行' : '生成してダウンロード'}
+                </button>
                 <button type="button" className={styles.closeButton} onClick={close}>閉じる</button>
               </div>
             )}

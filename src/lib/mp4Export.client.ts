@@ -51,6 +51,19 @@ export interface Mp4ExportResult {
   blob: Blob
   filename: string
 }
+
+export interface Mp4ExportOptions {
+  fontScale?: number
+  showNext?: boolean
+}
+
+type VideoLayout = {
+  currentFontSize: number
+  nextFontSize: number
+  maxRows: number
+  showNext: boolean
+}
+
 type ProgressCallback = (progress: number) => void
 
 type StyledChar = {
@@ -175,6 +188,24 @@ function clearCanvas(ctx: CanvasRenderingContext2D, song: VideoSong) {
   ctx.fillRect(0, 0, WIDTH, HEIGHT)
 }
 
+function resolveVideoLayout(options: Mp4ExportOptions): VideoLayout {
+  const fontScale = Math.min(1.6, Math.max(0.6, options.fontScale ?? 1))
+  const currentFontSize = CURRENT_FONT_SIZE * fontScale
+  const nextFontSize = NEXT_FONT_SIZE * fontScale
+  const showNext = options.showNext ?? true
+  const lineHeight = currentFontSize * 1.6
+  const gap = 6.4
+  const padTop = WIDTH * 0.03
+  const nextArea = showNext ? 80 + nextFontSize * 2.6 + 20 : 88
+  const available = HEIGHT - padTop - nextArea
+  return {
+    currentFontSize,
+    nextFontSize,
+    maxRows: Math.max(1, Math.floor((available + gap) / (lineHeight + gap))),
+    showNext,
+  }
+}
+
 function drawCover(
   ctx: CanvasRenderingContext2D,
   song: VideoSong,
@@ -223,40 +254,46 @@ function drawSlide(
   members: VideoMember[],
   blocks: DisplayChunk<VideoLine>[],
   blockIndex: number,
+  layout: VideoLayout,
 ) {
   clearCanvas(ctx, song)
+  const { currentFontSize, nextFontSize, showNext } = layout
   const memberMap = new Map(members.map(member => [member.id, member]))
   const current = blocks[blockIndex]
-  let baseline = 145
+  let baseline = WIDTH * 0.03 + currentFontSize * 0.9
   for (const line of current?.lines || []) {
     const rows = drawStyledLine(ctx, line, memberMap, {
       x: X_MARGIN,
       baseline,
       maxWidth: WIDTH - X_MARGIN * 2,
-      fontSize: CURRENT_FONT_SIZE,
+      fontSize: currentFontSize,
     })
-    baseline += rows * CURRENT_FONT_SIZE * 1.3 + CURRENT_FONT_SIZE * 0.3
+    baseline += rows * currentFontSize * 1.3 + currentFontSize * 0.3
   }
+
+  if (!showNext) return
+
   const next = blocks[blockIndex + 1]
+  const dividerY = HEIGHT - (80 + nextFontSize * 2.6 + 20) + 6
   ctx.globalAlpha = 0.65
   ctx.fillStyle = '#FF69B4'
-  ctx.fillRect(X_MARGIN, 820, WIDTH - X_MARGIN * 2, 5)
+  ctx.fillRect(X_MARGIN, dividerY, WIDTH - X_MARGIN * 2, 5)
   if (next) {
-    let nextBaseline = 910
+    let nextBaseline = dividerY + nextFontSize * 1.4
     for (const line of next.lines.slice(0, 2)) {
       const rows = drawStyledLine(ctx, line, memberMap, {
         x: X_MARGIN,
         baseline: nextBaseline,
         maxWidth: WIDTH - X_MARGIN * 2,
-        fontSize: NEXT_FONT_SIZE,
+        fontSize: nextFontSize,
       })
-      nextBaseline += rows * NEXT_FONT_SIZE * 1.3 + 10
-      if (nextBaseline > 1050) break
+      nextBaseline += rows * nextFontSize * 1.3 + 10
+      if (nextBaseline > HEIGHT - 30) break
     }
   } else {
     ctx.fillStyle = '#FFFFFF'
-    ctx.font = 'italic 52px "Hiragino Sans", "Yu Gothic", sans-serif'
-    ctx.fillText('― End ―', X_MARGIN, 920)
+    ctx.font = `italic ${nextFontSize * 0.8125}px "Hiragino Sans", "Yu Gothic", sans-serif`
+    ctx.fillText('― End ―', X_MARGIN, dividerY + nextFontSize * 1.55)
   }
   ctx.globalAlpha = 1
 }
@@ -292,6 +329,7 @@ function yieldToBrowser() {
 export async function createPrompterMp4(
   songId: string,
   onProgress: ProgressCallback,
+  options: Mp4ExportOptions = {},
 ): Promise<Mp4ExportResult> {
   if (typeof VideoEncoder === 'undefined') {
     throw new Error('このブラウザはMP4生成に対応していません。最新版のChromeまたはEdgeをご利用ください。')
@@ -311,10 +349,11 @@ export async function createPrompterMp4(
   if (!ctx) throw new Error('動画描画を初期化できませんでした。')
   await document.fonts?.ready
 
+  const layout = resolveVideoLayout(options)
   const sourceBlocks = groupBlocks(lines)
   const displayBlocks = buildDisplayBlocks(sourceBlocks, {
-    maxRows: 4,
-    lineFont: CURRENT_FONT_SIZE,
+    maxRows: layout.maxRows,
+    lineFont: layout.currentFontSize,
     contentW: WIDTH - X_MARGIN * 2,
   }, true)
   const bpmRate = prompterBpmRate(song.original_bpm, song.playback_bpm)
@@ -350,7 +389,7 @@ export async function createPrompterMp4(
       const blockChanged = blockIndex !== renderedBlock
       if (blockChanged) {
         if (blockIndex < 0) drawCover(ctx, song, members)
-        else drawSlide(ctx, song, members, displayBlocks, blockIndex)
+        else drawSlide(ctx, song, members, displayBlocks, blockIndex, layout)
         renderedBlock = blockIndex
       }
       await videoSource.add(timestampSeconds, 1 / FPS, {

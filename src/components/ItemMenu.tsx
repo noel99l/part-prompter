@@ -5,7 +5,7 @@ import styles from './ItemMenu.module.css'
 
 interface MenuItem { label: string; href: string; target?: string }
 
-export default function ItemMenu({ onDelete, menuItems }: { onDelete: () => void; menuItems?: MenuItem[] }) {
+export default function ItemMenu({ onDelete, menuItems }: { onDelete?: () => void; menuItems?: MenuItem[] }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -21,7 +21,7 @@ export default function ItemMenu({ onDelete, menuItems }: { onDelete: () => void
     e.preventDefault()
     e.stopPropagation()
     setOpen(false)
-    onDelete()
+    onDelete?.()
   }
 
   return (
@@ -34,10 +34,12 @@ export default function ItemMenu({ onDelete, menuItems }: { onDelete: () => void
               {item.label}
             </Link>
           ))}
-          {menuItems && menuItems.length > 0 && <div className={styles.divider} />}
-          <button className={`${styles.item} ${styles.itemDanger}`} onClick={handleDelete}>
-            🗑️ 削除
-          </button>
+          {menuItems && menuItems.length > 0 && onDelete && <div className={styles.divider} />}
+          {onDelete && (
+            <button className={`${styles.item} ${styles.itemDanger}`} onClick={handleDelete}>
+              🗑️ 削除
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -221,6 +221,27 @@ async function runInitDb() {
       )
     `)
 
+    // 招待リンクと承認済み共同編集者を分離し、リンク失効後も編集権限を維持する。
+    await query(`
+      CREATE TABLE IF NOT EXISTS playlist_collaboration_invites (
+        id SERIAL PRIMARY KEY,
+        playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+        invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+    await query(`
+      CREATE TABLE IF NOT EXISTS playlist_collaborators (
+        id SERIAL PRIMARY KEY,
+        playlist_id INTEGER NOT NULL REFERENCES playlists(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(playlist_id, user_id)
+      )
+    `)
+
     await query(`
       CREATE TABLE IF NOT EXISTS playlist_songs (
         id SERIAL PRIMARY KEY,
@@ -240,6 +261,9 @@ async function runInitDb() {
     await query(`CREATE INDEX IF NOT EXISTS idx_song_collaborators_song_id ON song_collaborators(song_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_scm_collaborator_id ON song_collaborator_members(collaborator_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_scm_user_id ON song_collaborator_members(user_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_playlist_invites_playlist_id ON playlist_collaboration_invites(playlist_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_playlist_collaborators_playlist_id ON playlist_collaborators(playlist_id)`)
+    await query(`CREATE INDEX IF NOT EXISTS idx_playlist_collaborators_user_id ON playlist_collaborators(user_id)`)
 
     await query(`
       CREATE TABLE IF NOT EXISTS prompter_sync_sessions (
