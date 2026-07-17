@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { initDb, query, withTransaction } from '@/lib/db'
 import { getSongAccess } from '@/lib/songAccess'
+import { MAX_MEMBERS } from '@/lib/memberTemplates'
 
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -17,7 +18,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const access = await getSongAccess(id, session.user.email)
   if (!access?.canEditContent) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const members: { id?: number; name: string; color: string; sort_order: number }[] = await req.json()
+  const payload: unknown = await req.json()
+  if (!Array.isArray(payload)) {
+    return NextResponse.json({ error: 'members must be an array' }, { status: 400 })
+  }
+  if (payload.length > MAX_MEMBERS) {
+    return NextResponse.json({ error: `メンバーは${MAX_MEMBERS}名まで登録できます。` }, { status: 400 })
+  }
+  const members = payload as { id?: number; name: string; color: string; sort_order: number }[]
 
   const saved = await withTransaction(async (client) => {
     const existingResult = await client.query(`SELECT id FROM prompter_members WHERE song_id=$1`, [id])
