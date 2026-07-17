@@ -100,7 +100,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
   return (
     <>
       <button type="button" className={className} onClick={openDialog} disabled={generating}>
-        🎬 MP4（無音）
+        🎬 MP4
       </button>
       {open && (
         <div className={styles.overlay} onClick={close}>
@@ -168,7 +168,7 @@ export default function Mp4ExportMenuItem({ songId, className, onClose }: Props)
               <p className={styles.success}>✓ MP4をダウンロードしました</p>
             )}
             {error && <p className={styles.error}>{error}</p>}
-            <p className={styles.note}>1920×1080・30fps・無音／最後のスライドは5秒間表示されます。保存済みのデータから生成します。</p>
+            <p className={styles.note}>1920×1080・30fps／最後のスライドは5秒間表示されます。保存済みのデータから生成します。</p>
             {!generating && (
               <div className={styles.actions}>
                 <button type="button" className={styles.exportButton} onClick={startExport}>
