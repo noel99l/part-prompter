@@ -221,7 +221,7 @@ export default function PrompterView() {
     }
   }, [viewport, fontScale, showNext])
 
-  // 自動ブロック分け：画面に収まらないブロックだけを均等なチャンクに分割する。
+  // 自動ブロック分け：画面に収まらないブロックを、表示可能な行数まで順番に詰めて分割する。
   // パート分けの元ブロック境界は必ずページ境界になる（詳細は lib/prompterBlocks.ts）。
   const displayBlocks = useMemo<DisplayBlock[]>(
     () => buildDisplayBlocks(blocks, layout, autoSplit),

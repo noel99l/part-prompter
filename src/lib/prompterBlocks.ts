@@ -4,7 +4,7 @@
 // - パート分けで定義された元ブロックの境界は必ずページ境界になる。
 //   自動分割は各ブロックの「内部」でのみ行い、ブロックをまたいで結合することはない。
 // - 画面に収まるブロックはそのまま1ページで表示する。
-// - 収まらないブロックは視覚行数（折り返し込み）ベースで均等なチャンクに分割する。
+// - 収まらないブロックは視覚行数（折り返し込み）を上限まで詰めてチャンクに分割する。
 // - 分割チャンクの開始時刻は、行自身のタイムスタンプがあればそれを、
 //   なければ前後ブロックのタイムスタンプから行位置で比例配分する。
 
@@ -46,8 +46,6 @@ export function buildDisplayBlocks<L extends PromptLine>(
     const rows = block.map(l => estimateRows(l, layout))
     const totalRows = rows.reduce((a, b) => a + b, 0)
     if (!autoSplit || totalRows <= maxRows) return [{ lines: block, startMs: startTs, sourceBlockIndex: bi }]
-    const count = Math.ceil(totalRows / maxRows)
-    const target = Math.ceil(totalRows / count) // 上限5行で7行なら 4+3 に均す
     const nextTs = blocks[bi + 1]?.[0]?.timestamp_ms ?? null
     const chunks: DisplayChunk<L>[] = []
     let cur: L[] = []
@@ -63,7 +61,7 @@ export function buildDisplayBlocks<L extends PromptLine>(
       chunks.push({ lines: cur, startMs, sourceBlockIndex: bi })
     }
     block.forEach((line, li) => {
-      if (cur.length > 0 && curRows + rows[li] > target) {
+      if (cur.length > 0 && curRows + rows[li] > maxRows) {
         pushChunk()
         cur = []
         curRows = 0

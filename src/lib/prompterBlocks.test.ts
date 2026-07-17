@@ -13,10 +13,10 @@ describe('buildDisplayBlocks', () => {
     expect(result.map(c => c.lines.length)).toEqual([2, 1])
   })
 
-  it('収まらないブロックは均等に分割される（上限5行の7行 → 4+3）', () => {
+  it('収まらないブロックは1ページの上限まで詰める（上限5行の7行 → 5+2）', () => {
     const blocks = [Array.from({ length: 7 }, (_, i) => line(`行${i}`))]
     const result = buildDisplayBlocks(blocks, layout(5), true)
-    expect(result.map(c => c.lines.length)).toEqual([4, 3])
+    expect(result.map(c => c.lines.length)).toEqual([5, 2])
   })
 
   it('autoSplit=false では元ブロックがそのまま使われる', () => {
