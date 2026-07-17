@@ -326,6 +326,34 @@ function yieldToBrowser() {
   return new Promise<void>(resolve => setTimeout(resolve, 0))
 }
 
+export async function createPrompterMp4Preview(
+  songId: string,
+  options: Mp4ExportOptions = {},
+): Promise<string> {
+  const [song, members, lines] = await Promise.all([
+    fetchJson<VideoSong>(`/api/songs/${songId}`),
+    fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
+    fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`),
+  ])
+  if (!Array.isArray(lines) || lines.length === 0) throw new Error('プレビューできる歌詞がありません。')
+
+  const canvas = document.createElement('canvas')
+  canvas.width = WIDTH
+  canvas.height = HEIGHT
+  const ctx = canvas.getContext('2d')
+  if (!ctx) throw new Error('プレビューを初期化できませんでした。')
+  await document.fonts?.ready
+
+  const layout = resolveVideoLayout(options)
+  const displayBlocks = buildDisplayBlocks(groupBlocks(lines), {
+    maxRows: layout.maxRows,
+    lineFont: layout.currentFontSize,
+    contentW: WIDTH - X_MARGIN * 2,
+  }, true)
+  drawSlide(ctx, song, members, displayBlocks, 0, layout)
+  return canvas.toDataURL('image/png')
+}
+
 export async function createPrompterMp4(
   songId: string,
   onProgress: ProgressCallback,
