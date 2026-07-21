@@ -151,6 +151,36 @@ export default function PlaylistEditPage() {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // プロンプターURLコピーのフィードバック表示
+  const [prompterUrlCopied, setPrompterUrlCopied] = useState(false)
+
+  const copyPrompterUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/playlists/${id}/prompter`)
+      setPrompterUrlCopied(true)
+      setTimeout(() => { setPrompterUrlCopied(false); setMoreMenuOpen(false) }, 1200)
+    } catch {
+      setMoreMenuOpen(false)
+    }
+  }
+
+  // ⋯メニューの中身。共同編集モーダルの開閉関数はオーナーのときだけ渡される。
+  const renderMoreMenu = (openCollab?: () => void) => (
+    moreMenuOpen ? (
+      <div className={styles.menuDropdown}>
+        <button className={styles.menuItem} onClick={copyPrompterUrl}>
+          {prompterUrlCopied ? '✓ コピーしました' : '📋 プロンプターURLをコピー'}
+        </button>
+        {openCollab && (
+          <button className={styles.menuItem} onClick={() => { setMoreMenuOpen(false); openCollab() }}>👥 共同編集を管理</button>
+        )}
+        {isOwner && canUseSyncPrompter && songCount > 0 && (
+          <Link href={`/manage/sync?playlistId=${id}`} className={styles.menuItem} onClick={() => setMoreMenuOpen(false)}>📡 同期プロンプターを開始</Link>
+        )}
+      </div>
+    ) : null
+  )
+
   // MCスライド追加・編集モーダル。editingMcItemId=nullなら新規追加。
   const [showMcModal, setShowMcModal] = useState(false)
   const [editingMcItemId, setEditingMcItemId] = useState<number | null>(null)
@@ -221,12 +251,13 @@ export default function PlaylistEditPage() {
       })
       setItems(prev => prev.filter(it => it.item_id !== item.item_id))
     } else {
+      // 同じ曲が複数入っている場合に他の行を巻き添えにしないよう、行ID単位で削除する
       await fetch(`/api/playlists/${id}/songs`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ songId: item.id }),
+        body: JSON.stringify({ itemId: item.item_id }),
       })
-      setItems(prev => prev.filter(it => it.id !== item.id || it.item_type !== 'song'))
+      setItems(prev => prev.filter(it => it.item_id !== item.item_id))
     }
   }
 
@@ -317,23 +348,14 @@ export default function PlaylistEditPage() {
             )}
           </div>
           <Link href={`/playlists/${id}/prompter`} className={styles.previewLink} target="_blank" title="プロンプターを表示">▶ 表示 ↗</Link>
-          {isOwner && (
-            <div className={styles.menuWrapper} ref={moreMenuRef}>
-              <button className={styles.menuBtn} onClick={() => setMoreMenuOpen(v => !v)} title="メニュー">⋯</button>
-              {/* モーダルの状態を保持するため、ドロップダウンの開閉に関わらず常時マウントし、
-                  メニュー本体は trigger 経由で描画する */}
-              <PlaylistCollaboratorManager playlistId={id} trigger={open => (
-                moreMenuOpen ? (
-                  <div className={styles.menuDropdown}>
-                    <button className={styles.menuItem} onClick={() => { setMoreMenuOpen(false); open() }}>👥 共同編集を管理</button>
-                    {canUseSyncPrompter && songCount > 0 && (
-                      <Link href={`/manage/sync?playlistId=${id}`} className={styles.menuItem} onClick={() => setMoreMenuOpen(false)}>📡 同期プロンプターを開始</Link>
-                    )}
-                  </div>
-                ) : null
-              )} />
-            </div>
-          )}
+          <div className={styles.menuWrapper} ref={moreMenuRef}>
+            <button className={styles.menuBtn} onClick={() => setMoreMenuOpen(v => !v)} title="メニュー">⋯</button>
+            {/* モーダルの状態を保持するため、ドロップダウンの開閉に関わらず常時マウントし、
+                メニュー本体は trigger 経由で描画する */}
+            {isOwner ? (
+              <PlaylistCollaboratorManager playlistId={id} trigger={open => renderMoreMenu(open)} />
+            ) : renderMoreMenu()}
+          </div>
         </div>
       </div>
 

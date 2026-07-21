@@ -61,15 +61,20 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   return NextResponse.json({ ok: true })
 }
 
-// 曲を削除
+// 曲を削除（同じ曲が複数入っていても対象の行だけ消せるよう、行ID=itemIdを優先する。
+// 旧クライアント互換でsongIdも受けるが、その場合は該当曲の全行が消える）
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb()
   const { id } = await params
   const denied = await authorizeEditor(id)
   if (denied) return denied
 
-  const { songId } = await req.json()
-  if (!Number.isInteger(songId)) return NextResponse.json({ error: 'songId required' }, { status: 400 })
+  const { itemId, songId } = await req.json()
+  if (Number.isInteger(itemId)) {
+    await query(`DELETE FROM playlist_songs WHERE playlist_id=$1 AND id=$2`, [id, itemId])
+    return NextResponse.json({ ok: true })
+  }
+  if (!Number.isInteger(songId)) return NextResponse.json({ error: 'itemId or songId required' }, { status: 400 })
   await query(`DELETE FROM playlist_songs WHERE playlist_id=$1 AND song_id=$2`, [id, songId])
   return NextResponse.json({ ok: true })
 }
