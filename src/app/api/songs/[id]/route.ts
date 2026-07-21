@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const session = await auth()
     if (session?.user?.email) {
       const access = await getSongAccess(id, session.user.email)
-      canManageSong = access?.isOwner ?? false
+      canManageSong = access?.canManageSong ?? false
     }
   }
   return NextResponse.json({ ...result.rows[0], can_manage_song: canManageSong })
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       description=$5, cover_text=$6, bg_color=$7, original_bpm=$8,
       playback_bpm=$9, show_progress_bar=$10, updated_at=NOW()
      WHERE id=$11 RETURNING *`,
-    [trimmedTitle, artist, access.isOwner, is_public ?? true, description ?? '', cover_text ?? '', bg_color ?? '#000000', original_bpm ?? null, playback_bpm ?? null, show_progress_bar ?? true, id]
+    [trimmedTitle, artist, access.canManageSong, is_public ?? true, description ?? '', cover_text ?? '', bg_color ?? '#000000', original_bpm ?? null, playback_bpm ?? null, show_progress_bar ?? true, id]
   )
   return NextResponse.json(result.rows[0])
 }
@@ -53,7 +53,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
   const session = await auth()
   if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const access = await getSongAccess(id, session.user.email)
-  if (!access?.isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (!access?.canManageSong) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   await query(`DELETE FROM prompter_songs WHERE id=$1`, [id])
   return NextResponse.json({ ok: true })

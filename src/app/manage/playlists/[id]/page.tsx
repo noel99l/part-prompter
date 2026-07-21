@@ -136,6 +136,21 @@ export default function PlaylistEditPage() {
   const [searching, setSearching] = useState(false)
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // ヘッダーの「＋ 追加」「⋯」ドロップダウンの開閉状態
+  const [addMenuOpen, setAddMenuOpen] = useState(false)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false)
+  const addMenuRef = useRef<HTMLDivElement>(null)
+  const moreMenuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) setAddMenuOpen(false)
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setMoreMenuOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
   // MCスライド追加・編集モーダル。editingMcItemId=nullなら新規追加。
   const [showMcModal, setShowMcModal] = useState(false)
   const [editingMcItemId, setEditingMcItemId] = useState<number | null>(null)
@@ -291,11 +306,35 @@ export default function PlaylistEditPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>📋 セットリスト</h1>
-        {isOwner && <PlaylistCollaboratorManager playlistId={id} />}
-        <Link href={`/playlists/${id}/prompter`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
-        {isOwner && canUseSyncPrompter && songCount > 0 && (
-          <Link href={`/manage/sync?playlistId=${id}`} className={styles.previewLink}>📡 同期プロンプターを開始</Link>
-        )}
+        <div className={styles.headerActions}>
+          <div className={styles.menuWrapper} ref={addMenuRef}>
+            <button className={styles.createBtn} onClick={() => setAddMenuOpen(v => !v)} title="追加">＋ 追加</button>
+            {addMenuOpen && (
+              <div className={styles.menuDropdown}>
+                <button className={styles.menuItem} onClick={() => { setAddMenuOpen(false); setShowAddModal(true); setSearchQuery(''); setSuggestions([]) }}>🎵 曲を追加</button>
+                <button className={styles.menuItem} onClick={() => { setAddMenuOpen(false); openMcModal() }}>🎤 MCスライドを追加</button>
+              </div>
+            )}
+          </div>
+          <Link href={`/playlists/${id}/prompter`} className={styles.previewLink} target="_blank" title="プロンプターを表示">▶ 表示 ↗</Link>
+          {isOwner && (
+            <div className={styles.menuWrapper} ref={moreMenuRef}>
+              <button className={styles.menuBtn} onClick={() => setMoreMenuOpen(v => !v)} title="メニュー">⋯</button>
+              {/* モーダルの状態を保持するため、ドロップダウンの開閉に関わらず常時マウントし、
+                  メニュー本体は trigger 経由で描画する */}
+              <PlaylistCollaboratorManager playlistId={id} trigger={open => (
+                moreMenuOpen ? (
+                  <div className={styles.menuDropdown}>
+                    <button className={styles.menuItem} onClick={() => { setMoreMenuOpen(false); open() }}>👥 共同編集を管理</button>
+                    {canUseSyncPrompter && songCount > 0 && (
+                      <Link href={`/manage/sync?playlistId=${id}`} className={styles.menuItem} onClick={() => setMoreMenuOpen(false)}>📡 同期プロンプターを開始</Link>
+                    )}
+                  </div>
+                ) : null
+              )} />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className={styles.nameRow}>
@@ -362,11 +401,6 @@ export default function PlaylistEditPage() {
           </SortableContext>
         </DndContext>
       )}
-
-      <div className={styles.addBtnRow}>
-        <button className={styles.createBtn} onClick={() => { setShowAddModal(true); setSearchQuery(''); setSuggestions([]) }}>＋ 曲を追加</button>
-        <button className={styles.createBtn} onClick={() => openMcModal()}>🎤 MCスライドを追加</button>
-      </div>
 
       {showAddModal && (
         <div className={styles.overlay} onClick={() => setShowAddModal(false)}>

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   let canManageSong = false
   if (withAccess && session?.user?.email) {
     const access = await getSongAccess(id, session.user.email)
-    canManageSong = access?.isOwner ?? false
+    canManageSong = access?.canManageSong ?? false
   }
 
   return NextResponse.json({
