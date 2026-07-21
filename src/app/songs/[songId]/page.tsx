@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
+import { AddToPlaylistModal } from '@/components/AddToPlaylistMenu'
 import skStyles from '@/components/skeleton.module.css'
 import { getCachedJson } from '@/lib/clientCache'
 import { harmonyIds } from '@/lib/harmony'
@@ -32,6 +33,7 @@ export default function SongDetailPage() {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const [showPartsCopy, setShowPartsCopy] = useState(false)
+  const [showAddToPlaylist, setShowAddToPlaylist] = useState(false)
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -242,6 +244,11 @@ export default function SongDetailPage() {
                 </button>
               )}
               {session && (
+                <button className={styles.menuItem} onClick={() => { setMenuOpen(false); setShowAddToPlaylist(true) }}>
+                  📋 セットリストに追加
+                </button>
+              )}
+              {session && (
                 <button className={styles.menuItem} onClick={() => { setMenuOpen(false); handleDuplicate() }} disabled={duplicating}>
                   {duplicating ? '複製中...' : '📋 複製して編集'}
                 </button>
@@ -250,6 +257,10 @@ export default function SongDetailPage() {
           )}
         </div>
       </div>
+
+      {showAddToPlaylist && (
+        <AddToPlaylistModal songId={parseInt(songId)} songTitle={song.title} onClose={() => setShowAddToPlaylist(false)} />
+      )}
 
       <div className={styles.header}>
         <div className={styles.headerTop}>

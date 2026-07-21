@@ -9,7 +9,7 @@ export default function TermsPage() {
         <Link href="/songs" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>← 一覧に戻る</Link>
 
         <h1 style={{ color: '#fff', fontSize: '1.6rem', margin: '1.5rem 0 0.5rem' }}>利用規約</h1>
-        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2025年6月</p>
+        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2026年7月</p>
 
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={h2}>1. 適用</h2>
@@ -22,9 +22,22 @@ export default function TermsPage() {
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>3. 禁止事項</h2>
+          <h2 style={h2}>3. 登録できる楽曲</h2>
+          <p style={p}>本サービスに歌詞を登録・公開できる楽曲は、以下のいずれかに該当するものに限ります。</p>
+          <ul style={ul}>
+            <li>一般社団法人日本音楽著作権協会（JASRAC）が著作権を管理する内国作品（インタラクティブ配信の利用許諾対象となる楽曲）</li>
+            <li>ユーザー自身が歌詞の著作権を有するオリジナル楽曲</li>
+          </ul>
+          <p style={p}>楽曲がJASRACの管理著作物であるかどうかは、JASRAC作品データベース検索サービス「<a href="https://www2.jasrac.or.jp/eJwid/" target="_blank" rel="noreferrer" style={{ color: '#FF69B4' }}>J-WID</a>」で確認できます。</p>
+          <p style={p}>外国作品（JASRAC作品コードの左から2桁目がアルファベットの楽曲）、JASRAC以外の著作権管理事業者（NexTone等）のみが管理する楽曲、その他著作権者から利用許諾を得ていない楽曲の歌詞は登録できません。運営者は、これらに該当すると判断した楽曲を予告なく非公開化または削除できるものとします。</p>
+        </section>
+
+        <section style={{ marginBottom: '2rem' }}>
+          <h2 style={h2}>4. 禁止事項</h2>
           <p style={p}>以下の行為を禁止します。</p>
           <ul style={ul}>
+            <li>前条に定める楽曲以外の歌詞の登録・公開</li>
+            <li>歌詞の改変（訳詞・替え歌等を含む）を伴うコンテンツの登録・公開</li>
             <li>著作権その他の権利を侵害するコンテンツの登録・公開</li>
             <li>他のユーザーや第三者を誹謗中傷するコンテンツの投稿</li>
             <li>本サービスの運営を妨害する行為</li>
@@ -34,28 +47,28 @@ export default function TermsPage() {
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>4. コンテンツの取り扱い</h2>
-          <p style={p}>ユーザーが登録した楽曲情報・歌詞・パート分けデータの著作権はユーザー本人に帰属します。公開設定にしたコンテンツは、他のユーザーが閲覧・セットリストへの追加・複製して編集することができます。</p>
+          <h2 style={h2}>5. コンテンツの取り扱い</h2>
+          <p style={p}>楽曲の歌詞の著作権は、作詞者その他の権利者に帰属します。ユーザーが作成したパート分けデータおよびユーザー自身が著作権を有するオリジナルコンテンツに関する権利は、ユーザー本人に帰属します。公開設定にしたコンテンツは、他のユーザーが閲覧・セットリストへの追加・複製して編集することができます。</p>
           <p style={p}>運営者は、禁止事項に該当すると判断したコンテンツを予告なく削除できるものとします。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>5. アカウントの管理</h2>
+          <h2 style={h2}>6. アカウントの管理</h2>
           <p style={p}>アカウントはGoogleアカウントと連携して管理されます。アカウントの不正利用による損害について、運営者は責任を負いません。アカウントの削除はアカウント設定ページから行えます。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>6. サービスの変更・停止</h2>
+          <h2 style={h2}>7. サービスの変更・停止</h2>
           <p style={p}>運営者は、予告なく本サービスの内容を変更・停止することがあります。これによりユーザーに生じた損害について、運営者は責任を負いません。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>7. 免責事項</h2>
+          <h2 style={h2}>8. 免責事項</h2>
           <p style={p}>本サービスは現状有姿で提供されます。運営者は、本サービスの利用により生じた損害について、一切の責任を負いません。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>8. 規約の変更</h2>
+          <h2 style={h2}>9. 規約の変更</h2>
           <p style={p}>本規約は予告なく変更される場合があります。変更後は本ページに掲載します。変更後も本サービスを利用した場合、変更後の規約に同意したものとみなします。</p>
         </section>
 

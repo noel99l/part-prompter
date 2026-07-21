@@ -1,0 +1,86 @@
+.container {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  font-family: 'Hiragino Sans', sans-serif;
+  overflow: hidden;
+}
+
+.badge {
+  color: #FF69B4;
+  font-size: clamp(0.9rem, 2.5vmin, 1.4rem);
+  letter-spacing: 0.15em;
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-size: clamp(1.6rem, 5vmin, 3.2rem);
+  font-weight: 700;
+  margin: 0 0 1.5rem;
+  text-align: center;
+}
+
+.body {
+  font-size: clamp(1.2rem, 4vmin, 2.4rem);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  text-align: center;
+  max-width: 90vw;
+  max-height: 60vh;
+  overflow-y: auto;
+  color: #eee;
+}
+
+.controls {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  z-index: 10;
+}
+
+.btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: #fff;
+  font-size: 1.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btnDisabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.closeBtn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-decoration: none;
+}

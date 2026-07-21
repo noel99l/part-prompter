@@ -23,8 +23,13 @@ import SongCard from '@/components/SongCard'
 import PlaylistCollaboratorManager from '@/components/PlaylistCollaboratorManager'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
 
-interface Song {
-  id: number; title: string; artist: string; sort_order: number; can_edit?: boolean
+interface PlaylistItem {
+  item_id: number
+  item_type: 'song' | 'mc'
+  mc_title: string | null
+  mc_body: string | null
+  id: number | null; title: string | null; artist: string | null
+  sort_order: number; can_edit?: boolean
   lyric_count?: string; timestamp_count?: string; member_count?: string
 }
 interface SearchResult {
@@ -42,12 +47,23 @@ function buildTags(s: { lyric_count?: string; timestamp_count?: string; member_c
   return tags
 }
 
-function SortableItem({ song, index, onRemove }: {
-  song: Song
-  index: number
-  onRemove: (id: number) => void
+function SortableItem({ item, songNumber, playlistId, onRemove, onEditMc }: {
+  item: PlaylistItem
+  songNumber: number
+  playlistId: string
+  onRemove: (item: PlaylistItem) => void
+  onEditMc: (item: PlaylistItem) => void
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: song.id })
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.item_id })
+
+  const dragHandle = (
+    <span
+      className={styles.dragHandle}
+      {...attributes}
+      {...listeners}
+      title="ドラッグして並び替え"
+    >⠿</span>
+  )
 
   return (
     <div
@@ -58,31 +74,47 @@ function SortableItem({ song, index, onRemove }: {
         opacity: isDragging ? 0.5 : 1,
       }}
     >
-      <SongCard
-        title={song.title}
-        artist={song.artist}
-        tags={buildTags(song)}
-        prefix={
-          <>
-            <span
-              className={styles.dragHandle}
-              {...attributes}
-              {...listeners}
-              title="ドラッグして並び替え"
-            >⠿</span>
-            <span className={styles.orderNum}>{index + 1}</span>
-          </>
-        }
-        actions={
-          <div className={styles.cardActions}>
-            {song.can_edit && (
-              <Link href={`/manage/songs/${song.id}`} className={styles.viewBtn} title="楽曲を編集">✏️</Link>
-            )}
-            <Link href={`/songs/${song.id}/prompter`} className={styles.viewBtn} target="_blank" title="プロンプターを表示">▶</Link>
-            <button className={styles.deleteBtn} onClick={() => onRemove(song.id)} title="セットリストから削除">🗑️</button>
-          </div>
-        }
-      />
+      {item.item_type === 'mc' ? (
+        <SongCard
+          title={item.mc_title || 'MC'}
+          artist={(item.mc_body || '').split('\n')[0] || undefined}
+          tags={[{ label: '🎤 MC', type: 'gray' }]}
+          prefix={
+            <>
+              {dragHandle}
+              <span className={styles.orderNum}>🎤</span>
+            </>
+          }
+          actions={
+            <div className={styles.cardActions}>
+              <button className={styles.viewBtn} onClick={() => onEditMc(item)} title="MCスライドを編集">✏️</button>
+              <Link href={`/playlists/${playlistId}/mc/${item.item_id}`} className={styles.viewBtn} target="_blank" title="スライドを表示">▶</Link>
+              <button className={styles.deleteBtn} onClick={() => onRemove(item)} title="セットリストから削除">🗑️</button>
+            </div>
+          }
+        />
+      ) : (
+        <SongCard
+          title={item.title || ''}
+          artist={item.artist || undefined}
+          tags={buildTags(item)}
+          prefix={
+            <>
+              {dragHandle}
+              <span className={styles.orderNum}>{songNumber}</span>
+            </>
+          }
+          actions={
+            <div className={styles.cardActions}>
+              {item.can_edit && (
+                <Link href={`/manage/songs/${item.id}`} className={styles.viewBtn} title="楽曲を編集">✏️</Link>
+              )}
+              <Link href={`/songs/${item.id}/prompter`} className={styles.viewBtn} target="_blank" title="プロンプターを表示">▶</Link>
+              <button className={styles.deleteBtn} onClick={() => onRemove(item)} title="セットリストから削除">🗑️</button>
+            </div>
+          }
+        />
+      )}
     </div>
   )
 }
@@ -91,7 +123,7 @@ export default function PlaylistEditPage() {
   const { id } = useParams<{ id: string }>()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [songs, setSongs] = useState<Song[]>([])
+  const [items, setItems] = useState<PlaylistItem[]>([])
   const [loading, setLoading] = useState(true)
   const [editingName, setEditingName] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -104,6 +136,13 @@ export default function PlaylistEditPage() {
   const [searching, setSearching] = useState(false)
   const searchTimer = useRef<NodeJS.Timeout | null>(null)
 
+  // MCスライド追加・編集モーダル。editingMcItemId=nullなら新規追加。
+  const [showMcModal, setShowMcModal] = useState(false)
+  const [editingMcItemId, setEditingMcItemId] = useState<number | null>(null)
+  const [mcTitle, setMcTitle] = useState('')
+  const [mcBody, setMcBody] = useState('')
+  const [mcSaving, setMcSaving] = useState(false)
+
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
@@ -112,14 +151,16 @@ export default function PlaylistEditPage() {
       .then(data => {
         setName(data.name)
         setDescription(data.description || '')
-        setSongs(data.songs || [])
+        setItems(data.items || [])
         setIsOwner(data.is_owner === true)
         setLoading(false)
       })
   }, [id])
 
-  const songsRef = useRef(songs)
-  useEffect(() => { songsRef.current = songs }, [songs])
+  const itemsRef = useRef(items)
+  useEffect(() => { itemsRef.current = items }, [items])
+
+  const songCount = items.filter(it => it.item_type === 'song').length
 
   const handleQueryChange = useCallback((value: string) => {
     setSearchQuery(value)
@@ -130,7 +171,7 @@ export default function PlaylistEditPage() {
       try {
         const res = await fetch(`/api/songs/search?q=${encodeURIComponent(value)}`)
         const data: SearchResult[] = await res.json()
-        const addedIds = new Set(songsRef.current.map(s => s.id))
+        const addedIds = new Set(itemsRef.current.filter(it => it.item_type === 'song').map(it => it.id))
         setSuggestions(data.filter(s => !addedIds.has(s.id)))
       } catch {
         setSuggestions([])
@@ -140,39 +181,83 @@ export default function PlaylistEditPage() {
     }, 300)
   }, [])
 
+  const refreshItems = async () => {
+    const res = await fetch(`/api/playlists/${id}?access=1`)
+    const data = await res.json()
+    setItems(data.items || [])
+  }
+
   const addSong = async (songId: number) => {
     await fetch(`/api/playlists/${id}/songs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ songId }),
     })
-    const res = await fetch(`/api/playlists/${id}`)
-    const data = await res.json()
-    setSongs(data.songs || [])
+    await refreshItems()
     setSearchQuery(''); setSuggestions([]); setShowAddModal(false)
   }
 
-  const removeSong = async (songId: number) => {
-    await fetch(`/api/playlists/${id}/songs`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId }),
-    })
-    setSongs(prev => prev.filter(s => s.id !== songId))
+  const removeItem = async (item: PlaylistItem) => {
+    if (item.item_type === 'mc') {
+      await fetch(`/api/playlists/${id}/mc`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemId: item.item_id }),
+      })
+      setItems(prev => prev.filter(it => it.item_id !== item.item_id))
+    } else {
+      await fetch(`/api/playlists/${id}/songs`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ songId: item.id }),
+      })
+      setItems(prev => prev.filter(it => it.id !== item.id || it.item_type !== 'song'))
+    }
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const oldIndex = songs.findIndex(s => s.id === active.id)
-    const newIndex = songs.findIndex(s => s.id === over.id)
-    const next = arrayMove(songs, oldIndex, newIndex)
-    setSongs(next)
+    const oldIndex = items.findIndex(it => it.item_id === active.id)
+    const newIndex = items.findIndex(it => it.item_id === over.id)
+    const next = arrayMove(items, oldIndex, newIndex)
+    setItems(next)
     await fetch(`/api/playlists/${id}/songs`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songIds: next.map(s => s.id) }),
+      body: JSON.stringify({ itemIds: next.map(it => it.item_id) }),
     })
+  }
+
+  const openMcModal = (item?: PlaylistItem) => {
+    setEditingMcItemId(item?.item_id ?? null)
+    setMcTitle(item?.mc_title ?? '')
+    setMcBody(item?.mc_body ?? '')
+    setShowMcModal(true)
+  }
+
+  const saveMc = async () => {
+    if (!mcTitle.trim() && !mcBody.trim()) return
+    setMcSaving(true)
+    try {
+      if (editingMcItemId == null) {
+        await fetch(`/api/playlists/${id}/mc`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: mcTitle, body: mcBody }),
+        })
+      } else {
+        await fetch(`/api/playlists/${id}/mc`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ itemId: editingMcItemId, title: mcTitle, body: mcBody }),
+        })
+      }
+      await refreshItems()
+      setShowMcModal(false)
+    } finally {
+      setMcSaving(false)
+    }
   }
 
   const saveName = async () => {
@@ -200,13 +285,15 @@ export default function PlaylistEditPage() {
     </div>
   )
 
+  let songNumber = 0
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>📋 セットリスト</h1>
         {isOwner && <PlaylistCollaboratorManager playlistId={id} />}
         <Link href={`/playlists/${id}/prompter`} className={styles.previewLink} target="_blank">▶ 表示 ↗</Link>
-        {isOwner && canUseSyncPrompter && songs.length > 0 && (
+        {isOwner && canUseSyncPrompter && songCount > 0 && (
           <Link href={`/manage/sync?playlistId=${id}`} className={styles.previewLink}>📡 同期プロンプターを開始</Link>
         )}
       </div>
@@ -252,15 +339,25 @@ export default function PlaylistEditPage() {
         </div>
       )}
 
-      {songs.length === 0 ? (
+      {items.length === 0 ? (
         <p className={styles.empty}>曲が追加されていません。</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={songs.map(s => s.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={items.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
             <div className={styles.list}>
-              {songs.map((s, i) => (
-                <SortableItem key={s.id} song={s} index={i} onRemove={removeSong} />
-              ))}
+              {items.map(it => {
+                if (it.item_type === 'song') songNumber++
+                return (
+                  <SortableItem
+                    key={it.item_id}
+                    item={it}
+                    songNumber={songNumber}
+                    playlistId={id}
+                    onRemove={removeItem}
+                    onEditMc={openMcModal}
+                  />
+                )
+              })}
             </div>
           </SortableContext>
         </DndContext>
@@ -268,6 +365,7 @@ export default function PlaylistEditPage() {
 
       <div className={styles.addBtnRow}>
         <button className={styles.createBtn} onClick={() => { setShowAddModal(true); setSearchQuery(''); setSuggestions([]) }}>＋ 曲を追加</button>
+        <button className={styles.createBtn} onClick={() => openMcModal()}>🎤 MCスライドを追加</button>
       </div>
 
       {showAddModal && (
@@ -301,6 +399,42 @@ export default function PlaylistEditPage() {
               <p className={styles.modalEmpty}>該当する曲が見つかりません</p>
             ) : null}
             <button className={`${styles.cancelBtn} ${styles.cancelBtnFull}`} onClick={() => setShowAddModal(false)}>キャンセル</button>
+          </div>
+        </div>
+      )}
+
+      {showMcModal && (
+        <div className={styles.overlay} onClick={() => setShowMcModal(false)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h2 className={styles.modalTitle}>{editingMcItemId == null ? '🎤 MCスライドを追加' : '🎤 MCスライドを編集'}</h2>
+            <input
+              className={styles.input}
+              value={mcTitle}
+              onChange={e => setMcTitle(e.target.value.slice(0, 100))}
+              placeholder="タイトル（例: MC①、メンバー紹介）"
+              autoComplete="off"
+              autoFocus
+            />
+            <textarea
+              className={styles.descriptionInput}
+              value={mcBody}
+              onChange={e => setMcBody(e.target.value.slice(0, 2000))}
+              placeholder={'話す内容やメモ（2000文字まで）\nプロンプターにそのまま表示されます'}
+              rows={8}
+              style={{ width: '100%', marginTop: 8 }}
+            />
+            {editingMcItemId == null && (
+              <p className={styles.modalEmpty} style={{ textAlign: 'left' }}>末尾に追加されます。位置はドラッグで調整してください。</p>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button
+                className={styles.saveBtn}
+                style={{ flex: 1 }}
+                onClick={saveMc}
+                disabled={mcSaving || (!mcTitle.trim() && !mcBody.trim())}
+              >{mcSaving ? '...' : '保存'}</button>
+              <button className={styles.cancelBtn} style={{ flex: 1 }} onClick={() => setShowMcModal(false)}>キャンセル</button>
+            </div>
           </div>
         </div>
       )}

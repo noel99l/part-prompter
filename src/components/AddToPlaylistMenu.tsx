@@ -10,6 +10,74 @@ interface MenuAction { label: string; action: () => void; danger?: boolean }
 interface MenuDivider { divider: true; label?: string }
 type MenuEntry = MenuItem | MenuAction | MenuDivider
 
+/** セットリスト選択モーダル。メニュー以外の場所からも曲を追加できるよう単体で公開する。 */
+export function AddToPlaylistModal({
+  songId,
+  songTitle,
+  onClose,
+}: {
+  songId: number
+  songTitle?: string
+  onClose: () => void
+}) {
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
+  const [loading, setLoading] = useState(true)
+  const [added, setAdded] = useState<Set<number>>(new Set())
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/playlists')
+      .then(r => r.json())
+      .then(data => {
+        if (!alive) return
+        setPlaylists(Array.isArray(data) ? data : [])
+        setLoading(false)
+      })
+    return () => { alive = false }
+  }, [])
+
+  const handleAdd = async (playlistId: number) => {
+    await fetch(`/api/playlists/${playlistId}/songs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ songId }),
+    })
+    setAdded(prev => new Set(prev).add(playlistId))
+  }
+
+  return (
+    <div className={modalStyles.overlay} onClick={onClose}>
+      <div className={modalStyles.modal} onClick={e => e.stopPropagation()}>
+        <div className={modalStyles.header}>
+          <h2 className={modalStyles.title}>📋 セットリストに追加</h2>
+          <button onClick={onClose} className={modalStyles.close}>✕</button>
+        </div>
+        {songTitle && <p className={modalStyles.songName}>{songTitle}</p>}
+        {loading ? (
+          <p className={modalStyles.muted}>読み込み中...</p>
+        ) : playlists.length === 0 ? (
+          <p className={modalStyles.muted}>セットリストがありません</p>
+        ) : (
+          <div className={modalStyles.list}>
+            {playlists.map(p => (
+              <div key={p.id} className={modalStyles.row}>
+                <span className={modalStyles.name}>{p.name}</span>
+                <button
+                  className={modalStyles.addBtn}
+                  onClick={() => handleAdd(p.id)}
+                  style={{ color: added.has(p.id) ? '#7CFC00' : undefined }}
+                >
+                  {added.has(p.id) ? '✓ 追加済み' : '追加'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AddToPlaylistMenu({
   songId,
   songTitle,
@@ -23,9 +91,6 @@ export default function AddToPlaylistMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [showModal, setShowModal] = useState(false)
-  const [playlists, setPlaylists] = useState<Playlist[]>([])
-  const [loading, setLoading] = useState(false)
-  const [added, setAdded] = useState<Set<number>>(new Set())
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -36,25 +101,11 @@ export default function AddToPlaylistMenu({
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
-  const handleOpenModal = async (e: React.MouseEvent) => {
+  const handleOpenModal = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     setOpen(false)
-    setAdded(new Set())
-    setLoading(true)
     setShowModal(true)
-    const res = await fetch('/api/playlists')
-    setPlaylists(await res.json())
-    setLoading(false)
-  }
-
-  const handleAdd = async (playlistId: number) => {
-    await fetch(`/api/playlists/${playlistId}/songs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId }),
-    })
-    setAdded(prev => new Set(prev).add(playlistId))
   }
 
   const handleDelete = (e: React.MouseEvent) => {
@@ -98,35 +149,7 @@ export default function AddToPlaylistMenu({
       </div>
 
       {showModal && (
-        <div className={modalStyles.overlay} onClick={() => setShowModal(false)}>
-          <div className={modalStyles.modal} onClick={e => e.stopPropagation()}>
-            <div className={modalStyles.header}>
-              <h2 className={modalStyles.title}>📋 セットリストに追加</h2>
-              <button onClick={() => setShowModal(false)} className={modalStyles.close}>✕</button>
-            </div>
-            {songTitle && <p className={modalStyles.songName}>{songTitle}</p>}
-            {loading ? (
-              <p className={modalStyles.muted}>読み込み中...</p>
-            ) : playlists.length === 0 ? (
-              <p className={modalStyles.muted}>セットリストがありません</p>
-            ) : (
-              <div className={modalStyles.list}>
-                {playlists.map(p => (
-                  <div key={p.id} className={modalStyles.row}>
-                    <span className={modalStyles.name}>{p.name}</span>
-                    <button
-                      className={modalStyles.addBtn}
-                      onClick={() => handleAdd(p.id)}
-                      style={{ color: added.has(p.id) ? '#7CFC00' : undefined }}
-                    >
-                      {added.has(p.id) ? '✓ 追加済み' : '追加'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <AddToPlaylistModal songId={songId} songTitle={songTitle} onClose={() => setShowModal(false)} />
       )}
     </>
   )
