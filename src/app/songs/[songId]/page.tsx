@@ -64,13 +64,11 @@ export default function SongDetailPage() {
 
   useEffect(() => {
     let alive = true
-    Promise.all([
-      getCachedJson(`/api/songs/${songId}`, s => { if (alive) setSong(s) }),
-      getCachedJson(`/api/songs/${songId}/members`, m => { if (alive) setMembers(m) }),
-      getCachedJson(`/api/songs/${songId}/lyrics`, l => { if (alive) setLyrics(l) }),
-    ]).then(([s, m, l]) => {
+    getCachedJson(`/api/songs/${songId}/detail`, d => {
+      if (alive) { setSong(d.song); setMembers(d.members); setLyrics(d.lyrics) }
+    }).then(d => {
       if (!alive) return
-      setSong(s); setMembers(m); setLyrics(l); setLoading(false)
+      setSong(d.song); setMembers(d.members); setLyrics(d.lyrics); setLoading(false)
     })
     getCachedJson('/api/master-settings', data => {
       if (alive) setShowPartsCopy(data.show_parts_copy === '1')

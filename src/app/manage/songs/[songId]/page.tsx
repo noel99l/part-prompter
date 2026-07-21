@@ -226,11 +226,10 @@ export default function LyricsEditor() {
 
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/songs/${songId}?access=1`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/members`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
-    ]).then(([s, m, l]) => {
+    fetch(`/api/songs/${songId}/detail?access=1`)
+      .then(r => r.json())
+      .then(({ song: s, members: m, lyrics: l }) => {
+      if (!s) return
       setSong(s); setEditTitle(s.title); setEditArtist(s.artist || ''); setEditDescription(s.description || ''); setIsPublic(s.is_public !== false); setCanManageSong(s.can_manage_song === true); setCoverText(s.cover_text || ''); setBgColor(s.bg_color || '#000000'); setOriginalBpm(s.original_bpm ?? ''); setPlaybackBpm(s.playback_bpm ?? ''); setShowProgressBar(s.show_progress_bar !== false); setMembers(m)
       let fl: FlatLine[] = []
       let br = new Set<number>()

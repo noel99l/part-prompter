@@ -1,10 +1,28 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/auth'
 import { initDb } from '@/lib/db'
 import { getSongAccess } from '@/lib/songAccess'
+import RouteLoading from '@/components/RouteLoading'
 
-export default async function SongEditLayout({
+// 権限チェック（auth + DB）を Suspense 内に隔離し、クリック直後に
+// フォールバックを描画できるようにする。レイアウト自体は同期で即返す。
+export default function SongEditLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ songId: string }>
+}) {
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      <AccessGuard params={params}>{children}</AccessGuard>
+    </Suspense>
+  )
+}
+
+async function AccessGuard({
   children,
   params,
 }: {

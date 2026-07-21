@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import skStyles from '@/components/skeleton.module.css'
+import { getCachedJson } from '@/lib/clientCache'
 import styles from './page.module.css'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -38,13 +39,14 @@ export default function SongDetailPage() {
   }, [])
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/songs/${songId}`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/members`).then(r => r.json()),
-      fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
-    ]).then(([s, m, l]) => {
-      setSong(s); setMembers(m); setLyrics(l); setLoading(false)
+    let alive = true
+    getCachedJson(`/api/songs/${songId}/detail`, d => {
+      if (alive) { setSong(d.song); setMembers(d.members); setLyrics(d.lyrics) }
+    }).then(d => {
+      if (!alive) return
+      setSong(d.song); setMembers(d.members); setLyrics(d.lyrics); setLoading(false)
     })
+    return () => { alive = false }
   }, [songId])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])

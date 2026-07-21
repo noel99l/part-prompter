@@ -3,6 +3,26 @@ import { query, initDb } from '@/lib/db'
 import { auth } from '@/auth'
 import { isMasterEmail } from '@/lib/permissions'
 
+// 楽曲ごとの相関サブクエリ3本（メンバー数・歌詞行数・タイムスタンプ数）は
+// 曲数×3回のインデックス参照になるため、テーブル1回ずつの GROUP BY 集計に
+// まとめて JOIN する。
+const COUNT_JOINS = `
+  LEFT JOIN (
+    SELECT song_id, COUNT(*) AS member_count
+    FROM prompter_members GROUP BY song_id
+  ) mc ON mc.song_id = s.id
+  LEFT JOIN (
+    SELECT song_id, COUNT(*) AS lyric_count, COUNT(timestamp_ms) AS timestamp_count
+    FROM prompter_lyrics GROUP BY song_id
+  ) lc ON lc.song_id = s.id
+`
+
+const COUNT_COLS = `
+  COALESCE(mc.member_count, 0) AS member_count,
+  COALESCE(lc.lyric_count, 0) AS lyric_count,
+  COALESCE(lc.timestamp_count, 0) AS timestamp_count
+`
+
 export async function GET(req: NextRequest) {
   await initDb()
   const mine = req.nextUrl.searchParams.get('mine')
@@ -12,35 +32,31 @@ export async function GET(req: NextRequest) {
 
   const result = master
     ? await query(`
-        SELECT s.*, u.account_name as created_by_name,
-          (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
+        SELECT s.*, u.account_name as created_by_name, ${COUNT_COLS}
         FROM prompter_songs s
         LEFT JOIN users u ON u.id = s.created_by
+        ${COUNT_JOINS}
         ORDER BY s.created_at DESC
       `)
     : email
     ? await query(`
-        SELECT DISTINCT s.*, u.account_name as created_by_name,
-          (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
+        SELECT s.*, u.account_name as created_by_name, ${COUNT_COLS}
         FROM prompter_songs s
         LEFT JOIN users u ON u.id = s.created_by
-        LEFT JOIN song_collaborators sc ON sc.song_id = s.id
-        LEFT JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
-        LEFT JOIN users cu ON cu.id = scm.user_id
-        WHERE u.email = $1 OR cu.email = $1
+        ${COUNT_JOINS}
+        WHERE u.email = $1 OR EXISTS (
+          SELECT 1 FROM song_collaborators sc
+          JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
+          JOIN users cu ON cu.id = scm.user_id
+          WHERE sc.song_id = s.id AND cu.email = $1
+        )
         ORDER BY s.created_at DESC
       `, [email])
     : await query(`
-        SELECT s.*, u.account_name as created_by_name,
-          (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
-          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
+        SELECT s.*, u.account_name as created_by_name, ${COUNT_COLS}
         FROM prompter_songs s
         LEFT JOIN users u ON u.id = s.created_by
+        ${COUNT_JOINS}
         WHERE s.is_public = true
         ORDER BY s.created_at DESC
       `)

@@ -7,6 +7,7 @@ import SongCardSkeleton from '@/components/SongCardSkeleton'
 import AddToPlaylistMenu from '@/components/AddToPlaylistMenu'
 import Pagination from '@/components/Pagination'
 import skStyles from '@/components/skeleton.module.css'
+import { getCachedJson, invalidateJson } from '@/lib/clientCache'
 import styles from '@/app/manage/page.module.css'
 
 interface LrcResult {
@@ -92,8 +93,9 @@ export default function AdminSongsPage() {
 
   const loadSongs = async () => {
     setLoading(true)
-    const res = await fetch('/api/songs?mine=1')
-    const data = await res.json()
+    const data = await getCachedJson('/api/songs?mine=1', fresh => {
+      setSongs(Array.isArray(fresh) ? fresh : [])
+    })
     setSongs(Array.isArray(data) ? data : [])
     setLoading(false)
   }
@@ -167,6 +169,8 @@ export default function AdminSongsPage() {
     setNewTitle('')
     setNewArtist('')
     setSelectedLyrics(null)
+    invalidateJson('/api/songs?mine=1')
+    invalidateJson('/api/songs')
     router.push(`/manage/songs/${song.id}`)
   }
 
@@ -184,6 +188,8 @@ export default function AdminSongsPage() {
   const deleteSong = async (id: number) => {
     if (!confirm('この曲を削除しますか？歌詞・メンバーも全て削除されます。')) return
     await fetch(`/api/songs/${id}`, { method: 'DELETE' })
+    invalidateJson('/api/songs?mine=1')
+    invalidateJson('/api/songs')
     setSongs(prev => prev.filter(s => s.id !== id))
   }
 

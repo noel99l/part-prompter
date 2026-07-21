@@ -40,3 +40,8 @@ export function getCachedJson(url: string, onUpdate?: (data: any) => void): Prom
 export function prefetchJson(url: string) {
   if (!cache.has(url)) fetchAndStore(url).catch(() => {})
 }
+
+// 作成・削除など変更系操作の後に呼び、古いキャッシュを返さないようにする。
+export function invalidateJson(url: string) {
+  cache.delete(url)
+}
