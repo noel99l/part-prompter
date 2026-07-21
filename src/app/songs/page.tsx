@@ -57,11 +57,7 @@ export default function PrompterList() {
               <SongCard
                 key={s.id}
                 href={`/songs/${s.id}`}
-                onHover={() => {
-                  prefetchJson(`/api/songs/${s.id}`)
-                  prefetchJson(`/api/songs/${s.id}/members`)
-                  prefetchJson(`/api/songs/${s.id}/lyrics`)
-                }}
+                onHover={() => prefetchJson(`/api/songs/${s.id}/detail`)}
                 title={s.title}
                 artist={s.artist}
                 tags={[
