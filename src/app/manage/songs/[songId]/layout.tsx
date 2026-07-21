@@ -3,7 +3,6 @@ import Link from 'next/link'
 import { auth } from '@/auth'
 import { initDb } from '@/lib/db'
 import { getSongAccess } from '@/lib/songAccess'
-import { isMasterEmail } from '@/lib/permissions'
 
 export default async function SongEditLayout({
   children,
@@ -19,7 +18,7 @@ export default async function SongEditLayout({
   await initDb()
   const access = await getSongAccess(songId, session.user.email)
 
-  if (!access?.canEditContent && !(await isMasterEmail(session.user.email))) {
+  if (!access?.canEditContent) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', background: '#0a0a0a', color: '#fff', gap: '1rem', fontFamily: 'Hiragino Sans, sans-serif' }}>
         <p style={{ fontSize: '1.2rem', color: '#888' }}>この楽曲を編集する権限がありません</p>

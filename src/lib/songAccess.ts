@@ -1,10 +1,12 @@
 import { query } from '@/lib/db'
+import { MASTER_USER_ID } from '@/lib/permissions'
 
 export interface SongAccess {
   userId: number
   isOwner: boolean
   isDirectCollaborator: boolean
   canEditViaPlaylist: boolean
+  isMaster: boolean
   canEditContent: boolean
 }
 
@@ -34,11 +36,12 @@ export async function getSongAccess(
               WHERE pc.playlist_id = p.id AND pc.user_id = u.id
             )
           )
-      ) AS can_edit_via_playlist
+      ) AS can_edit_via_playlist,
+      u.id = $3 AS is_master
     FROM prompter_songs s
     JOIN users u ON u.email = $2
     WHERE s.id = $1
-  `, [songId, email])
+  `, [songId, email, MASTER_USER_ID])
   const row = result.rows[0]
   if (!row) return null
   return {
@@ -46,6 +49,7 @@ export async function getSongAccess(
     isOwner: row.is_owner,
     isDirectCollaborator: row.is_direct_collaborator,
     canEditViaPlaylist: row.can_edit_via_playlist,
-    canEditContent: row.is_owner || row.is_direct_collaborator || row.can_edit_via_playlist,
+    isMaster: row.is_master,
+    canEditContent: row.is_owner || row.is_direct_collaborator || row.can_edit_via_playlist || row.is_master,
   }
 }
