@@ -1,14 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, initDb } from '@/lib/db'
 import { auth } from '@/auth'
+import { isMasterEmail } from '@/lib/permissions'
 
 export async function GET(req: NextRequest) {
   await initDb()
   const mine = req.nextUrl.searchParams.get('mine')
   const session = mine ? await auth() : null
   const email = mine && session?.user?.email ? session.user.email : null
+  const master = email ? await isMasterEmail(email) : false
 
-  const result = email
+  const result = master
+    ? await query(`
+        SELECT s.*, u.account_name as created_by_name,
+          (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,
+          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
+          (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count
+        FROM prompter_songs s
+        LEFT JOIN users u ON u.id = s.created_by
+        ORDER BY s.created_at DESC
+      `)
+    : email
     ? await query(`
         SELECT DISTINCT s.*, u.account_name as created_by_name,
           (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count,

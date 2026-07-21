@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { auth } from '@/auth'
 import crypto from 'crypto'
+import { isMasterEmail } from '@/lib/permissions'
 
 async function canEdit(songId: string, email: string): Promise<boolean> {
+  if (await isMasterEmail(email)) return true
   const res = await query(`
     SELECT 1 FROM prompter_songs s
     LEFT JOIN users u ON u.id = s.created_by
