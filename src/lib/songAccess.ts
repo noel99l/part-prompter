@@ -8,6 +8,8 @@ export interface SongAccess {
   canEditViaPlaylist: boolean
   isMaster: boolean
   canEditContent: boolean
+  // 公開設定の変更・削除・共同編集者管理などのオーナー操作。所有者とマスターに許可する。
+  canManageSong: boolean
 }
 
 /** 楽曲自体または収録先セットリストから導出した編集権限を返す。 */
@@ -51,5 +53,6 @@ export async function getSongAccess(
     canEditViaPlaylist: row.can_edit_via_playlist,
     isMaster: row.is_master,
     canEditContent: row.is_owner || row.is_direct_collaborator || row.can_edit_via_playlist || row.is_master,
+    canManageSong: row.is_owner || row.is_master,
   }
 }

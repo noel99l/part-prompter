@@ -4,7 +4,11 @@ import styles from './PlaylistCollaboratorManager.module.css'
 
 interface Member { id: number; user_name?: string | null }
 
-export default function PlaylistCollaboratorManager({ playlistId }: { playlistId: string }) {
+export default function PlaylistCollaboratorManager({ playlistId, trigger }: {
+  playlistId: string
+  // 指定するとデフォルトのボタンの代わりに任意のトリガー要素を描画する（メニュー項目化などに使う）
+  trigger?: (open: () => void) => React.ReactNode
+}) {
   const [open, setOpen] = useState(false)
   const [members, setMembers] = useState<Member[]>([])
   const [expireMinutes, setExpireMinutes] = useState(10080)
@@ -62,7 +66,9 @@ export default function PlaylistCollaboratorManager({ playlistId }: { playlistId
 
   return (
     <>
-      <button className={styles.trigger} onClick={openModal}>👥 共同編集</button>
+      {trigger ? trigger(openModal) : (
+        <button className={styles.trigger} onClick={openModal}>👥 共同編集</button>
+      )}
       {open && (
         <div className={styles.overlay} onClick={() => setOpen(false)}>
           <div className={styles.modal} role="dialog" aria-modal="true" aria-labelledby="playlist-collab-title" onClick={event => event.stopPropagation()}>
