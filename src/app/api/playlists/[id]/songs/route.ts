@@ -28,16 +28,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   return NextResponse.json({ ok: true })
 }
 
-// 並び順を更新（song_idの配列を受け取る）
+// 並び順を更新（playlist_songs.idの配列を受け取る。旧クライアント互換でsongIdsも受ける）
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb()
   const { id } = await params
   const denied = await authorizeEditor(id)
   if (denied) return denied
 
-  const { songIds }: { songIds?: number[] } = await req.json()
+  const { itemIds, songIds }: { itemIds?: number[]; songIds?: number[] } = await req.json()
+  if (Array.isArray(itemIds) && itemIds.every(Number.isInteger)) {
+    await withTransaction(async (client) => {
+      for (let index = 0; index < itemIds.length; index++) {
+        await client.query(
+          `UPDATE playlist_songs SET sort_order=$1 WHERE playlist_id=$2 AND id=$3`,
+          [index, id, itemIds[index]]
+        )
+      }
+    })
+    return NextResponse.json({ ok: true })
+  }
   if (!Array.isArray(songIds) || !songIds.every(Number.isInteger)) {
-    return NextResponse.json({ error: 'songIds required' }, { status: 400 })
+    return NextResponse.json({ error: 'itemIds or songIds required' }, { status: 400 })
   }
   await withTransaction(async (client) => {
     for (let index = 0; index < songIds.length; index++) {

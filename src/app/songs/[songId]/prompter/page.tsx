@@ -47,6 +47,8 @@ export default function PrompterView() {
   const [viewport, setViewport] = useState({ w: 0, h: 0 })
   const [fullscreenSupported, setFullscreenSupported] = useState(true)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
+  // MCスライドを含むセットリスト全体の並び。曲送り時にMCスライドを経由するために使う。
+  const [playlistItems, setPlaylistItems] = useState<{item_id:number;item_type:'song'|'mc';id:number|null}[]>([])
 
   const [flashBtn, setFlashBtn] = useState<'prev' | 'next' | null>(null)
   const flashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -152,10 +154,16 @@ export default function PrompterView() {
       setSong(cachedSong.song)
       setMembers(cachedSong.members || [])
       setLyrics(cachedSong.lyrics || [])
-      // playlistSongsもキャッシュから復元
-      const allSongs = Object.values(cached).map((v: any) => v.song)
+      // playlistSongsもキャッシュから復元（__itemsはMCスライドを含む並び順リスト）
+      const allSongs = Object.values(cached).filter((v: any) => v?.song).map((v: any) => v.song)
       allSongs.sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       setPlaylistSongs(allSongs)
+      if (Array.isArray(cached.__items)) {
+        setPlaylistItems(cached.__items)
+      } else if (playlistId) {
+        // 旧形式キャッシュにはMCスライド情報がないため取得し直す
+        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistItems(data.items || []))
+      }
     } else {
       let alive = true
       Promise.all([
@@ -167,7 +175,11 @@ export default function PrompterView() {
         setSong(s); setMembers(m); setLyrics(l)
       })
       if (playlistId) {
-        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => { if (alive) setPlaylistSongs(data.songs || []) })
+        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => {
+          if (!alive) return
+          setPlaylistSongs(data.songs || [])
+          setPlaylistItems(data.items || [])
+        })
       }
       return () => { alive = false }
     }
@@ -240,10 +252,17 @@ export default function PrompterView() {
     [song]
   )
 
-  const playlistRef = useRef({ playlistSongs: [] as {id:number;title:string}[], playlistIndex: -1, playlistTotal: 0, playlistId: null as string|null })
+  // MCスライドを含む並びでの前後有無。itemsが未取得の間は曲インデックスで判定する。
+  const currentItemIdx = playlistItems.findIndex(it => it.item_type === 'song' && String(it.id) === String(songId))
+  const hasPrevItem = playlistItems.length > 0 ? currentItemIdx > 0 : playlistIndex > 0
+  const hasNextItem = playlistItems.length > 0
+    ? currentItemIdx >= 0 && currentItemIdx < playlistItems.length - 1
+    : playlistIndex < playlistTotal - 1
+
+  const playlistRef = useRef({ playlistSongs: [] as {id:number;title:string}[], playlistItems: [] as {item_id:number;item_type:'song'|'mc';id:number|null}[], playlistIndex: -1, playlistTotal: 0, playlistId: null as string|null })
   useEffect(() => {
-    playlistRef.current = { playlistSongs, playlistIndex, playlistTotal, playlistId }
-  }, [playlistSongs, playlistIndex, playlistTotal, playlistId])
+    playlistRef.current = { playlistSongs, playlistItems, playlistIndex, playlistTotal, playlistId }
+  }, [playlistSongs, playlistItems, playlistIndex, playlistTotal, playlistId])
 
   const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as DisplayBlock[], startTime: null as number | null, bpmRate: 1 })
   useEffect(() => { stateRef.current.blocks = displayBlocks }, [displayBlocks])
@@ -355,13 +374,31 @@ export default function PrompterView() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  const handlePrevSong = () => {
-    const { playlistSongs: ps, playlistId: pid, playlistTotal: pt } = playlistRef.current
-    if (!pid || ps.length === 0) return
-    const currentIdx = ps.findIndex((s: any) => String(s.id) === String(songId))
-    if (currentIdx <= 0) return
-    const prev = ps[currentIdx - 1]
-    if (!prev) return
+  // 曲送りで隣に移動する。MCスライドを含むitemsがあればそれを辿り、なければ曲のみで移動する。
+  const gotoAdjacent = (direction: -1 | 1) => {
+    const { playlistSongs: ps, playlistItems: items, playlistId: pid, playlistTotal: pt } = playlistRef.current
+    if (!pid) return
+
+    let targetUrl: string | null = null
+    if (items.length > 0) {
+      const currentIdx = items.findIndex(it => it.item_type === 'song' && String(it.id) === String(songId))
+      const target = currentIdx >= 0 ? items[currentIdx + direction] : undefined
+      if (!target) return
+      if (target.item_type === 'mc') {
+        targetUrl = `/playlists/${pid}/mc/${target.item_id}`
+      } else {
+        const songIndex = items.slice(0, currentIdx + direction).filter(it => it.item_type === 'song').length
+        targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${songIndex}&total=${pt}`
+      }
+    } else {
+      if (ps.length === 0) return
+      const currentIdx = ps.findIndex((s: any) => String(s.id) === String(songId))
+      if (currentIdx < 0) return
+      const target = ps[currentIdx + direction]
+      if (!target) return
+      targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${currentIdx + direction}&total=${pt}`
+    }
+
     stopLoop()
     stateRef.current.isPlaying = false
     setIsPlaying(false)
@@ -369,25 +406,12 @@ export default function PrompterView() {
     pausedElapsedRef.current = null
     const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
     if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
-    router.push(`/songs/${prev.id}/prompter?playlist=${pid}&index=${currentIdx - 1}&total=${pt}`)
+    router.push(targetUrl)
   }
 
-  const handleNextSong = () => {
-    const { playlistSongs: ps, playlistId: pid, playlistTotal: pt } = playlistRef.current
-    if (!pid || ps.length === 0) return
-    const currentIdx = ps.findIndex((s: any) => String(s.id) === String(songId))
-    if (currentIdx < 0 || currentIdx >= ps.length - 1) return
-    const next = ps[currentIdx + 1]
-    if (!next) return
-    stopLoop()
-    stateRef.current.isPlaying = false
-    setIsPlaying(false)
-    progressRef.current = 0
-    pausedElapsedRef.current = null
-    const el = document.getElementById('auto-progress-bar'); const gel = document.getElementById('global-progress-bar')
-    if (el) { el.style.width = '0%'; el.style.opacity = '0' }; if (gel) { gel.style.width = '0%'; gel.style.opacity = '0' }
-    router.push(`/songs/${next.id}/prompter?playlist=${pid}&index=${currentIdx + 1}&total=${pt}`)
-  }
+  const handlePrevSong = () => gotoAdjacent(-1)
+
+  const handleNextSong = () => gotoAdjacent(1)
 
   const handleTap = (e: React.MouseEvent<HTMLDivElement>) => {
     const x = e.clientX
@@ -532,7 +556,7 @@ export default function PrompterView() {
 
         <div className={`${styles.controls} ${controlsVisible || settingsOpen ? '' : styles.controlsHidden}`} onClick={e => e.stopPropagation()}>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={handlePrevSong} title="前の曲 (Shift+←)"><IconPrevSong /></button>
+            <button className={styles.btn} disabled={!hasPrevItem} style={{ opacity: !hasPrevItem ? 0.3 : 1 }} onClick={handlePrevSong} title="前の曲 (Shift+←)"><IconPrevSong /></button>
           )}
           <button className={`${styles.btn} ${flashBtn === 'prev' ? styles.btnFlash : ''}`} onClick={() => { handlePrev(); flash('prev') }} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}><IconPrev /></button>
           {hasTimestamp && (
@@ -543,7 +567,7 @@ export default function PrompterView() {
           )}
           <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={currentBlock >= displayBlocks.length - 1} style={{ opacity: currentBlock >= displayBlocks.length - 1 ? 0.3 : 1 }}><IconNext /></button>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
+            <button className={styles.btn} disabled={!hasNextItem} style={{ opacity: !hasNextItem ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
           {!isPortrait && (
             <>

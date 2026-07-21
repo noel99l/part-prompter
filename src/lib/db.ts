@@ -263,6 +263,12 @@ async function runInitDb() {
       )
     `)
 
+    // 曲間に挟むMCスライド対応。item_type='mc'の行はsong_idを持たずmc_title/mc_bodyを使う。
+    await query(`ALTER TABLE playlist_songs ADD COLUMN IF NOT EXISTS item_type TEXT NOT NULL DEFAULT 'song'`)
+    await query(`ALTER TABLE playlist_songs ADD COLUMN IF NOT EXISTS mc_title TEXT`)
+    await query(`ALTER TABLE playlist_songs ADD COLUMN IF NOT EXISTS mc_body TEXT`)
+    await query(`ALTER TABLE playlist_songs ALTER COLUMN song_id DROP NOT NULL`)
+
     // 一覧取得の集計サブクエリ・結合を高速化するインデックス（冪等）
     await query(`CREATE INDEX IF NOT EXISTS idx_member_templates_user_id ON member_templates(user_id)`)
     await query(`CREATE INDEX IF NOT EXISTS idx_prompter_members_song_id ON prompter_members(song_id)`)

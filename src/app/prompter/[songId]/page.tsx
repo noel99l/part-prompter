@@ -32,6 +32,8 @@ export default function PrompterView() {
   const [isMobile, setIsMobile] = useState(false)
   const [isPortrait, setIsPortrait] = useState(false)
   const [playlistSongs, setPlaylistSongs] = useState<{id:number;title:string}[]>([])
+  // MCスライドを含むセットリスト全体の並び。曲送り時にMCスライドを経由するために使う。
+  const [playlistItems, setPlaylistItems] = useState<{item_id:number;item_type:'song'|'mc';id:number|null}[]>([])
   const blockRefs = useRef<(HTMLDivElement | null)[]>([])
 
   const rafRef = useRef<number | null>(null)
@@ -55,7 +57,10 @@ export default function PrompterView() {
 
   useEffect(() => {
     if (!playlistId) return
-    fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistSongs(data.songs || []))
+    fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => {
+      setPlaylistSongs(data.songs || [])
+      setPlaylistItems(data.items || [])
+    })
   }, [playlistId])
 
   const blocks = useMemo(() => {
@@ -73,6 +78,30 @@ export default function PrompterView() {
   )
 
   const hasTimestamp = useMemo(() => lyrics.some(l => l.timestamp_ms != null), [lyrics])
+
+  // MCスライドを含む並びでの前後有無と移動。itemsが未取得の間は曲インデックスで判定する。
+  const currentItemIdx = playlistItems.findIndex(it => it.item_type === 'song' && String(it.id) === String(songId))
+  const hasPrevItem = playlistItems.length > 0 ? currentItemIdx > 0 : playlistIndex > 0
+  const hasNextItem = playlistItems.length > 0
+    ? currentItemIdx >= 0 && currentItemIdx < playlistItems.length - 1
+    : playlistIndex < playlistTotal - 1
+
+  const gotoAdjacent = (direction: -1 | 1) => {
+    if (!playlistId) return
+    if (playlistItems.length > 0) {
+      const target = currentItemIdx >= 0 ? playlistItems[currentItemIdx + direction] : undefined
+      if (!target) return
+      if (target.item_type === 'mc') {
+        router.push(`/playlists/${playlistId}/mc/${target.item_id}?from=prompter`)
+      } else {
+        const songIndex = playlistItems.slice(0, currentItemIdx + direction).filter(it => it.item_type === 'song').length
+        router.push(`/prompter/${target.id}?playlist=${playlistId}&index=${songIndex}&total=${playlistTotal}`)
+      }
+      return
+    }
+    const target = playlistSongs[playlistIndex + direction]
+    if (target) router.push(`/prompter/${target.id}?playlist=${playlistId}&index=${playlistIndex + direction}&total=${playlistTotal}`)
+  }
 
   const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as LyricLine[][], startTime: null as number | null })
 
@@ -308,10 +337,7 @@ export default function PrompterView() {
 
         <div className={styles.controls} onClick={e => e.stopPropagation()}>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex <= 0} style={{ opacity: playlistIndex <= 0 ? 0.3 : 1 }} onClick={() => {
-              const prev = playlistSongs[playlistIndex - 1]
-              if (prev) router.push(`/prompter/${prev.id}?playlist=${playlistId}&index=${playlistIndex - 1}&total=${playlistTotal}`)
-            }} title="前の曲">⏮</button>
+            <button className={styles.btn} disabled={!hasPrevItem} style={{ opacity: !hasPrevItem ? 0.3 : 1 }} onClick={() => gotoAdjacent(-1)} title="前の曲">⏮</button>
           )}
           <button className={styles.btn} onClick={handlePrev} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}>◀</button>
           {hasTimestamp && (
@@ -322,10 +348,7 @@ export default function PrompterView() {
           )}
           <button className={styles.btn} onClick={handleNext} disabled={currentBlock >= blocks.length - 1} style={{ opacity: currentBlock >= blocks.length - 1 ? 0.3 : 1 }}>▶</button>
           {playlistId && (
-            <button className={styles.btn} disabled={playlistIndex >= playlistTotal - 1} style={{ opacity: playlistIndex >= playlistTotal - 1 ? 0.3 : 1 }} onClick={() => {
-              const next = playlistSongs[playlistIndex + 1]
-              if (next) router.push(`/prompter/${next.id}?playlist=${playlistId}&index=${playlistIndex + 1}&total=${playlistTotal}`)
-            }} title="次の曲">⏭</button>
+            <button className={styles.btn} disabled={!hasNextItem} style={{ opacity: !hasNextItem ? 0.3 : 1 }} onClick={() => gotoAdjacent(1)} title="次の曲">⏭</button>
           )}
           {!isPortrait && <button className={styles.btn} onClick={e => { e.stopPropagation(); if (!document.fullscreenElement) document.documentElement.requestFullscreen?.().catch(() => {}); else document.exitFullscreen?.() }}>⛶</button>}
         </div>

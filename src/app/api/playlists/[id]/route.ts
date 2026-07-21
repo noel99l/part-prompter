@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { initDb, query } from '@/lib/db'
 import { getPlaylistAccess } from '@/lib/playlistAccess'
+import { isMasterEmail } from '@/lib/permissions'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   await initDb()
@@ -11,33 +12,52 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   let isOwner = false
   let viewerUserId: number | null = null
+  let viewerCanEditPlaylist = false
+  let viewerIsMaster = false
   if (req.nextUrl.searchParams.get('access') === '1') {
     const session = await auth()
     if (session?.user?.email) {
-      const access = await getPlaylistAccess(id, session.user.email)
+      const [access, master] = await Promise.all([
+        getPlaylistAccess(id, session.user.email),
+        isMasterEmail(session.user.email),
+      ])
       isOwner = access?.isOwner ?? false
-      viewerUserId = access?.canEdit ? access.userId : null
+      viewerUserId = access?.userId ?? null
+      viewerCanEditPlaylist = access?.canEdit ?? false
+      viewerIsMaster = master
     }
   }
 
-  const songs = await query(`
-    SELECT ps.sort_order, s.id, s.title, s.artist,
+  // MCスライドも含めた全アイテムを並び順で取得し、songsは曲行だけに絞って返す（既存互換）
+  // can_edit: 曲の作成者・共同編集者は常に編集可。セットリスト経由の権限（作成者所有曲）は
+  // セットリスト編集権を持つ閲覧者のみ。マスターは後段で全曲trueにする。
+  const itemsRes = await query(`
+    SELECT ps.id AS item_id, ps.item_type, ps.mc_title, ps.mc_body,
+      ps.sort_order, s.id, s.title, s.artist,
       CASE WHEN $2::integer IS NULL THEN FALSE ELSE (
         s.created_by = $2 OR EXISTS (
           SELECT 1 FROM song_collaborators sc
           JOIN song_collaborator_members scm ON scm.collaborator_id = sc.id
           WHERE sc.song_id = s.id AND scm.user_id = $2
-        ) OR p.created_by = s.created_by
+        ) OR ($3 AND p.created_by = s.created_by)
       ) END AS can_edit,
       (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id) as lyric_count,
       (SELECT COUNT(*) FROM prompter_lyrics l WHERE l.song_id = s.id AND l.timestamp_ms IS NOT NULL) as timestamp_count,
       (SELECT COUNT(DISTINCT m.id) FROM prompter_members m WHERE m.song_id = s.id) as member_count
     FROM playlist_songs ps
     JOIN playlists p ON p.id = ps.playlist_id
-    JOIN prompter_songs s ON s.id = ps.song_id
+    LEFT JOIN prompter_songs s ON s.id = ps.song_id
     WHERE ps.playlist_id=$1
-    ORDER BY ps.sort_order
-  `, [id, viewerUserId])
+    ORDER BY ps.sort_order, ps.id
+  `, [id, viewerUserId, viewerCanEditPlaylist])
+  const items = itemsRes.rows
+    .filter((row: { item_type: string; id: number | null }) =>
+      row.item_type === 'mc' || row.id != null
+    )
+    .map((row: { item_type: string; can_edit: boolean }) =>
+      viewerIsMaster && row.item_type === 'song' ? { ...row, can_edit: true } : row
+    )
+  const songs = { rows: items.filter((row: { item_type: string }) => row.item_type === 'song') }
 
   if (req.nextUrl.searchParams.get('full') === '1') {
     const songIds = songs.rows.map((song: { id: number }) => song.id)
@@ -62,10 +82,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         lyrics: lyricsMap[song.id] || [],
       }
     }))
-    return NextResponse.json({ ...playlist.rows[0], is_owner: isOwner, songs: songsWithData })
+    return NextResponse.json({ ...playlist.rows[0], is_owner: isOwner, songs: songsWithData, items })
   }
 
-  return NextResponse.json({ ...playlist.rows[0], is_owner: isOwner, songs: songs.rows })
+  return NextResponse.json({ ...playlist.rows[0], is_owner: isOwner, songs: songs.rows, items })
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
