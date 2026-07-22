@@ -26,21 +26,6 @@
     display: flex;
     padding: 4vw 4vw 80px;
   }
-
-  .controls {
-    bottom: 1rem;
-    left: 1rem;
-    right: 1rem;
-    transform: none;
-    gap: 0.3rem;
-    justify-content: center;
-    flex-wrap: nowrap;
-  }
-
-  .btn {
-    font-size: 1rem;
-    padding: 0.4rem 0.6rem;
-  }
 }
 
 .loading {
@@ -113,6 +98,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* インラインのままだと svg のベースライン下に余白が出てボタンが約4px高くなり、
+   flexの stretch で他のボタンまで引き伸ばされるため flex 化する */
+.autoLabel {
+  display: flex;
+  align-items: center;
 }
 
 .autoProgress {
@@ -316,4 +308,27 @@
   pointer-events: none;
   z-index: 100;
   transition: none;
+}
+
+/* 縦画面のコントロール列。ベース定義より後に置いて確実に上書きする（以前は
+   ファイル先頭にあり大半が後勝ちで無効化されていた）。曲送りボタンが両端に
+   来るよう space-between で全幅に広げ、MCスライドの配置と揃える */
+@media (max-width: 768px) and (orientation: portrait) {
+  .controls {
+    bottom: 1rem;
+    left: 1rem;
+    right: 1rem;
+    transform: none;
+    gap: 0.3rem;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .btn {
+    font-size: 1rem;
+    padding: 0.4rem 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 }
