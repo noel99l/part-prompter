@@ -47,14 +47,14 @@
   flex-wrap: nowrap;
 }
 
-/* 縦画面では曲プロンプターのコントロール列と同じく下部中央に配置する */
+/* 縦画面では曲プロンプターの外側ボタン（前の曲/次の曲）と同じく左右の端に寄せる */
 @media (max-width: 768px) and (orientation: portrait) {
   .controls {
     bottom: 1rem;
     left: 1rem;
     right: 1rem;
     gap: 0.3rem;
-    justify-content: center;
+    justify-content: space-between;
   }
 }
 
