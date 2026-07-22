@@ -85,26 +85,47 @@ export default function PrompterStage<Line extends PromptLine>({
   )
 
   if (scrollMode) {
+    // 縦画面では、自動分割で生まれた表示チャンクではなく元の歌詞ブロック単位で
+    // カレント枠（ピンクの縦線）を付けるため、連続する同一ブロックのチャンクを
+    // グループ化して描画する。横画面の連続表示は従来どおりチャンク単位。
+    const groups: { source: number; chunks: { chunk: DisplayChunk<Line>; index: number }[] }[] = []
+    displayBlocks.forEach((chunk, index) => {
+      const last = groups[groups.length - 1]
+      if (!landscapeScroll && last && last.source === chunk.sourceBlockIndex) {
+        last.chunks.push({ chunk, index })
+      } else {
+        groups.push({ source: chunk.sourceBlockIndex, chunks: [{ chunk, index }] })
+      }
+    })
     return (
       <div className={`${styles.scrollView} ${landscapeScroll ? styles.scrollViewLandscape : ''}`}>
         {cover}
-        {displayBlocks.map((block, blockIndex) => (
-          <div
-            key={blockIndex}
-            ref={element => { blockRefs.current[blockIndex] = element }}
-            className={`${styles.scrollBlock} ${landscapeScroll ? styles.scrollBlockLandscape : ''} ${blockIndex === currentBlock ? styles.scrollBlockActive : ''}`}
-            onClick={onSelectBlock ? () => onSelectBlock(blockIndex) : undefined}
-          >
-            {block.lines.map(line => (
-              <div
-                key={lineKey(line)}
-                className={`${styles.scrollLine} ${landscapeScroll ? styles.scrollLineLandscape : ''} ${landscapeScroll && embedded ? styles.scrollLineEmbedded : ''}`}
-              >
-                {renderLine(line)}
-              </div>
-            ))}
-          </div>
-        ))}
+        {groups.map(group => {
+          const active = group.chunks.some(({ index }) => index === currentBlock)
+          return (
+            <div
+              key={group.chunks[0].index}
+              className={`${styles.scrollBlock} ${landscapeScroll ? styles.scrollBlockLandscape : ''} ${active ? styles.scrollBlockActive : ''}`}
+            >
+              {group.chunks.map(({ chunk, index }) => (
+                <div
+                  key={index}
+                  ref={element => { blockRefs.current[index] = element }}
+                  onClick={onSelectBlock ? () => onSelectBlock(index) : undefined}
+                >
+                  {chunk.lines.map(line => (
+                    <div
+                      key={lineKey(line)}
+                      className={`${styles.scrollLine} ${landscapeScroll ? styles.scrollLineLandscape : ''} ${landscapeScroll && embedded ? styles.scrollLineEmbedded : ''}`}
+                    >
+                      {renderLine(line)}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )
+        })}
         <div className={styles.scrollEnd}>― End ―</div>
         <div className={styles.scrollSpacer} />
       </div>
