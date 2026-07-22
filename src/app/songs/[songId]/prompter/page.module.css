@@ -69,11 +69,12 @@
   pointer-events: none;
 }
 
-/* 縦画面用：右下に縦積みするボタン群（上が設定、下が全画面） */
+/* 縦画面用：右上に縦積みするボタン群（上が設定、下が全画面）。
+   下部の曲送りコントロール列と重ならないよう上部に置く */
 .cornerControls {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
+  top: 1rem;
+  right: 1rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -81,14 +82,11 @@
   transition: opacity 0.8s ease;
 }
 
-/* 縦画面では設定パネルを右下ボタン群の上に開く */
-.settingsPanel.settingsPanelPortrait {
-  bottom: 8.5rem;
-}
-
-/* 縦画面で全画面ボタンがない（＝設定ボタン1個だけ）の場合は詰める */
+/* 縦画面では設定パネルを右上ボタンの直下に開く（全画面ボタンの有無に依らない） */
+.settingsPanel.settingsPanelPortrait,
 .settingsPanel.settingsPanelPortraitSingle {
-  bottom: 5.5rem;
+  top: 4.2rem;
+  bottom: auto;
 }
 
 

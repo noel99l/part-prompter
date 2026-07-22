@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Loading from '@/components/Loading'
+import { IconPrevSong, IconNextSong } from '@/components/icons'
 import styles from './page.module.css'
 
 interface PlaylistItem {
@@ -85,12 +86,12 @@ export default function McSlidePage() {
           className={`${styles.btn} ${prevUrl ? '' : styles.btnDisabled}`}
           onClick={() => prevUrl && router.push(prevUrl)}
           title="前へ"
-        >⏮</button>
+        ><IconPrevSong /></button>
         <button
           className={`${styles.btn} ${nextUrl ? '' : styles.btnDisabled}`}
           onClick={() => nextUrl && router.push(nextUrl)}
           title="次へ"
-        >⏭</button>
+        ><IconNextSong /></button>
       </div>
     </div>
   )
