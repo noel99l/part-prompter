@@ -264,10 +264,11 @@ export default function PrompterView() {
     playlistRef.current = { playlistSongs, playlistItems, playlistIndex, playlistTotal, playlistId }
   }, [playlistSongs, playlistItems, playlistIndex, playlistTotal, playlistId])
 
-  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as DisplayBlock[], startTime: null as number | null, bpmRate: 1 })
+  const stateRef = useRef({ currentBlock: -1, isPlaying: false, blocks: [] as DisplayBlock[], startTime: null as number | null, bpmRate: 1, isPortrait: false })
   useEffect(() => { stateRef.current.blocks = displayBlocks }, [displayBlocks])
   useEffect(() => { stateRef.current.currentBlock = currentBlock }, [currentBlock])
   useEffect(() => { stateRef.current.bpmRate = bpmRate }, [bpmRate])
+  useEffect(() => { stateRef.current.isPortrait = isPortrait }, [isPortrait])
 
   const stopLoop = () => {
     if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = null }
@@ -332,8 +333,26 @@ export default function PrompterView() {
     pausedElapsedRef.current = Date.now() - (stateRef.current.startTime ?? 0)
     stateRef.current.isPlaying = false; setIsPlaying(false); stopLoop()
   }
+  // 縦画面は自動分割チャンクではなく元の歌詞ブロック単位で前後に移動する。
+  // 現在位置がブロック途中（タップや自動再生で移動した場合）なら、まずそのブロックの先頭へ戻る。
+  const prevPosition = () => {
+    const { blocks, currentBlock, isPortrait } = stateRef.current
+    if (!isPortrait) return Math.max(-1, currentBlock - 1)
+    if (currentBlock <= 0) return -1
+    const curSource = blocks[currentBlock]?.sourceBlockIndex ?? 0
+    const firstOfCurrent = blocks.findIndex(b => b.sourceBlockIndex === curSource)
+    if (currentBlock > firstOfCurrent) return firstOfCurrent
+    return curSource <= 0 ? -1 : blocks.findIndex(b => b.sourceBlockIndex === curSource - 1)
+  }
+  const nextPosition = () => {
+    const { blocks, currentBlock, isPortrait } = stateRef.current
+    if (!isPortrait) return Math.min(blocks.length - 1, currentBlock + 1)
+    const curSource = currentBlock < 0 ? -1 : blocks[currentBlock]?.sourceBlockIndex ?? -1
+    const found = blocks.findIndex(b => b.sourceBlockIndex > curSource)
+    return found === -1 ? currentBlock : found
+  }
   const handlePrev = () => {
-    const next = Math.max(-1, stateRef.current.currentBlock - 1)
+    const next = prevPosition()
     stateRef.current.currentBlock = next; setCurrentBlock(next)
     if (stateRef.current.isPlaying) startLoop(next)
     else {
@@ -343,7 +362,7 @@ export default function PrompterView() {
     }
   }
   const handleNext = () => {
-    const next = Math.min(stateRef.current.blocks.length - 1, stateRef.current.currentBlock + 1)
+    const next = nextPosition()
     stateRef.current.currentBlock = next
     setCurrentBlock(next)
     if (stateRef.current.isPlaying) startLoop(next)
@@ -450,6 +469,10 @@ export default function PrompterView() {
   }
 
   const continuousScroll = !isPortrait && displayMode === 'scroll'
+  // 縦画面はブロック単位で移動するため、最終ブロック内にいる時点で「次へ」を無効化する
+  const atLastPosition = displayBlocks.length === 0 || (isPortrait
+    ? currentBlock >= 0 && displayBlocks[currentBlock]?.sourceBlockIndex === displayBlocks[displayBlocks.length - 1]?.sourceBlockIndex
+    : currentBlock >= displayBlocks.length - 1)
 
   if (!song) return (
     <div className={styles.skeletonWrap}>
@@ -565,7 +588,7 @@ export default function PrompterView() {
               <span className={styles.autoLabel}>{isPlaying ? <IconPause /> : <IconPlay />}</span>
             </button>
           )}
-          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={currentBlock >= displayBlocks.length - 1} style={{ opacity: currentBlock >= displayBlocks.length - 1 ? 0.3 : 1 }}><IconNext /></button>
+          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={atLastPosition} style={{ opacity: atLastPosition ? 0.3 : 1 }}><IconNext /></button>
           {playlistId && (
             <button className={styles.btn} disabled={!hasNextItem} style={{ opacity: !hasNextItem ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
