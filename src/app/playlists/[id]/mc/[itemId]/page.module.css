@@ -37,6 +37,18 @@
   color: #eee;
 }
 
+.pageIndicator {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #888;
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+  z-index: 10;
+  pointer-events: none;
+}
+
 .controls {
   position: fixed;
   bottom: 1.5rem;
@@ -69,21 +81,6 @@
 .btnDisabled {
   opacity: 0.3;
   pointer-events: none;
-}
-
-.closeBtn {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 10;
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
-  color: #aaa;
-  font-size: 1rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 8px;
-  cursor: pointer;
-  text-decoration: none;
 }
 
 /* 縦画面では曲プロンプターの外側ボタン（前の曲/次の曲）と同じ位置・サイズに揃える。
