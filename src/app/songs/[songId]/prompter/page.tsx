@@ -3,7 +3,7 @@ import { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
-import { getCachedJson } from '@/lib/clientCache'
+import { getCachedJson, writePlaylistItemsCache } from '@/lib/clientCache'
 import { buildDisplayBlocks, type DisplayChunk } from '@/lib/prompterBlocks'
 import { displayBlockAtPosition, prompterBpmRate } from '@/lib/prompterTimeline'
 import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
@@ -162,7 +162,11 @@ export default function PrompterView() {
         setPlaylistItems(cached.__items)
       } else if (playlistId) {
         // 旧形式キャッシュにはMCスライド情報がないため取得し直す
-        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => setPlaylistItems(data.items || []))
+        fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => {
+          const nextItems = data.items || []
+          setPlaylistItems(nextItems)
+          writePlaylistItemsCache(playlistId, nextItems)
+        })
       }
     } else {
       let alive = true
@@ -177,8 +181,10 @@ export default function PrompterView() {
       if (playlistId) {
         fetch(`/api/playlists/${playlistId}`).then(r => r.json()).then(data => {
           if (!alive) return
+          const nextItems = data.items || []
           setPlaylistSongs(data.songs || [])
-          setPlaylistItems(data.items || [])
+          setPlaylistItems(nextItems)
+          writePlaylistItemsCache(playlistId, nextItems)
         })
       }
       return () => { alive = false }

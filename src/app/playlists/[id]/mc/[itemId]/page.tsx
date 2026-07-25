@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Loading from '@/components/Loading'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconFullscreen } from '@/components/icons'
-import { getCachedJson } from '@/lib/clientCache'
+import { getCachedJson, readPlaylistItemsCache, writePlaylistItemsCache } from '@/lib/clientCache'
 import { buildDisplayBlocks, type PromptLine } from '@/lib/prompterBlocks'
 import styles from './page.module.css'
 
@@ -21,19 +21,32 @@ export default function McSlidePage() {
   const router = useRouter()
   // セットリスト一覧のどちらの画面から来たかで曲プロンプターの遷移先を切り替える
   const from = searchParams.get('from') === 'prompter' ? 'prompter' : 'songs'
-  const [items, setItems] = useState<PlaylistItem[]>([])
-  const [loading, setLoading] = useState(true)
+  const [initialItems] = useState(() => readPlaylistItemsCache<PlaylistItem>(id))
+  const [items, setItems] = useState<PlaylistItem[]>(initialItems)
+  const [loading, setLoading] = useState(() => !initialItems.some(
+    item => item.item_type === 'mc' && String(item.item_id) === String(itemId)
+  ))
   const [page, setPage] = useState(0)
   const [viewport, setViewport] = useState({ w: 0, h: 0 })
   const [fullscreenSupported, setFullscreenSupported] = useState(true)
 
   useEffect(() => {
     let alive = true
-    getCachedJson(`/api/playlists/${id}`, data => { if (alive) setItems(data.items || []) })
+    const applyItems = (data: { items?: PlaylistItem[] }) => {
+      if (!alive) return
+      const nextItems = Array.isArray(data.items) ? data.items : []
+      setItems(nextItems)
+      writePlaylistItemsCache(id, nextItems)
+    }
+
+    getCachedJson(`/api/playlists/${id}`, applyItems)
       .then(data => {
         if (!alive) return
-        setItems(data.items || [])
+        applyItems(data)
         setLoading(false)
+      })
+      .catch(() => {
+        if (alive) setLoading(false)
       })
     return () => { alive = false }
   }, [id])

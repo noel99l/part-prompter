@@ -45,3 +45,27 @@ export function prefetchJson(url: string) {
 export function invalidateJson(url: string) {
   cache.delete(url)
 }
+
+// セットリストの曲データと同じsessionStorageにMCを含む並び順を保持する。
+// 同期的に読めるため、MC画面への遷移直後から内容を表示できる。
+export function readPlaylistItemsCache<T>(playlistId: string): T[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const value = JSON.parse(sessionStorage.getItem(`playlist_cache_${playlistId}`) || 'null')
+    return Array.isArray(value?.__items) ? value.__items as T[] : []
+  } catch {
+    return []
+  }
+}
+
+export function writePlaylistItemsCache<T>(playlistId: string, items: T[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    const parsed = JSON.parse(sessionStorage.getItem(`playlist_cache_${playlistId}`) || 'null')
+    const value = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
+    value.__items = items
+    sessionStorage.setItem(`playlist_cache_${playlistId}`, JSON.stringify(value))
+  } catch {
+    // ストレージが利用できない場合も画面表示は継続する。
+  }
+}
