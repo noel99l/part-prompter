@@ -47,23 +47,30 @@ export default function McSlidePage() {
     return () => window.removeEventListener('resize', update)
   }, [])
 
-  const { current, prevUrl, nextUrl } = useMemo(() => {
+  const { current, prevSongUrl, nextSongUrl } = useMemo(() => {
     const songTotal = items.filter(it => it.item_type === 'song').length
     const idx = items.findIndex(it => String(it.item_id) === String(itemId))
-    const urlFor = (target: PlaylistItem, targetIdx: number): string => {
-      if (target.item_type === 'mc') {
-        return `/playlists/${id}/mc/${target.item_id}${from === 'prompter' ? '?from=prompter' : ''}`
-      }
+    const songUrlFor = (target: PlaylistItem, targetIdx: number): string => {
       const songIndex = items.slice(0, targetIdx).filter(it => it.item_type === 'song').length
       const query = `playlist=${id}&index=${songIndex}&total=${songTotal}`
       return from === 'prompter'
         ? `/prompter/${target.id}?${query}`
         : `/songs/${target.id}/prompter?${query}`
     }
+
+    let prevSongIdx = -1
+    for (let i = idx - 1; i >= 0; i -= 1) {
+      if (items[i].item_type === 'song') { prevSongIdx = i; break }
+    }
+    let nextSongIdx = -1
+    for (let i = idx + 1; i < items.length; i += 1) {
+      if (items[i].item_type === 'song') { nextSongIdx = i; break }
+    }
+
     return {
       current: idx >= 0 ? items[idx] : null,
-      prevUrl: idx > 0 ? urlFor(items[idx - 1], idx - 1) : null,
-      nextUrl: idx >= 0 && idx < items.length - 1 ? urlFor(items[idx + 1], idx + 1) : null,
+      prevSongUrl: prevSongIdx >= 0 ? songUrlFor(items[prevSongIdx], prevSongIdx) : null,
+      nextSongUrl: nextSongIdx >= 0 ? songUrlFor(items[nextSongIdx], nextSongIdx) : null,
     }
   }, [items, itemId, id, from])
 
@@ -91,9 +98,9 @@ export default function McSlidePage() {
     const rem = 16
     const vmin = Math.min(w, h)
     const clampCalc = (min: number, val: number, max: number) => Math.min(Math.max(min, val), max)
-    const bodyFont = clampCalc(1.2 * rem, 0.04 * vmin, 2.4 * rem)
-    const titleFont = clampCalc(1.6 * rem, 0.05 * vmin, 3.2 * rem)
-    const badgeFont = clampCalc(0.9 * rem, 0.025 * vmin, 1.4 * rem)
+    const bodyFont = clampCalc(1.5 * rem, 0.06 * vmin, 3.8 * rem)
+    const titleFont = clampCalc(2 * rem, 0.07 * vmin, 4.5 * rem)
+    const badgeFont = clampCalc(1 * rem, 0.03 * vmin, 1.6 * rem)
     const overhead =
       4 * rem                                                    // container 上下 padding
       + badgeFont + rem                                          // バッジ + margin-bottom
@@ -116,25 +123,37 @@ export default function McSlidePage() {
     if (pages.length > 0 && page >= pages.length) setPage(pages.length - 1)
   }, [pages.length, page])
 
-  const hasPrev = page > 0 || prevUrl != null
-  const hasNext = page < pages.length - 1 || nextUrl != null
-  const goPrev = () => {
-    if (page > 0) setPage(p => p - 1)
-    else if (prevUrl) router.push(prevUrl)
+  const hasPrevPage = page > 0
+  const hasNextPage = page < pages.length - 1
+  const goPrevPage = () => {
+    if (hasPrevPage) setPage(p => p - 1)
   }
-  const goNext = () => {
-    if (page < pages.length - 1) setPage(p => p + 1)
-    else if (nextUrl) router.push(nextUrl)
+  const goNextPage = () => {
+    if (hasNextPage) setPage(p => p + 1)
   }
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (e.key === 'ArrowRight') {
         e.preventDefault()
-        goNext()
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        if (e.shiftKey) {
+          if (nextSongUrl) router.push(nextSongUrl)
+        } else {
+          goNextPage()
+        }
+      } else if (e.key === 'ArrowLeft') {
         e.preventDefault()
-        goPrev()
+        if (e.shiftKey) {
+          if (prevSongUrl) router.push(prevSongUrl)
+        } else {
+          goPrevPage()
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        goNextPage()
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        goPrevPage()
       }
     }
     window.addEventListener('keydown', handler)
@@ -167,24 +186,28 @@ export default function McSlidePage() {
       )}
       <div className={styles.controls}>
         <button
-          className={`${styles.btn} ${prevUrl ? '' : styles.btnDisabled}`}
-          onClick={() => prevUrl && router.push(prevUrl)}
-          title="前の項目"
+          className={`${styles.btn} ${prevSongUrl ? '' : styles.btnDisabled}`}
+          onClick={() => prevSongUrl && router.push(prevSongUrl)}
+          title="前の曲 (Shift+←)"
+          aria-label="前の曲"
         ><IconPrevSong /></button>
         <button
-          className={`${styles.btn} ${hasPrev ? '' : styles.btnDisabled}`}
-          onClick={goPrev}
-          title="前へ"
+          className={`${styles.btn} ${hasPrevPage ? '' : styles.btnDisabled}`}
+          onClick={goPrevPage}
+          title="前のMCスライド (←)"
+          aria-label="前のMCスライド"
         ><IconPrev /></button>
         <button
-          className={`${styles.btn} ${hasNext ? '' : styles.btnDisabled}`}
-          onClick={goNext}
-          title="次へ"
+          className={`${styles.btn} ${hasNextPage ? '' : styles.btnDisabled}`}
+          onClick={goNextPage}
+          title="次のMCスライド (→)"
+          aria-label="次のMCスライド"
         ><IconNext /></button>
         <button
-          className={`${styles.btn} ${nextUrl ? '' : styles.btnDisabled}`}
-          onClick={() => nextUrl && router.push(nextUrl)}
-          title="次の項目"
+          className={`${styles.btn} ${nextSongUrl ? '' : styles.btnDisabled}`}
+          onClick={() => nextSongUrl && router.push(nextSongUrl)}
+          title="次の曲 (Shift+→)"
+          aria-label="次の曲"
         ><IconNextSong /></button>
         {fullscreenSupported && (
           <button
