@@ -383,7 +383,7 @@ export default function PrompterView() {
         e.preventDefault()
         if (e.shiftKey && playlistId) handlePrevSong()
         else { handlePrev(); flash('prev') }
-      } else if (e.key === ' ') {
+      } else if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault()
         if (stateRef.current.isPlaying) handlePause()
         else handlePlay()
