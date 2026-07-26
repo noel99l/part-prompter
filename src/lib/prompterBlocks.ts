@@ -5,6 +5,7 @@
 //   自動分割は各ブロックの「内部」でのみ行い、ブロックをまたいで結合することはない。
 // - 画面に収まるブロックはそのまま1ページで表示する。
 // - 収まらないブロックは視覚行数（折り返し込み）を上限まで詰めてチャンクに分割する。
+// - 同じタイムスタンプを持つ連続行は不可分として、必ず同じチャンクに入れる。
 // - 分割チャンクの開始時刻は、行自身のタイムスタンプがあればそれを、
 //   なければ前後ブロックのタイムスタンプから行位置で比例配分する。
 
@@ -60,16 +61,24 @@ export function buildDisplayBlocks<L extends PromptLine>(
       else startMs = null
       chunks.push({ lines: cur, startMs, sourceBlockIndex: bi })
     }
-    block.forEach((line, li) => {
-      if (cur.length > 0 && curRows + rows[li] > maxRows) {
+    for (let li = 0; li < block.length;) {
+      const timestamp = block[li].timestamp_ms
+      let unitEnd = li + 1
+      // 同一時刻に表示する行の途中では分割しない。未設定(null)の行は個別に扱う。
+      if (timestamp != null) {
+        while (unitEnd < block.length && block[unitEnd].timestamp_ms === timestamp) unitEnd += 1
+      }
+      const unitRows = rows.slice(li, unitEnd).reduce((sum, value) => sum + value, 0)
+      if (cur.length > 0 && curRows + unitRows > maxRows) {
         pushChunk()
         cur = []
         curRows = 0
         startIdx = li
       }
-      cur.push(line)
-      curRows += rows[li]
-    })
+      cur.push(...block.slice(li, unitEnd))
+      curRows += unitRows
+      li = unitEnd
+    }
     pushChunk()
     return chunks
   })
