@@ -21,6 +21,8 @@ import styles from '@/app/manage/page.module.css'
 import skStyles from '@/components/skeleton.module.css'
 import SongCard from '@/components/SongCard'
 import PlaylistCollaboratorManager from '@/components/PlaylistCollaboratorManager'
+import McPngExportButton from '@/components/McPngExportButton'
+import PlaylistMp4ExportDialog, { type PlaylistMp4Song } from '@/components/PlaylistMp4ExportDialog'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
 
 interface PlaylistItem {
@@ -47,8 +49,9 @@ function buildTags(s: { lyric_count?: string; timestamp_count?: string; member_c
   return tags
 }
 
-function SortableItem({ item, songNumber, playlistId, onRemove, onEditMc }: {
+function SortableItem({ item, itemOrder, songNumber, playlistId, onRemove, onEditMc }: {
   item: PlaylistItem
+  itemOrder: number
   songNumber: number
   playlistId: string
   onRemove: (item: PlaylistItem) => void
@@ -88,6 +91,12 @@ function SortableItem({ item, songNumber, playlistId, onRemove, onEditMc }: {
           actions={
             <div className={styles.cardActions}>
               <button className={styles.viewBtn} onClick={() => onEditMc(item)} title="MCスライドを編集">✏️</button>
+              <McPngExportButton
+                title={item.mc_title}
+                body={item.mc_body}
+                itemOrder={itemOrder}
+                className={styles.viewBtn}
+              />
               <Link href={`/playlists/${playlistId}/mc/${item.item_id}`} className={styles.viewBtn} target="_blank" title="スライドを表示">▶</Link>
               <button className={styles.deleteBtn} onClick={() => onRemove(item)} title="セットリストから削除">🗑️</button>
             </div>
@@ -128,6 +137,7 @@ export default function PlaylistEditPage() {
   const [editingName, setEditingName] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isOwner, setIsOwner] = useState(false)
+  const [mp4ExportOpen, setMp4ExportOpen] = useState(false)
   const canUseSyncPrompter = useSyncCapability()
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -174,6 +184,11 @@ export default function PlaylistEditPage() {
         {openCollab && (
           <button className={styles.menuItem} onClick={() => { setMoreMenuOpen(false); openCollab() }}>👥 共同編集を管理</button>
         )}
+        {songCount > 0 && (
+          <button className={styles.menuItem} onClick={() => { setMoreMenuOpen(false); setMp4ExportOpen(true) }}>
+            🎬 曲ごとにMP4を一括出力
+          </button>
+        )}
         {isOwner && canUseSyncPrompter && songCount > 0 && (
           <Link href={`/manage/sync?playlistId=${id}`} className={styles.menuItem} onClick={() => setMoreMenuOpen(false)}>📡 同期プロンプターを開始</Link>
         )}
@@ -206,6 +221,16 @@ export default function PlaylistEditPage() {
   useEffect(() => { itemsRef.current = items }, [items])
 
   const songCount = items.filter(it => it.item_type === 'song').length
+  const mp4Songs: PlaylistMp4Song[] = items.flatMap(item => (
+    item.item_type === 'song' && item.id != null
+      ? [{
+          id: String(item.id),
+          title: item.title || `曲${item.id}`,
+          lyricCount: parseInt(item.lyric_count ?? '0'),
+          timestampCount: parseInt(item.timestamp_count ?? '0'),
+        }]
+      : []
+  ))
 
   const handleQueryChange = useCallback((value: string) => {
     setSearchQuery(value)
@@ -494,6 +519,12 @@ export default function PlaylistEditPage() {
           </div>
         </div>
       )}
+
+      <PlaylistMp4ExportDialog
+        open={mp4ExportOpen}
+        songs={mp4Songs}
+        onClose={() => setMp4ExportOpen(false)}
+      />
     </div>
   )
 }

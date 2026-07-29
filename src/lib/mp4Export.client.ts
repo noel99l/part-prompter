@@ -60,6 +60,7 @@ export interface Mp4ExportOptions {
   displayMode?: 'slide' | 'scroll'
   autoSplit?: boolean
   backgroundColor?: string
+  signal?: AbortSignal
 }
 
 export interface Mp4PreviewResult {
@@ -450,8 +451,8 @@ function downloadFilename(title: string) {
   return `${safe}.mp4`
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T> {
+  const response = await fetch(url, { signal })
   if (!response.ok) {
     throw new Error(`動画データの読み込みに失敗しました（${response.status}）`)
   }
@@ -468,9 +469,9 @@ export async function createPrompterMp4Preview(
   requestedPage = 0,
 ): Promise<Mp4PreviewResult> {
   const [song, members, lines] = await Promise.all([
-    fetchJson<VideoSong>(`/api/songs/${songId}`),
-    fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
-    fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`),
+    fetchJson<VideoSong>(`/api/songs/${songId}`, options.signal),
+    fetchJson<VideoMember[]>(`/api/songs/${songId}/members`, options.signal),
+    fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`, options.signal),
   ])
   if (options.backgroundColor) song.bg_color = options.backgroundColor
   if (!Array.isArray(lines) || lines.length === 0) throw new Error('プレビューできる歌詞がありません。')
@@ -521,9 +522,9 @@ export async function createPrompterMp4(
   }
 
   const [song, members, lines] = await Promise.all([
-    fetchJson<VideoSong>(`/api/songs/${songId}`),
-    fetchJson<VideoMember[]>(`/api/songs/${songId}/members`),
-    fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`),
+    fetchJson<VideoSong>(`/api/songs/${songId}`, options.signal),
+    fetchJson<VideoMember[]>(`/api/songs/${songId}/members`, options.signal),
+    fetchJson<VideoLine[]>(`/api/songs/${songId}/lyrics`, options.signal),
   ])
   if (options.backgroundColor) song.bg_color = options.backgroundColor
   if (!Array.isArray(lines) || lines.length === 0) throw new Error('歌詞がありません。')
@@ -569,9 +570,11 @@ export async function createPrompterMp4(
   output.setMetadataTags({ title: song.title, artist: song.artist })
 
   try {
+    options.signal?.throwIfAborted()
     await output.start()
     let renderedBlock = Number.NaN
     for (let frame = 0; frame < totalFrames; frame++) {
+      options.signal?.throwIfAborted()
       const timestampSeconds = frame / FPS
       const positionMs = timestampSeconds * 1000
       const blockIndex = displayBlockAtPosition(displayBlocks, positionMs, -1, bpmRate)

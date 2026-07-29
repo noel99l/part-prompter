@@ -5,7 +5,7 @@
   color: #fff;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   padding: 2rem;
   font-family: 'Hiragino Sans', sans-serif;
@@ -13,24 +13,28 @@
 }
 
 .badge {
+  width: min(90vw, calc(100vw - 4rem));
   color: #FF69B4;
   font-size: clamp(1rem, 3vmin, 1.6rem);
   letter-spacing: 0.15em;
   margin-bottom: 1rem;
+  text-align: right;
 }
 
 .title {
+  width: min(90vw, calc(100vw - 4rem));
   font-size: clamp(2rem, 7vmin, 4.5rem);
   font-weight: 700;
   margin: 0 0 1.5rem;
-  text-align: center;
+  text-align: right;
 }
 
 .body {
+  width: min(90vw, calc(100vw - 4rem));
   font-size: clamp(1.5rem, 6vmin, 3.8rem);
   line-height: 1.7;
   white-space: pre-wrap;
-  text-align: center;
+  text-align: right;
   max-width: 90vw;
   max-height: 60vh;
   overflow-y: auto;
