@@ -431,12 +431,13 @@ export default function PlaylistEditPage() {
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={items.map(it => it.item_id)} strategy={verticalListSortingStrategy}>
             <div className={styles.list}>
-              {items.map(it => {
+              {items.map((it, itemIndex) => {
                 if (it.item_type === 'song') songNumber++
                 return (
                   <SortableItem
                     key={it.item_id}
                     item={it}
+                    itemOrder={itemIndex + 1}
                     songNumber={songNumber}
                     playlistId={id}
                     onRemove={removeItem}
