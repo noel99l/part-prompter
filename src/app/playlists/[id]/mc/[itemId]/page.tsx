@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Loading from '@/components/Loading'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconFullscreen } from '@/components/icons'
@@ -135,6 +135,18 @@ export default function McSlidePage() {
   useEffect(() => {
     if (pages.length > 0 && page >= pages.length) setPage(pages.length - 1)
   }, [pages.length, page])
+
+  // ?pos=last 付きで遷移してきたら末尾ページから開始する
+  // （セットリストで←により前の項目へ戻った時、その最後の内容を表示するため）
+  const initialPosAppliedRef = useRef(false)
+  useEffect(() => { initialPosAppliedRef.current = false }, [itemId])
+  useEffect(() => {
+    if (initialPosAppliedRef.current) return
+    if (searchParams.get('pos') !== 'last') return
+    if (pages.length === 0) return
+    initialPosAppliedRef.current = true
+    setPage(pages.length - 1)
+  }, [pages.length, searchParams, itemId])
 
   const hasPrevPage = page > 0
   const hasNextPage = page < pages.length - 1

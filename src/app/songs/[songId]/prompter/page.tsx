@@ -253,6 +253,18 @@ export default function PrompterView() {
     }
   }, [displayBlocks.length, currentBlock])
 
+  // ?pos=last 付きで遷移してきたら、読み込み後に末尾のスライドから開始する
+  // （セットリストで←により前の項目へ戻った時、その最後の歌詞を表示するため）
+  const initialPosAppliedRef = useRef(false)
+  useEffect(() => { initialPosAppliedRef.current = false }, [songId])
+  useEffect(() => {
+    if (initialPosAppliedRef.current) return
+    if (searchParams.get('pos') !== 'last') return
+    if (displayBlocks.length === 0) return
+    initialPosAppliedRef.current = true
+    setCurrentBlock(displayBlocks.length - 1)
+  }, [displayBlocks, searchParams, songId])
+
   const bpmRate = useMemo(
     () => prompterBpmRate(song?.original_bpm, song?.playback_bpm),
     [song]
@@ -359,6 +371,11 @@ export default function PrompterView() {
   }
   const handlePrev = () => {
     const next = prevPosition()
+    // 表紙でこれ以上戻れない場合、セットリスト再生中なら前の項目の末尾へ戻る
+    if (next === stateRef.current.currentBlock) {
+      if (playlistRef.current.playlistId) gotoAdjacent(-1, 'last')
+      return
+    }
     stateRef.current.currentBlock = next; setCurrentBlock(next)
     if (stateRef.current.isPlaying) startLoop(next)
     else {
@@ -406,7 +423,8 @@ export default function PrompterView() {
   }, [])
 
   // 曲送りで隣に移動する。MCスライドを含むitemsがあればそれを辿り、なければ曲のみで移動する。
-  const gotoAdjacent = (direction: -1 | 1) => {
+  // position='last' を渡すと遷移先を末尾のスライド/ページから開始する（←で戻る時用）。
+  const gotoAdjacent = (direction: -1 | 1, position?: 'last') => {
     const { playlistSongs: ps, playlistItems: items, playlistId: pid, playlistTotal: pt } = playlistRef.current
     if (!pid) return
 
@@ -416,10 +434,10 @@ export default function PrompterView() {
       const target = currentIdx >= 0 ? items[currentIdx + direction] : undefined
       if (!target) return
       if (target.item_type === 'mc') {
-        targetUrl = `/playlists/${pid}/mc/${target.item_id}`
+        targetUrl = `/playlists/${pid}/mc/${target.item_id}${position === 'last' ? '?pos=last' : ''}`
       } else {
         const songIndex = items.slice(0, currentIdx + direction).filter(it => it.item_type === 'song').length
-        targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${songIndex}&total=${pt}`
+        targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${songIndex}&total=${pt}${position === 'last' ? '&pos=last' : ''}`
       }
     } else {
       if (ps.length === 0) return
@@ -427,7 +445,7 @@ export default function PrompterView() {
       if (currentIdx < 0) return
       const target = ps[currentIdx + direction]
       if (!target) return
-      targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${currentIdx + direction}&total=${pt}`
+      targetUrl = `/songs/${target.id}/prompter?playlist=${pid}&index=${currentIdx + direction}&total=${pt}${position === 'last' ? '&pos=last' : ''}`
     }
 
     stopLoop()
@@ -487,6 +505,8 @@ export default function PrompterView() {
     : currentBlock >= displayBlocks.length - 1)
   // 最終スライドでも、セットリストに次の項目があれば「次へ」で曲送りできる
   const nextDisabled = atLastPosition && !(playlistId && hasNextItem)
+  // 表紙でも、セットリストに前の項目があれば「前へ」で末尾に戻れる
+  const prevDisabled = currentBlock <= -1 && !(playlistId && hasPrevItem)
 
   if (!song) return (
     <div className={styles.skeletonWrap}>
@@ -595,7 +615,7 @@ export default function PrompterView() {
           {playlistId && (
             <button className={styles.btn} disabled={!hasPrevItem} style={{ opacity: !hasPrevItem ? 0.3 : 1 }} onClick={handlePrevSong} title="前の曲 (Shift+←)"><IconPrevSong /></button>
           )}
-          <button className={`${styles.btn} ${flashBtn === 'prev' ? styles.btnFlash : ''}`} onClick={() => { handlePrev(); flash('prev') }} disabled={currentBlock <= -1} style={{ opacity: currentBlock <= -1 ? 0.3 : 1 }}><IconPrev /></button>
+          <button className={`${styles.btn} ${flashBtn === 'prev' ? styles.btnFlash : ''}`} onClick={() => { handlePrev(); flash('prev') }} disabled={prevDisabled} style={{ opacity: prevDisabled ? 0.3 : 1 }}><IconPrev /></button>
           {hasTimestamp && (
             <button className={`${styles.btn} ${styles.btnAuto}`} onClick={isPlaying ? handlePause : handlePlay}>
               <span id="auto-progress-bar" className={styles.autoProgress} />
