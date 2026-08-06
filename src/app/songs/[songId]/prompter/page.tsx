@@ -369,6 +369,12 @@ export default function PrompterView() {
   }
   const handleNext = () => {
     const next = nextPosition()
+    // 曲の最終スライドでこれ以上進めない場合、セットリスト再生中なら
+    // 次の項目（曲/MC）へそのまま進む（Shift+→を押す必要をなくす）
+    if (next === stateRef.current.currentBlock) {
+      if (playlistRef.current.playlistId) gotoAdjacent(1)
+      return
+    }
     stateRef.current.currentBlock = next
     setCurrentBlock(next)
     if (stateRef.current.isPlaying) startLoop(next)
@@ -475,10 +481,12 @@ export default function PrompterView() {
   }
 
   const continuousScroll = !isPortrait && displayMode === 'scroll'
-  // 縦画面はブロック単位で移動するため、最終ブロック内にいる時点で「次へ」を無効化する
+  // 縦画面はブロック単位で移動するため、最終ブロック内にいる時点で「最終位置」扱いにする
   const atLastPosition = displayBlocks.length === 0 || (isPortrait
     ? currentBlock >= 0 && displayBlocks[currentBlock]?.sourceBlockIndex === displayBlocks[displayBlocks.length - 1]?.sourceBlockIndex
     : currentBlock >= displayBlocks.length - 1)
+  // 最終スライドでも、セットリストに次の項目があれば「次へ」で曲送りできる
+  const nextDisabled = atLastPosition && !(playlistId && hasNextItem)
 
   if (!song) return (
     <div className={styles.skeletonWrap}>
@@ -594,7 +602,7 @@ export default function PrompterView() {
               <span className={styles.autoLabel}>{isPlaying ? <IconPause /> : <IconPlay />}</span>
             </button>
           )}
-          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={atLastPosition} style={{ opacity: atLastPosition ? 0.3 : 1 }}><IconNext /></button>
+          <button className={`${styles.btn} ${flashBtn === 'next' ? styles.btnFlash : ''}`} onClick={() => { handleNext(); flash('next') }} disabled={nextDisabled} style={{ opacity: nextDisabled ? 0.3 : 1 }}><IconNext /></button>
           {playlistId && (
             <button className={styles.btn} disabled={!hasNextItem} style={{ opacity: !hasNextItem ? 0.3 : 1 }} onClick={handleNextSong} title="次の曲 (Shift+→)"><IconNextSong /></button>
           )}
