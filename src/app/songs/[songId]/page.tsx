@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react'
 import { AddToPlaylistModal } from '@/components/AddToPlaylistMenu'
 import skStyles from '@/components/skeleton.module.css'
 import { getCachedJson } from '@/lib/clientCache'
-import { harmonyIds } from '@/lib/harmony'
+import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
 import styles from './page.module.css'
 
 interface Member { id: number; name: string; color: string; sort_order: number }
@@ -115,16 +115,24 @@ export default function SongDetailPage() {
       return (
         <span className={styles.lineText}>
           {line.word_members.map((w, wi) => {
+            // 文字にメイン色が無ければ行のメイン色にフォールバックする（編集画面と表示を揃える）
+            const mainIds = w.member_ids?.length ? w.member_ids : (line.member_ids || [])
             const partIds = [...new Set([
-              ...(w.member_ids || []),
+              ...mainIds,
               ...harmonyIds(w, 'up'),
               ...harmonyIds(w, 'down'),
             ])]
             const emphasisClass = partEmphasisClass(partIds)
-            if (!w.member_ids?.length) {
-              return <span key={wi} className={`${styles.textWhite} ${emphasisClass}`}>{w.text}</span>
-            }
-            return <span key={wi} className={emphasisClass} style={gradientStyle(w.member_ids)}>{w.text}</span>
+            // 上ハモ＝文字上端、下ハモ＝下端に担当者の色帯を描く（編集画面・プロンプターと同じ）
+            const band = harmonyBandStyle(
+              harmonyIds(w, 'up').map(id => memberMap[id]?.color || '#888'),
+              harmonyIds(w, 'down').map(id => memberMap[id]?.color || '#888'),
+              '0.12em'
+            )
+            const inner = mainIds.length
+              ? <span style={gradientStyle(mainIds)}>{w.text}</span>
+              : <span className={styles.textWhite}>{w.text}</span>
+            return <span key={wi} className={emphasisClass} style={band || undefined}>{inner}</span>
           })}
         </span>
       )

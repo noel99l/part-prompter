@@ -43,7 +43,8 @@ export async function GET(_: NextRequest, { params }: { params: Promise<{ id: st
       // 交互表示の位置を行内で引き継ぐ（各文字で先頭色に戻るのを防ぐ）。
       const multiMemberOffsets = new Map<string, number>()
       return wordMembers.flatMap(w => {
-        const ids: number[] = w.member_ids ?? []
+        // 文字にメイン色が無ければ行のメイン色にフォールバックする（編集画面と表示を揃える）
+        const ids: number[] = w.member_ids?.length ? w.member_ids : (memberIds || [])
         // PowerPointの下線は1色しか指定できないため、下ハモ複数名は先頭メンバーの色で代表する
         const downIds = harmonyIds(w, 'down')
         const underlineColor = downIds.length > 0 ? (memberMap[downIds[0]]?.color || '#FFFFFF').replace('#', '') : null

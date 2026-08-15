@@ -87,7 +87,11 @@ export default function PrintPage() {
 
   const renderLine = (line: LyricLine) => {
     if (line.word_members?.length) {
-      return <>{line.word_members.map((w, wi) => renderWord(w.text, w.member_ids, wi, harmonyIds(w, 'up'), harmonyIds(w, 'down')))}</>
+      return <>{line.word_members.map((w, wi) => {
+        // 文字にメイン色が無ければ行のメイン色にフォールバックする（編集画面と表示を揃える）
+        const mainIds = w.member_ids?.length ? w.member_ids : (line.member_ids || [])
+        return renderWord(w.text, mainIds, wi, harmonyIds(w, 'up'), harmonyIds(w, 'down'))
+      })}</>
     }
     if (!line.member_ids?.length) return <span>{line.text}</span>
     if (line.member_ids.length === 1) return <span style={{ color: getColor(line.member_ids) }}>{line.text}</span>
