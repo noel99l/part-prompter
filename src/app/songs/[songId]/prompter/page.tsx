@@ -476,7 +476,9 @@ export default function PrompterView() {
           {line.word_members.map((w, wi) => {
             const isSpace = w.text === ' ' || w.text === '　'
             if (isSpace) return <span key={wi} className={styles.textTransparent}>{w.text}</span>
-            const ids: number[] = (w as any).member_ids ?? ((w as any).member_id ? [(w as any).member_id] : [])
+            const wordIds: number[] = (w as any).member_ids ?? ((w as any).member_id ? [(w as any).member_id] : [])
+            // 文字にメイン色が無ければ行のメイン色にフォールバックする（編集画面と表示を揃える）
+            const ids = wordIds.length > 0 ? wordIds : (line.member_ids || [])
             const band = harmonyBandStyle(
               harmonyIds(w as any, 'up').map(id => memberMap[id]?.color || '#888'),
               harmonyIds(w as any, 'down').map(id => memberMap[id]?.color || '#888'),
