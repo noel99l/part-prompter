@@ -36,16 +36,24 @@ export function estimateRows(line: PromptLine, layout: PromptLayout | null): num
   return Math.max(1, Math.ceil((units * layout.lineFont) / layout.contentW))
 }
 
+/**
+ * extraRows を渡すと、行ごとに追加の高さ（視覚行数換算、小数可）を加味して分割する。
+ * prev は同じチャンク内の直前の行で、チャンク先頭の行では null になる
+ * （パート名ラベルのように、チャンク先頭や担当の変わり目でだけ高さが増える表示向け）。
+ */
 export function buildDisplayBlocks<L extends PromptLine>(
   blocks: L[][],
   layout: PromptLayout | null,
-  autoSplit: boolean
+  autoSplit: boolean,
+  extraRows?: (line: L, prev: L | null) => number
 ): DisplayChunk<L>[] {
   return blocks.flatMap((block, bi) => {
     const startTs = block[0]?.timestamp_ms ?? null
     const maxRows = layout?.maxRows ?? Infinity
     const rows = block.map(l => estimateRows(l, layout))
-    const totalRows = rows.reduce((a, b) => a + b, 0)
+    const lineCost = (li: number, firstInChunk: boolean) =>
+      rows[li] + (extraRows ? extraRows(block[li], firstInChunk ? null : block[li - 1]) : 0)
+    const totalRows = block.reduce((sum, _line, li) => sum + lineCost(li, li === 0), 0)
     if (!autoSplit || totalRows <= maxRows) return [{ lines: block, startMs: startTs, sourceBlockIndex: bi }]
     const nextTs = blocks[bi + 1]?.[0]?.timestamp_ms ?? null
     const chunks: DisplayChunk<L>[] = []
@@ -68,12 +76,19 @@ export function buildDisplayBlocks<L extends PromptLine>(
       if (timestamp != null) {
         while (unitEnd < block.length && block[unitEnd].timestamp_ms === timestamp) unitEnd += 1
       }
-      const unitRows = rows.slice(li, unitEnd).reduce((sum, value) => sum + value, 0)
+      const unitStart = li
+      const unitCost = (startsChunk: boolean) => {
+        let sum = 0
+        for (let k = unitStart; k < unitEnd; k += 1) sum += lineCost(k, startsChunk && k === unitStart)
+        return sum
+      }
+      let unitRows = unitCost(cur.length === 0)
       if (cur.length > 0 && curRows + unitRows > maxRows) {
         pushChunk()
         cur = []
         curRows = 0
         startIdx = li
+        unitRows = unitCost(true)
       }
       cur.push(...block.slice(li, unitEnd))
       curRows += unitRows

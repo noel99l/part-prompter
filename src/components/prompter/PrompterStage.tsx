@@ -13,6 +13,9 @@ export interface PrompterStageMember {
   sortOrder?: number
 }
 
+/** 行が描画される位置。current=現在のスライド、next=次スライドのプレビュー、scroll=スクロール表示 */
+export type PrompterLineContext = 'current' | 'next' | 'scroll'
+
 interface PrompterStageProps<Line extends PromptLine> {
   title: string
   artist?: string | null
@@ -23,7 +26,7 @@ interface PrompterStageProps<Line extends PromptLine> {
   isPortrait: boolean
   continuousScroll?: boolean
   showNext?: boolean
-  renderLine: (line: Line) => ReactNode
+  renderLine: (line: Line, context: PrompterLineContext) => ReactNode
   lineKey: (line: Line) => string | number
   onSelectBlock?: (index: number) => void
   embedded?: boolean
@@ -118,7 +121,7 @@ export default function PrompterStage<Line extends PromptLine>({
                       key={lineKey(line)}
                       className={`${styles.scrollLine} ${landscapeScroll ? styles.scrollLineLandscape : ''} ${landscapeScroll && embedded ? styles.scrollLineEmbedded : ''}`}
                     >
-                      {renderLine(line)}
+                      {renderLine(line, 'scroll')}
                     </div>
                   ))}
                 </div>
@@ -139,7 +142,7 @@ export default function PrompterStage<Line extends PromptLine>({
         {showNext && displayBlocks[0] && (
           <div className={`${styles.nextBlock} ${embedded ? styles.nextBlockEmbedded : ''}`}>
             {displayBlocks[0].lines.slice(0, 2).map(line => (
-              <div key={lineKey(line)} className={styles.nextLine}>{renderLine(line)}</div>
+              <div key={lineKey(line)} className={styles.nextLine}>{renderLine(line, 'next')}</div>
             ))}
           </div>
         )}
@@ -151,7 +154,7 @@ export default function PrompterStage<Line extends PromptLine>({
     <>
       <div className={`${styles.currentBlock} ${embedded ? styles.currentBlockEmbedded : ''}`}>
         {(displayBlocks[currentBlock]?.lines ?? []).map(line => (
-          <div key={lineKey(line)} className={styles.line}>{renderLine(line)}</div>
+          <div key={lineKey(line)} className={styles.line}>{renderLine(line, 'current')}</div>
         ))}
       </div>
       {showNext && (
@@ -159,7 +162,7 @@ export default function PrompterStage<Line extends PromptLine>({
           {currentBlock === displayBlocks.length - 1 ? (
             <div className={styles.nextLine}>― End ―</div>
           ) : displayBlocks[currentBlock + 1]?.lines.slice(0, 2).map(line => (
-            <div key={lineKey(line)} className={styles.nextLine}>{renderLine(line)}</div>
+            <div key={lineKey(line)} className={styles.nextLine}>{renderLine(line, 'next')}</div>
           ))}
         </div>
       )}

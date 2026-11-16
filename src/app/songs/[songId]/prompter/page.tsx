@@ -5,15 +5,19 @@ import skStyles from '@/components/skeleton.module.css'
 import styles from './page.module.css'
 import { getCachedJson, writePlaylistItemsCache } from '@/lib/clientCache'
 import { buildDisplayBlocks, type DisplayChunk } from '@/lib/prompterBlocks'
+import { buildPartLabelMap, lineHasLabelRow, readableTextColor, type PartSegment } from '@/lib/partLabels'
+import { memberDisplayName } from '@/lib/memberDisplayName'
 import { displayBlockAtPosition, prompterBpmRate } from '@/lib/prompterTimeline'
 import { harmonyIds, harmonyBandStyle } from '@/lib/harmony'
-import PrompterStage from '@/components/prompter/PrompterStage'
+import PrompterStage, { type PrompterLineContext } from '@/components/prompter/PrompterStage'
 import { IconPrevSong, IconNextSong, IconPrev, IconNext, IconPause, IconFullscreen, IconPlay, IconSettings } from '@/components/icons'
 
 const DISPLAY_SETTINGS_KEY = 'prompter_display_settings'
 const FONT_SCALE_MIN = 0.6
 const FONT_SCALE_MAX = 1.6
 const FONT_SCALE_STEP = 0.01
+// パート名ラベル1段分の高さ（歌詞1行=1.6emに対する比）。page.module.css の .partChips と対応
+const PART_LABEL_ROWS = 0.5
 
 interface LyricLine {
   id: number
@@ -63,6 +67,8 @@ export default function PrompterView() {
   const [showNext, setShowNext] = useState(true)
   const [autoSplit, setAutoSplit] = useState(true)
   const [displayMode, setDisplayMode] = useState<'slide' | 'scroll'>('slide')
+  // パート名ラベル表示（行頭にメンバー名ラベル）。初期値は従来の色分け表示
+  const [partLabels, setPartLabels] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   useEffect(() => {
@@ -72,41 +78,48 @@ export default function PrompterView() {
       if (saved && typeof saved.showNext === 'boolean') setShowNext(saved.showNext)
       if (saved && typeof saved.autoSplit === 'boolean') setAutoSplit(saved.autoSplit)
       if (saved?.displayMode === 'slide' || saved?.displayMode === 'scroll') setDisplayMode(saved.displayMode)
+      if (saved && typeof saved.partLabels === 'boolean') setPartLabels(saved.partLabels)
     } catch {}
   }, [])
 
-  const persistDisplaySettings = (fs: number, sn: boolean, as: boolean, mode: 'slide' | 'scroll') => {
-    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn, autoSplit: as, displayMode: mode })) } catch {}
+  const persistDisplaySettings = (fs: number, sn: boolean, as: boolean, mode: 'slide' | 'scroll', labels: boolean) => {
+    try { localStorage.setItem(DISPLAY_SETTINGS_KEY, JSON.stringify({ fontScale: fs, showNext: sn, autoSplit: as, displayMode: mode, partLabels: labels })) } catch {}
   }
   const changeFontScale = (delta: number) => {
     setFontScale(prev => {
       const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +(prev + delta).toFixed(2)))
-      persistDisplaySettings(next, showNext, autoSplit, displayMode)
+      persistDisplaySettings(next, showNext, autoSplit, displayMode, partLabels)
       return next
     })
   }
   const setFontScaleValue = (value: number) => {
     const next = Math.min(FONT_SCALE_MAX, Math.max(FONT_SCALE_MIN, +value.toFixed(2)))
     setFontScale(next)
-    persistDisplaySettings(next, showNext, autoSplit, displayMode)
+    persistDisplaySettings(next, showNext, autoSplit, displayMode, partLabels)
   }
   const toggleShowNext = () => {
     setShowNext(prev => {
-      persistDisplaySettings(fontScale, !prev, autoSplit, displayMode)
+      persistDisplaySettings(fontScale, !prev, autoSplit, displayMode, partLabels)
       return !prev
     })
   }
   const toggleAutoSplit = () => {
     setAutoSplit(prev => {
-      persistDisplaySettings(fontScale, showNext, !prev, displayMode)
+      persistDisplaySettings(fontScale, showNext, !prev, displayMode, partLabels)
       return !prev
     })
   }
   const toggleDisplayMode = () => {
     setDisplayMode(prev => {
       const next = prev === 'slide' ? 'scroll' : 'slide'
-      persistDisplaySettings(fontScale, showNext, autoSplit, next)
+      persistDisplaySettings(fontScale, showNext, autoSplit, next, partLabels)
       return next
+    })
+  }
+  const togglePartLabels = () => {
+    setPartLabels(prev => {
+      persistDisplaySettings(fontScale, showNext, autoSplit, displayMode, !prev)
+      return !prev
     })
   }
   const rafRef = useRef<number | null>(null)
@@ -232,8 +245,11 @@ export default function PrompterView() {
     const available = H - padTop - nextArea
     // N行のとき高さ = N * lineHeight + (N-1) * gap
     // available + gap >= N * (lineHeight + gap) を解く
+    const rowCapacity = (available + gap) / (lineHeight + gap)
     return {
-      maxRows: Math.max(1, Math.floor((available + gap) / (lineHeight + gap))),
+      maxRows: Math.max(1, Math.floor(rowCapacity)),
+      // 切り捨て前の行数。ラベル分の端数（0.5行）を足して収まり判定するときに使う
+      rowCapacity,
       lineFont,
       contentW: W * 0.92, // padding 左右 4vw ずつ
     }
@@ -241,9 +257,31 @@ export default function PrompterView() {
 
   // 自動ブロック分け：画面に収まらないブロックを、表示可能な行数まで順番に詰めて分割する。
   // パート分けの元ブロック境界は必ずページ境界になる（詳細は lib/prompterBlocks.ts）。
-  const displayBlocks = useMemo<DisplayBlock[]>(
-    () => buildDisplayBlocks(blocks, layout, autoSplit),
-    [blocks, layout, autoSplit]
+  const displayBlocks = useMemo<DisplayBlock[]>(() => {
+    if (!partLabels) return buildDisplayBlocks(blocks, layout, autoSplit)
+    // ラベル表示では、ラベルが付く行（スライド先頭・担当の変わり目）の高さ増を加味して分割する
+    const labelLayout = layout ? { ...layout, maxRows: Math.max(1, layout.rowCapacity) } : null
+    return buildDisplayBlocks(blocks, labelLayout, autoSplit, (line, prev) => lineHasLabelRow(line, prev) ? PART_LABEL_ROWS : 0)
+  }, [blocks, layout, autoSplit, partLabels])
+
+  // パート名ラベル表示用: 行ごとの担当区間と、ラベルを出すかどうか。
+  // 「担当が変わった行だけ」ラベルを出すが、スライド（縦画面では元ブロック）の先頭では
+  // 必ず出して、その画面だけ見ても誰のパートか分かるようにする。
+  const partLabelMap = useMemo(() => {
+    if (!partLabels) return null
+    const groups: LyricLine[][] = []
+    let lastSource = -1
+    for (const chunk of displayBlocks) {
+      if (isPortrait && chunk.sourceBlockIndex === lastSource) groups[groups.length - 1].push(...chunk.lines)
+      else groups.push([...chunk.lines])
+      lastSource = chunk.sourceBlockIndex
+    }
+    return buildPartLabelMap(groups, line => line.id)
+  }, [partLabels, displayBlocks, isPortrait])
+
+  const memberNames = useMemo(
+    () => Object.fromEntries(members.map((m, i) => [m.id, memberDisplayName(m, i)])),
+    [members]
   )
 
   // 分割数が変わって現在位置が範囲外になったら末尾に丸める
@@ -469,7 +507,43 @@ export default function PrompterView() {
     else handleNext()
   }
 
-  function renderLine(line: LyricLine) {
+  // パート名ラベル表示: 担当区間ごとに、名前ラベル（背景=メンバー色）と歌詞を描く。
+  // 一人で歌う区間の歌詞はその人の色、複数人・全員の区間は白。
+  // inline は次スライドのプレビュー用で、高さを増やさないようラベルを歌詞の左に並べる。
+  function renderLabeledLine(segments: PartSegment[], inline: boolean) {
+    return (
+      <span className={inline ? styles.partLineInline : styles.partLine}>
+        {segments.map((seg, si) => {
+          const textColor = seg.mainIds.length === 1 ? (memberMap[seg.mainIds[0]]?.color || '#fff') : '#fff'
+          return (
+            <span key={si} className={inline ? styles.partSegInline : styles.partSeg}>
+              {seg.showLabel && (
+                <span className={styles.partChips}>
+                  {seg.mainIds.length === 0 ? (
+                    <span className={`${styles.partChip} ${styles.partChipAll}`}>全員</span>
+                  ) : seg.mainIds.map(id => {
+                    const color = memberMap[id]?.color || '#888'
+                    return <span key={id} className={styles.partChip} style={{ background: color, color: readableTextColor(color) }}>{memberNames[id] ?? '?'}</span>
+                  })}
+                  {seg.upIds.map(id => (
+                    <span key={`up-${id}`} className={`${styles.partChip} ${styles.partChipHarmony}`} style={{ color: memberMap[id]?.color || '#888' }}>上ハモ {memberNames[id] ?? '?'}</span>
+                  ))}
+                  {seg.downIds.map(id => (
+                    <span key={`down-${id}`} className={`${styles.partChip} ${styles.partChipHarmony}`} style={{ color: memberMap[id]?.color || '#888' }}>下ハモ {memberNames[id] ?? '?'}</span>
+                  ))}
+                </span>
+              )}
+              <span style={{ color: textColor }}>{seg.text}</span>
+            </span>
+          )
+        })}
+      </span>
+    )
+  }
+
+  function renderLine(line: LyricLine, context: PrompterLineContext = 'current') {
+    const segments = partLabelMap?.get(line.id)
+    if (segments) return renderLabeledLine(segments, context === 'next')
     if (line.word_members && line.word_members.length > 0) {
       return (
         <>
@@ -584,6 +658,17 @@ export default function PrompterView() {
                 aria-checked={displayMode === 'scroll'}
                 className={`${styles.switch} ${displayMode === 'scroll' ? styles.switchOn : ''}`}
                 onClick={toggleDisplayMode}
+              >
+                <span className={styles.switchKnob} />
+              </button>
+            </div>
+            <div className={styles.settingsRow}>
+              <span className={styles.settingsLabel}>パート名ラベル表示</span>
+              <button
+                role="switch"
+                aria-checked={partLabels}
+                className={`${styles.switch} ${partLabels ? styles.switchOn : ''}`}
+                onClick={togglePartLabels}
               >
                 <span className={styles.switchKnob} />
               </button>

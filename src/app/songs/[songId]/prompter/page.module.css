@@ -297,6 +297,66 @@
 .textWhite { color: #fff; }
 .textTransparent { color: transparent; }
 
+/* パート名ラベル表示。サイズはすべて歌詞の文字サイズ比（em）なので、文字サイズ設定に追従する。
+   .partChips の高さ（約0.75em）は page.tsx の PART_LABEL_ROWS と対応している。 */
+.partLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 0.3em;
+}
+
+.partSeg {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.partChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35em;
+  font-size: 0.42em;
+  line-height: 1.4;
+  margin-bottom: 0.2em;
+}
+
+.partChip {
+  padding: 0.1em 0.6em;
+  border-radius: 0.3em;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.partChipAll {
+  background: #d3d1c7;
+  color: #2c2c2a;
+}
+
+/* ハモリは枠線だけのラベルにして、メイン担当（塗り）と区別する */
+.partChipHarmony {
+  background: transparent;
+  box-shadow: inset 0 0 0 0.12em currentColor;
+}
+
+/* 次スライドのプレビュー用: 2行分の高さに収めるため、ラベルを歌詞の左に横並びにする */
+.partLineInline {
+  display: inline;
+}
+
+.partSegInline {
+  display: inline;
+  margin-right: 0.3em;
+}
+
+.partLineInline .partChips {
+  display: inline-flex;
+  vertical-align: middle;
+  margin: 0 0.4em 0 0;
+}
+
 .globalProgress {
   position: fixed;
   bottom: 0;

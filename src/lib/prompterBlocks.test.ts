@@ -93,4 +93,38 @@ describe('buildDisplayBlocks', () => {
     expect(result[0].startMs).toBe(1000)
     expect(result[1].startMs).toBeNull()
   })
+
+  describe('extraRows（行ごとの追加の高さ）', () => {
+    // チャンク先頭の行だけ 0.5 行分の高さが増える（パート名ラベルを想定）
+    const headOnly = (_l: PromptLine, prev: PromptLine | null) => (prev === null ? 0.5 : 0)
+
+    it('追加の高さを含めて収まるならブロックは分割されない', () => {
+      const blocks = [[line('a'), line('b'), line('c')]]
+      const result = buildDisplayBlocks(blocks, layout(3.5), true, headOnly)
+      expect(result.map(c => c.lines.length)).toEqual([3])
+    })
+
+    it('追加の高さで上限を超えるなら分割され、各チャンクが上限に収まる', () => {
+      // 3行 + 先頭ラベル0.5 = 3.5行 > 上限3 → 2行(2.5) + 1行(1.5)
+      const blocks = [[line('a'), line('b'), line('c')]]
+      const result = buildDisplayBlocks(blocks, layout(3), true, headOnly)
+      expect(result.map(c => c.lines.length)).toEqual([2, 1])
+    })
+
+    it('チャンク先頭になった行には prev=null が渡される', () => {
+      const blocks = [[line('a'), line('b'), line('c'), line('d')]]
+      const heads: string[] = []
+      buildDisplayBlocks(blocks, layout(2.5), true, (l, prev) => {
+        if (prev === null) heads.push(l.text)
+        return prev === null ? 0.5 : 0
+      })
+      // 分割後のチャンク先頭は a と c（a は収まり判定時にも先頭として評価される）
+      expect([...new Set(heads)]).toEqual(['a', 'c'])
+    })
+
+    it('extraRows を渡さなければ従来どおりの分割になる', () => {
+      const blocks = [Array.from({ length: 7 }, (_, i) => line(`行${i}`))]
+      expect(buildDisplayBlocks(blocks, layout(5), true).map(c => c.lines.length)).toEqual([5, 2])
+    })
+  })
 })
