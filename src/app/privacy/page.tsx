@@ -9,7 +9,7 @@ export default function PrivacyPage() {
         <Link href="/songs" style={{ color: '#888', textDecoration: 'none', fontSize: '0.9rem' }}>← 一覧に戻る</Link>
 
         <h1 style={{ color: '#fff', fontSize: '1.6rem', margin: '1.5rem 0 0.5rem' }}>プライバシーポリシー</h1>
-        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2025年6月</p>
+        <p style={{ color: '#666', fontSize: '0.85rem', marginBottom: '2rem' }}>最終更新日：2026年11月</p>
 
         <section style={{ marginBottom: '2rem' }}>
           <h2 style={h2}>1. 収集する情報</h2>
@@ -20,6 +20,7 @@ export default function PrivacyPage() {
             <li>ユーザーが設定したアカウント名</li>
           </ul>
           <p style={p}>また、ユーザーが登録した楽曲情報（曲名・アーティスト・歌詞・パート分けデータ）をデータベースに保存します。</p>
+          <p style={p}>お知らせの未読表示のため、ログイン中のユーザーについては、お知らせを最後に確認した日時をデータベースに保存します。ログインしていない場合、この日時はお使いのブラウザ内にのみ保存し、サーバーには送信しません。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
@@ -28,6 +29,7 @@ export default function PrivacyPage() {
             <li>ユーザー認証および管理画面へのアクセス制御</li>
             <li>楽曲・歌詞・パート分けデータの保存・表示</li>
             <li>作成者名の表示（楽曲一覧への表示）</li>
+            <li>運営からのお知らせの掲載、および未読件数の表示</li>
           </ul>
         </section>
 
@@ -52,8 +54,9 @@ export default function PrivacyPage() {
         </section>
 
         <section style={{ marginBottom: '2rem' }}>
-          <h2 style={h2}>6. Cookieについて</h2>
+          <h2 style={h2}>6. Cookie・ブラウザ内の保存領域について</h2>
           <p style={p}>本サービスはセッション管理のためにCookieを使用します。ブラウザの設定によりCookieを無効にすることができますが、その場合ログイン機能が利用できなくなります。</p>
+          <p style={p}>また、プロンプターの表示設定、お知らせを最後に確認した日時、閉じたお知らせの記録を、お使いのブラウザ内の保存領域（ローカルストレージ）に保存します。これらはブラウザのサイトデータを削除することで消去できます。</p>
         </section>
 
         <section style={{ marginBottom: '2rem' }}>

@@ -1,0 +1,50 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 2rem 0;
+  padding: 0.6rem 0.75rem 0.6rem 1rem;
+  background: #1a1014;
+  border: 1px solid #ff69b4;
+  border-radius: 8px;
+  font-family: 'Hiragino Sans', sans-serif;
+}
+
+.tag {
+  flex: none;
+  background: #ff69b4;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  color: #fff;
+  font-size: 0.95rem;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.title:hover { text-decoration: underline; }
+
+.close {
+  flex: none;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.4rem 0.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.close:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+
+@media (max-width: 768px) {
+  .banner { margin: 0.75rem 1rem 0; }
+}

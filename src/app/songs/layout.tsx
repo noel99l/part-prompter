@@ -1,6 +1,7 @@
 import AppMenu from '@/components/AppMenu'
 import BrandLogo from '@/components/BrandLogo'
 import SideNav from '@/components/SideNav'
+import AnnouncementBanner from '@/components/announcements/AnnouncementBanner'
 import { auth } from '@/auth'
 import { query } from '@/lib/db'
 import styles from './layout.module.css'
@@ -23,7 +24,10 @@ export default async function PrompterLayout({ children }: { children: React.Rea
         <aside className={styles.sidebar}>
           <SideNav accountName={accountName} />
         </aside>
-        <main className={styles.main}>{children}</main>
+        <main className={styles.main}>
+          <AnnouncementBanner />
+          {children}
+        </main>
       </div>
     </div>
   )

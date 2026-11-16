@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { query, initDb } from '@/lib/db'
+import { isMasterEmail } from '@/lib/permissions'
 
-const MASTER_EMAIL = 'noelkaikei@gmail.com'
-
+// マスター判定はユーザーID基準（lib/permissions.ts）
 async function isMasterUser(): Promise<boolean> {
   const session = await auth()
-  return session?.user?.email === MASTER_EMAIL
+  return isMasterEmail(session?.user?.email)
 }
 
 // 公開設定取得（認証不要）

@@ -1,7 +1,8 @@
 import { query } from './db'
+import { MASTER_USER_ID } from './masterUser'
 
-// ユーザーID1はマスターアカウントとして全楽曲の編集権限を持つ
-export const MASTER_USER_ID = 1
+// ユーザーID1はマスターアカウントとして全楽曲の編集権限を持つ（定義は masterUser.ts）
+export { MASTER_USER_ID }
 
 export async function isMasterEmail(email: string | null | undefined): Promise<boolean> {
   if (!email) return false

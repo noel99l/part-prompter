@@ -65,3 +65,24 @@
 }
 
 .logoutBtn:hover { background: #1a1a1a; color: #fff; }
+
+/* お知らせの未読件数バッジ */
+.itemWithBadge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.badge {
+  flex: none;
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: #ff69b4;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: bold;
+  line-height: 1.4rem;
+  text-align: center;
+}

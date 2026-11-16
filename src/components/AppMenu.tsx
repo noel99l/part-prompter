@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
+import { useAnnouncements } from '@/lib/announcementsClient'
+import { isMasterSessionUserId } from '@/lib/masterUser'
 import styles from './AdminMenu.module.css'
 
 const ADMIN_NAV = [
@@ -33,7 +35,8 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
 
   const isLoggedIn = !!(accountName || session)
 
-  const isMaster = session?.user?.email === 'noelkaikei@gmail.com'
+  const isMaster = isMasterSessionUserId(session?.user?.id)
+  const { unreadCount } = useAnnouncements()
 
   return (
     <div className={styles.wrapper} ref={ref}>
@@ -50,6 +53,10 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
           <nav className={styles.nav}>
             <Link href="/songs" className={`${styles.navItem} ${pathname === '/songs' || pathname.startsWith('/songs/') ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
               🎵 パート分け一覧
+            </Link>
+            <Link href="/news" className={`${styles.navItem} ${styles.navItemWithBadge} ${pathname === '/news' ? styles.navItemActive : ''}`} onClick={() => setOpen(false)}>
+              <span>📢 お知らせ</span>
+              {unreadCount > 0 && <span className={styles.navBadge} aria-label={`未読${unreadCount}件`}>{unreadCount}</span>}
             </Link>
 
             {isLoggedIn ? (
@@ -82,6 +89,15 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
                     onClick={() => setOpen(false)}
                   >
                     🔧 マスタ設定
+                  </Link>
+                )}
+                {isMaster && (
+                  <Link
+                    href="/manage/announcements"
+                    className={`${styles.navItem} ${pathname === '/manage/announcements' ? styles.navItemActive : ''}`}
+                    onClick={() => setOpen(false)}
+                  >
+                    📝 お知らせ管理
                   </Link>
                 )}
               </>

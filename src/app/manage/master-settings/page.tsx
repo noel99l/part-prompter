@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { isMasterSessionUserId } from '@/lib/masterUser'
 import styles from '@/app/manage/page.module.css'
 
 export default function MasterSettingsPage() {
@@ -21,7 +22,7 @@ export default function MasterSettingsPage() {
   useEffect(() => {
     if (status === 'loading') return
     if (!session?.user?.email) { router.push('/auth/signin'); return }
-    if (session.user.email !== 'noelkaikei@gmail.com') { router.push('/manage/songs'); return }
+    if (!isMasterSessionUserId(session.user.id)) { router.push('/manage/songs'); return }
     setIsMaster(true)
 
     fetch('/api/master-settings')

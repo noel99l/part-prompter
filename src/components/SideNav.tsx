@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useSession, signOut } from 'next-auth/react'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
+import { useAnnouncements } from '@/lib/announcementsClient'
+import { isMasterSessionUserId } from '@/lib/masterUser'
 import styles from './SideNav.module.css'
 
 const ADMIN_NAV = [
@@ -17,12 +19,17 @@ export default function SideNav({ accountName }: { accountName?: string }) {
   const canUseSyncPrompter = useSyncCapability()
   const isLoggedIn = !!session
   const name = accountName ?? session?.user?.accountName ?? null
-  const isMaster = session?.user?.email === 'noelkaikei@gmail.com'
+  const isMaster = isMasterSessionUserId(session?.user?.id)
+  const { unreadCount } = useAnnouncements()
 
   return (
     <nav className={styles.nav}>
       <Link href="/songs" className={`${styles.item} ${pathname === '/songs' || pathname.startsWith('/songs/') ? styles.itemActive : ''}`}>
         🎵 パート分け一覧
+      </Link>
+      <Link href="/news" className={`${styles.item} ${styles.itemWithBadge} ${pathname === '/news' ? styles.itemActive : ''}`}>
+        <span>📢 お知らせ</span>
+        {unreadCount > 0 && <span className={styles.badge} aria-label={`未読${unreadCount}件`}>{unreadCount}</span>}
       </Link>
 
       {isLoggedIn ? (
@@ -53,6 +60,14 @@ export default function SideNav({ accountName }: { accountName?: string }) {
               className={`${styles.item} ${pathname === '/manage/master-settings' ? styles.itemActive : ''}`}
             >
               🔧 マスタ設定
+            </Link>
+          )}
+          {isMaster && (
+            <Link
+              href="/manage/announcements"
+              className={`${styles.item} ${pathname === '/manage/announcements' ? styles.itemActive : ''}`}
+            >
+              📝 お知らせ管理
             </Link>
           )}
           <div className={styles.divider} />

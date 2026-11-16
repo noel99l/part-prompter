@@ -1,0 +1,142 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  background: #141414;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  color: #aaa;
+  font-size: 0.85rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.input {
+  background: #0a0a0a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  padding: 0.6rem 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus-visible {
+  outline: 2px solid #ff69b4;
+  outline-offset: 1px;
+}
+
+.textarea {
+  min-height: 12rem;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ccc;
+  font-size: 0.9rem;
+  padding-bottom: 0.6rem;
+  cursor: pointer;
+}
+
+.check input { width: 1.1rem; height: 1.1rem; accent-color: #ff69b4; }
+
+.error {
+  color: #ff8a8a;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.actions,
+.cardActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.secondaryBtn,
+.dangerBtn {
+  background: #262626;
+  border: none;
+  color: #ddd;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.secondaryBtn:hover { background: #333; }
+.dangerBtn { color: #ff8a8a; }
+.dangerBtn:hover { background: #3a1f1f; }
+.secondaryBtn:disabled { opacity: 0.5; cursor: default; }
+
+.card {
+  background: #141414;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.cardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.published,
+.draft,
+.category,
+.important {
+  font-size: 0.72rem;
+  font-weight: bold;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+}
+
+.published { background: #173404; color: #9fe870; }
+.draft { background: #333; color: #bbb; }
+.category { background: #262626; color: #bbb; }
+.important { background: #ff69b4; color: #fff; }
+
+.date { color: #777; font-size: 0.8rem; }
+
+.cardTitle {
+  color: #fff;
+  font-size: 1.05rem;
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.cardBody {
+  color: #bbb;
+  font-size: 0.9rem;
+  line-height: 1.7;
+  margin-bottom: 0.75rem !important;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

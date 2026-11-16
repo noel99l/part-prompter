@@ -363,3 +363,49 @@ graph TD
 
   SongCard --> AddToPlaylistMenu
 ```
+
+## お知らせ機能
+
+運営（マスター）からユーザーへ、アップデートやメンテナンスを知らせる。
+
+### 画面
+
+| URL | 対象 | 内容 |
+| --- | --- | --- |
+| `/news` | 全員（未ログイン可） | 公開中のお知らせ一覧。開いた時点で既読になる |
+| `/manage/announcements` | マスターのみ | お知らせの作成・編集・公開・下書き戻し・削除 |
+
+- サイドナビとモバイルメニューに「お知らせ」を表示し、未読があれば件数バッジを付ける。
+- 未読の「重要」なお知らせは、一覧系ページ（`/songs`・`/manage` 配下）の上部にバナーで1件表示する。閉じた記録は端末に保存する。プロンプター画面には表示しない。
+- 本文はプレーンテキスト。HTMLとしては解釈せず、`http(s)` のURLだけリンクにする。
+
+### マスター判定
+
+ユーザーID 1 をマスターとする（`lib/masterUser.ts`）。サーバーは `isMasterEmail()`（ID 1 かつメール一致）、画面の出し分けは `isMasterSessionUserId()` で判定する。マスタ設定も同じ判定を使う。
+
+### 既読管理
+
+お知らせ単位ではなく「最後に読んだ日時」で管理する。その日時より後に公開されたものが未読。
+
+- ログイン中: `users.announcements_read_at` に保存
+- 未ログイン: ブラウザのローカルストレージ（`announcements_read_at`）に保存
+- 両方ある場合は新しい方を使う
+
+公開日時（`published_at`）は初めて公開した時点で確定し、編集や下書きへの戻しでは変えない（編集のたびに全員の未読に戻さないため）。
+
+### データ
+
+`announcements` テーブル: `title`, `body`, `category`（`update` / `maintenance` / `info`）, `is_important`, `status`（`draft` / `published`）, `published_at`, `created_by`, `created_at`, `updated_at`
+
+テーブル作成は `initDb()` ではなく `ensureAnnouncementsSchema()`（`lib/announcements.ts`）で行い、お知らせ関連のAPIからだけ呼ぶ。
+
+### API
+
+| メソッド | パス | 権限 | 内容 |
+| --- | --- | --- | --- |
+| GET | `/api/announcements` | 不要 | 公開中の一覧（最新50件）と、ログイン中なら既読日時 |
+| GET | `/api/announcements?all=1` | マスター | 下書きを含む全件 |
+| POST | `/api/announcements` | マスター | 新規作成 |
+| PUT | `/api/announcements/[id]` | マスター | 更新 |
+| DELETE | `/api/announcements/[id]` | マスター | 削除 |
+| POST | `/api/announcements/read` | ログイン | 既読日時を現在時刻に更新（未ログインは何もしない） |

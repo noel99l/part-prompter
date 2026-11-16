@@ -5,6 +5,7 @@ import { shouldShowOnboarding } from '@/lib/onboarding/state'
 import AdminMenu from '@/components/AppMenu'
 import BrandLogo from '@/components/BrandLogo'
 import SideNav from '@/components/SideNav'
+import AnnouncementBanner from '@/components/announcements/AnnouncementBanner'
 import OnboardingGate from '@/components/onboarding/OnboardingGate'
 import styles from './layout.module.css'
 
@@ -49,7 +50,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <aside className={styles.sidebar}>
           <SideNav accountName={accountName} />
         </aside>
-        <main className={styles.main}>{children}</main>
+        <main className={styles.main}>
+          <AnnouncementBanner />
+          {children}
+        </main>
       </div>
       <OnboardingGate initialShouldShow={initialShouldShow} />
     </div>
