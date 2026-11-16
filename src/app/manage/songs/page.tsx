@@ -84,11 +84,9 @@ export default function AdminSongsPage() {
   useEffect(() => { loadSongs() }, [pathname])
 
   useEffect(() => {
+    // 表示可否はサーバー側で判定する（許可リストのメールアドレスは画面に渡さない）
     fetch('/api/master-settings').then(r => r.json()).then(data => {
-      const globalOn = data.show_download === '1'
-      const whitelist = (data.download_whitelist || '').split(',').map((e: string) => e.trim().toLowerCase()).filter(Boolean)
-      const userEmail = session?.user?.email?.toLowerCase() || ''
-      setShowDownload(globalOn || whitelist.includes(userEmail))
+      setShowDownload(data.can_download === true)
     }).catch(() => {})
   }, [session])
 

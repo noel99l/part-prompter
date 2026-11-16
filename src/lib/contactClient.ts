@@ -11,7 +11,7 @@ export function useContactEmail(): string | null {
 
   useEffect(() => {
     let alive = true
-    const apply = (data: Record<string, string> | null) => {
+    const apply = (data: Record<string, unknown> | null) => {
       if (!alive) return
       const value = data?.[CONTACT_EMAIL_SETTING_KEY]
       setEmail(isValidContactEmail(value) ? value : null)

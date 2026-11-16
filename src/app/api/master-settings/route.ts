@@ -3,6 +3,7 @@ import { auth } from '@/auth'
 import { query, initDb } from '@/lib/db'
 import { isMasterEmail } from '@/lib/permissions'
 import { CONTACT_EMAIL_SETTING_KEY, isValidContactEmail } from '@/lib/contact'
+import { buildMasterSettingsResponse } from '@/lib/masterSettingsPublic'
 
 // マスター判定はユーザーID基準（lib/permissions.ts）
 async function isMasterUser(): Promise<boolean> {
@@ -10,15 +11,22 @@ async function isMasterUser(): Promise<boolean> {
   return isMasterEmail(session?.user?.email)
 }
 
-// 公開設定取得（認証不要）
+// 設定取得（認証不要）。
+// 未ログインでも呼べるので、返すのは公開してよい項目と「本人がダウンロード項目を
+// 見られるか」の判定結果だけ。ダウンロード許可リスト（メールアドレス）はマスターにだけ返す。
 export async function GET() {
   await initDb()
-  const result = await query(`SELECT key, value FROM master_settings`)
+  const [result, session] = await Promise.all([
+    query(`SELECT key, value FROM master_settings`),
+    auth(),
+  ])
   const settings: Record<string, string> = {}
   for (const row of result.rows) {
     settings[row.key] = row.value
   }
-  return NextResponse.json(settings)
+  const email = session?.user?.email ?? null
+  const isMaster = await isMasterEmail(email)
+  return NextResponse.json(buildMasterSettingsResponse(settings, { email, isMaster }))
 }
 
 // マスタユーザーのみ設定変更可
