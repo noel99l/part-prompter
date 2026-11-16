@@ -64,21 +64,26 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(result.rows)
 }
 
+// 楽曲の新規作成。ログイン必須。
+// 以前は未ログインでも作成でき、作成者なしの公開曲を誰でも一覧に追加できてしまった。
 export async function POST(req: NextRequest) {
-  await initDb()
   const session = await auth()
-  const { title, artist } = await req.json()
+  if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  await initDb()
+  const body = await req.json().catch(() => null)
+  const title = typeof body?.title === 'string' ? body.title.trim() : ''
+  const artist = typeof body?.artist === 'string' ? body.artist.trim() : ''
   if (!title) return NextResponse.json({ error: 'title required' }, { status: 400 })
 
-  let userId = null
-  if (session?.user?.email) {
-    const u = await query(`SELECT id FROM users WHERE email = $1`, [session.user.email])
-    userId = u.rows[0]?.id ?? null
-  }
+  // 作成者を必ず記録する（作成者なしの曲は本人が編集も削除もできなくなる）
+  const u = await query(`SELECT id FROM users WHERE email = $1`, [session.user.email])
+  const userId = u.rows[0]?.id
+  if (!userId) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
   const result = await query(
     `INSERT INTO prompter_songs (title, artist, created_by) VALUES ($1, $2, $3) RETURNING *`,
-    [title, artist || '', userId]
+    [title, artist, userId]
   )
   return NextResponse.json(result.rows[0])
 }
