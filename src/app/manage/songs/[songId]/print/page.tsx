@@ -18,14 +18,25 @@ export default function PrintPage() {
   const [song, setSong] = useState<any>(null)
   const [members, setMembers] = useState<Member[]>([])
   const [lyrics, setLyrics] = useState<LyricLine[]>([])
+  // ダウンロード項目の利用可否（null は確認中）。メニューを隠すだけでなく、
+  // URLを直接開いた場合もここで止める。
+  const [allowed, setAllowed] = useState<boolean | null>(null)
 
   useEffect(() => {
+    fetch('/api/master-settings')
+      .then(r => r.json())
+      .then(data => setAllowed(data.can_download === true))
+      .catch(() => setAllowed(false))
+  }, [])
+
+  useEffect(() => {
+    if (!allowed) return
     Promise.all([
       fetch(`/api/songs/${songId}`).then(r => r.json()),
       fetch(`/api/songs/${songId}/members`).then(r => r.json()),
       fetch(`/api/songs/${songId}/lyrics`).then(r => r.json()),
     ]).then(([s, m, l]) => { setSong(s); setMembers(m); setLyrics(l) })
-  }, [songId])
+  }, [songId, allowed])
 
   const memberMap = useMemo(() => Object.fromEntries(members.map(m => [m.id, m])), [members])
 
@@ -43,6 +54,12 @@ export default function PrintPage() {
       setTimeout(() => window.print(), 500)
     }
   }, [song, members, lyrics])
+
+  if (allowed === false) return (
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }} role="alert">
+      このページを表示する権限がありません。
+    </div>
+  )
 
   if (!song) return <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>読み込み中...</div>
 

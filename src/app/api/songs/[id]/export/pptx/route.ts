@@ -1,5 +1,9 @@
 import { NextRequest } from 'next/server'
+import { auth } from '@/auth'
 import { query } from '@/lib/db'
+import { canUserDownload } from '@/lib/downloadPermission'
+import { consumeRateLimit, rateLimitedResponse } from '@/lib/rateLimit'
+import { getSongAccess } from '@/lib/songAccess'
 import { harmonyIds } from '@/lib/harmony'
 import PptxGenJS from 'pptxgenjs'
 
@@ -11,9 +15,28 @@ const X_MARGIN = 0.4
 
 export const runtime = 'nodejs'
 
+function jsonError(message: string, status: number) {
+  return new globalThis.Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  })
+}
+
 export async function GET(_: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
   const { id } = await params
+
+  // ダウンロードは、管理画面でボタンが表示される条件と同じ条件でだけ許可する:
+  // ログイン済み・ダウンロード許可あり（全体ONまたは許可リスト）・その曲を編集できる。
+  const session = await auth()
+  const email = session?.user?.email
+  if (!email) return jsonError('ログインが必要です。', 401)
+  const [allowed, access] = await Promise.all([canUserDownload(email), getSongAccess(id, email)])
+  if (!allowed || !access?.canEditContent) return jsonError('この楽曲をダウンロードする権限がありません。', 403)
+
+  // 生成はCPUを使うので、1ユーザーあたり1分に10回までにする
+  const limit = consumeRateLimit(`pptx:${access.userId}`, 10, 60_000)
+  if (!limit.allowed) return rateLimitedResponse(limit.retryAfterSec)
 
   const songRes = await query(`SELECT * FROM prompter_songs WHERE id=$1`, [id])
   const song = songRes.rows[0]
