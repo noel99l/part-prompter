@@ -6,10 +6,16 @@
 const cache = new Map<string, unknown>()
 const inflight = new Map<string, Promise<unknown>>()
 
+// 応答が返らないまま待ち続けると、呼び出し側のローディング表示が永久に残る。
+// サーバーレスのコールドスタート（十数秒）は待てる長さにしつつ、上限で必ず失敗させる。
+const FETCH_TIMEOUT_MS = 30000
+
 function fetchAndStore(url: string): Promise<unknown> {
   const existing = inflight.get(url)
   if (existing) return existing
-  const p = fetch(url)
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const p = fetch(url, { signal: controller.signal })
     .then(r => {
       if (!r.ok) throw new Error(`fetch failed: ${r.status} ${url}`)
       return r.json()
@@ -18,7 +24,10 @@ function fetchAndStore(url: string): Promise<unknown> {
       cache.set(url, data)
       return data
     })
-    .finally(() => inflight.delete(url))
+    .finally(() => {
+      clearTimeout(timer)
+      inflight.delete(url)
+    })
   inflight.set(url, p)
   return p
 }

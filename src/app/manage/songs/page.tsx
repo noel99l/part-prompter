@@ -65,6 +65,7 @@ export default function AdminSongsPage() {
   const { data: session } = useSession()
   const [songs, setSongs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [step, setStep] = useState<'search' | 'input'>('search')
   const [newTitle, setNewTitle] = useState('')
@@ -91,12 +92,25 @@ export default function AdminSongsPage() {
     }).catch(() => {})
   }, [session])
 
+  // 取得に失敗してもスケルトンのまま固まらないよう、1回だけ自動で再試行し、
+  // それでも失敗したらエラー表示（再読み込みボタン付き）に切り替える。
   const loadSongs = async () => {
     setLoading(true)
-    const data = await getCachedJson('/api/songs?mine=1', fresh => {
-      setSongs(Array.isArray(fresh) ? fresh : [])
-    })
-    setSongs(Array.isArray(data) ? data : [])
+    setLoadError(false)
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const data = await getCachedJson('/api/songs?mine=1', fresh => {
+          setSongs(Array.isArray(fresh) ? fresh : [])
+        })
+        setSongs(Array.isArray(data) ? data : [])
+        setLoading(false)
+        return
+      } catch (e) {
+        console.error('楽曲一覧の取得に失敗しました', e)
+        if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
+    setLoadError(true)
     setLoading(false)
   }
 
@@ -212,7 +226,14 @@ export default function AdminSongsPage() {
         <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋ 曲を追加</button>
       </div>
 
-      {songs.length === 0 ? (
+      {loadError ? (
+        <div role="alert">
+          <p className={styles.empty} style={{ color: '#ccc', marginBottom: '1rem' }}>
+            楽曲一覧を読み込めませんでした。通信状況を確認して、もう一度お試しください。
+          </p>
+          <button className={styles.createBtn} onClick={loadSongs}>再読み込み</button>
+        </div>
+      ) : songs.length === 0 ? (
         <p className={styles.empty}>曲が登録されていません。「曲を追加」から登録してください。</p>
       ) : (
         <>

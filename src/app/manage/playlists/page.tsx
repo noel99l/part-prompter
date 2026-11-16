@@ -21,6 +21,7 @@ export default function PlaylistsPage() {
   const router = useRouter()
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -29,11 +30,21 @@ export default function PlaylistsPage() {
 
   useEffect(() => { load() }, [])
 
+  // 取得に失敗してもスケルトンのまま固まらないよう、エラー表示（再読み込みボタン付き）に切り替える。
   const load = async () => {
     setLoading(true)
-    const res = await fetch('/api/playlists')
-    setPlaylists(await res.json())
-    setLoading(false)
+    setLoadError(false)
+    try {
+      const res = await fetch('/api/playlists')
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`)
+      const data = await res.json()
+      setPlaylists(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error('セットリスト一覧の取得に失敗しました', e)
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const create = async () => {
@@ -81,7 +92,14 @@ export default function PlaylistsPage() {
         <button className={styles.createBtn} onClick={() => setShowModal(true)}>＋追加</button>
       </div>
 
-      {playlists.length === 0 ? (
+      {loadError ? (
+        <div role="alert">
+          <p className={styles.empty} style={{ color: '#ccc', marginBottom: '1rem' }}>
+            セットリスト一覧を読み込めませんでした。通信状況を確認して、もう一度お試しください。
+          </p>
+          <button className={styles.createBtn} onClick={load}>再読み込み</button>
+        </div>
+      ) : playlists.length === 0 ? (
         <p className={styles.empty}>セットリストがありません。「セットリストを追加」から作成してください。</p>
       ) : (
         <>
