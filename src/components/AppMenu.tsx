@@ -6,6 +6,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useSyncCapability } from '@/hooks/useSyncCapability'
 import { useAnnouncements } from '@/lib/announcementsClient'
 import { isMasterSessionUserId } from '@/lib/masterUser'
+import ContactLink from './ContactLink'
 import styles from './AdminMenu.module.css'
 
 const ADMIN_NAV = [
@@ -58,6 +59,7 @@ export default function AppMenu({ accountName }: { accountName?: string }) {
               <span>📢 お知らせ</span>
               {unreadCount > 0 && <span className={styles.navBadge} aria-label={`未読${unreadCount}件`}>{unreadCount}</span>}
             </Link>
+            <ContactLink className={styles.navItem} onNavigate={() => setOpen(false)} />
 
             {isLoggedIn ? (
               <>

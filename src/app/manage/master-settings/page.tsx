@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { isMasterSessionUserId } from '@/lib/masterUser'
+import { invalidateJson } from '@/lib/clientCache'
+import { CONTACT_EMAIL_SETTING_KEY, isValidContactEmail } from '@/lib/contact'
+import { MASTER_SETTINGS_API_URL } from '@/lib/contactClient'
 import styles from '@/app/manage/page.module.css'
 
 export default function MasterSettingsPage() {
@@ -18,6 +21,9 @@ export default function MasterSettingsPage() {
   const [showPartsCopy, setShowPartsCopy] = useState(true)
   const [downloadWhitelist, setDownloadWhitelist] = useState('')
   const [newEmail, setNewEmail] = useState('')
+  // ご意見・不具合報告の宛先（空なら連絡リンクを表示しない）
+  const [contactEmail, setContactEmail] = useState('')
+  const [error, setError] = useState('')
 
   useEffect(() => {
     if (status === 'loading') return
@@ -31,6 +37,7 @@ export default function MasterSettingsPage() {
         setShowDownload(data.show_download === '1')
         setShowPartsCopy(data.show_parts_copy === '1')
         setDownloadWhitelist(data.download_whitelist || '')
+        setContactEmail(data[CONTACT_EMAIL_SETTING_KEY] || '')
         setLoading(false)
       })
   }, [session, status, router])
@@ -55,19 +62,39 @@ export default function MasterSettingsPage() {
   }
 
   const handleSave = async () => {
+    const email = contactEmail.trim()
+    if (email && !isValidContactEmail(email)) {
+      setError('連絡用メールアドレスの形式が正しくありません')
+      return
+    }
+    setError('')
     setSaving(true)
-    await fetch('/api/master-settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        show_download: showDownload ? '1' : '0',
-        show_parts_copy: showPartsCopy ? '1' : '0',
-        download_whitelist: downloadWhitelist,
-      }),
-    })
-    setSaving(false)
-    setToast('保存しました')
-    setTimeout(() => setToast(null), 2000)
+    try {
+      const res = await fetch('/api/master-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          show_download: showDownload ? '1' : '0',
+          show_parts_copy: showPartsCopy ? '1' : '0',
+          download_whitelist: downloadWhitelist,
+          [CONTACT_EMAIL_SETTING_KEY]: email,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error || '保存できませんでした。もう一度お試しください。')
+        return
+      }
+      setContactEmail(email)
+      // メニューの連絡リンクが新しい宛先を読み直すようにする
+      invalidateJson(MASTER_SETTINGS_API_URL)
+      setToast('保存しました')
+      setTimeout(() => setToast(null), 2000)
+    } catch {
+      setError('保存できませんでした。通信状況を確認して、もう一度お試しください。')
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!isMaster || loading) return (
@@ -189,6 +216,30 @@ export default function MasterSettingsPage() {
             </div>
           )}
         </div>
+
+        {/* ご意見・不具合報告の宛先 */}
+        <div style={{ background: '#111', border: '1px solid #222', borderRadius: 12, padding: '1.2rem 1.5rem' }}>
+          <h2 style={{ fontSize: '1rem', color: '#fff', margin: '0 0 0.5rem' }}>ご意見・不具合報告の宛先</h2>
+          <p style={{ color: '#666', fontSize: '0.8rem', margin: '0 0 1rem' }}>
+            メニューの「ご意見・不具合報告」を押すと、このアドレス宛てのメールが開きます。空欄にするとリンクは表示されません。アドレスは利用者全員から見える状態になります。
+          </p>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#aaa', fontSize: '0.85rem' }}>
+            <span>連絡用メールアドレス</span>
+            <input
+              type="email"
+              value={contactEmail}
+              onChange={e => setContactEmail(e.target.value)}
+              placeholder="support@example.com"
+              autoComplete="off"
+              style={{
+                background: '#1a1a1a', border: '1px solid #333', borderRadius: 6,
+                color: '#fff', padding: '0.6rem 0.75rem', fontSize: '1rem', minHeight: 44, boxSizing: 'border-box',
+              }}
+            />
+          </label>
+        </div>
+
+        {error && <p role="alert" style={{ color: '#ff8a8a', fontSize: '0.9rem', margin: 0 }}>{error}</p>}
 
         <button
           onClick={handleSave}

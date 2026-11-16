@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/auth'
 import { query, initDb } from '@/lib/db'
 import { isMasterEmail } from '@/lib/permissions'
+import { CONTACT_EMAIL_SETTING_KEY, isValidContactEmail } from '@/lib/contact'
 
 // マスター判定はユーザーID基準（lib/permissions.ts）
 async function isMasterUser(): Promise<boolean> {
@@ -28,6 +29,12 @@ export async function PUT(req: NextRequest) {
   }
 
   const body: Record<string, string> = await req.json()
+
+  // 連絡用メールアドレスは全員に見えるリンクの宛先になるので、形式を検証する（空は「未設定」）
+  const contactEmail = body[CONTACT_EMAIL_SETTING_KEY]
+  if (contactEmail !== undefined && contactEmail !== '' && !isValidContactEmail(contactEmail)) {
+    return NextResponse.json({ error: '連絡用メールアドレスの形式が正しくありません' }, { status: 400 })
+  }
 
   for (const [key, value] of Object.entries(body)) {
     await query(
