@@ -35,6 +35,7 @@
   font-family: inherit;
   padding: 0.6rem 0.75rem;
   width: 100%;
+  min-height: 2.75rem;
   box-sizing: border-box;
 }
 
@@ -139,4 +140,25 @@
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* スマホ幅: 操作ボタンが中途半端に折り返さないよう、
+   「キャンセル｜下書き」を等幅で並べ、公開ボタンは下段に全幅で置く */
+@media (max-width: 480px) {
+  .form { padding: 1rem; }
+
+  .actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .actions button {
+    min-height: 2.75rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  .actions > :last-child { grid-column: 1 / -1; }
+
+  .cardActions button { min-height: 2.75rem; }
 }

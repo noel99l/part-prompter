@@ -38,7 +38,10 @@
   color: #aaa;
   font-size: 1rem;
   line-height: 1;
-  padding: 0.4rem 0.5rem;
+  /* スマホでも押しやすいよう、タップ範囲は44px四方を確保する */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: -0.4rem -0.4rem -0.4rem 0;
   border-radius: 6px;
   cursor: pointer;
 }

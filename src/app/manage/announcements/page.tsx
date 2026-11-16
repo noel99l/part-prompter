@@ -133,7 +133,7 @@ export default function AnnouncementsAdminPage() {
               value={form.title}
               maxLength={ANNOUNCEMENT_TITLE_MAX}
               onChange={e => setForm({ ...form, title: e.target.value })}
-              placeholder="セットリストにMCスライドを追加できるようになりました"
+              placeholder="MCスライドを追加しました"
               autoFocus
             />
           </label>
